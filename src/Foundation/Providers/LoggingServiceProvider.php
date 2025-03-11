@@ -3,7 +3,8 @@ namespace Ody\Core\Foundation\Providers;
 
 use Illuminate\Container\Container;
 use Ody\Core\Foundation\Support\Config;
-use Ody\Core\Foundation\Logger;
+use Ody\Core\Foundation\Logging\LogManager;
+use Psr\Log\LoggerInterface;
 
 /**
  * Service provider for logging
@@ -17,27 +18,25 @@ class LoggingServiceProvider extends AbstractServiceProvider
      */
     protected function registerServices(): void
     {
-        // Register logger
-        $this->container->singleton(Logger::class, function ($container) {
+        // Register LogManager
+        $this->container->singleton(LogManager::class, function ($container) {
             /** @var Config $config */
             $config = $container->make(Config::class);
 
             // Get log configuration
-            $channel = $config->get('logging.default', 'file');
-            $level = $config->get('logging.level', Logger::LEVEL_INFO);
-            $path = $config->get("logging.channels.{$channel}.path", base_path('/storage/logs/api.log'));
+            $loggingConfig = $config->get('logging', []);
 
-            // Ensure log directory exists
-            $logDir = dirname($path);
-            if (!is_dir($logDir)) {
-                mkdir($logDir, 0755, true);
-            }
-
-            return new Logger($path, $level);
+            return new LogManager($loggingConfig);
         });
 
-        // Alias logger
-        $this->container->alias(Logger::class, 'logger');
+        // Register default logger as LoggerInterface
+        $this->container->singleton(LoggerInterface::class, function ($container) {
+            return $container->make(LogManager::class)->channel();
+        });
+
+        // Alias for backward compatibility
+        $this->container->alias(LogManager::class, 'log');
+        $this->container->alias(LoggerInterface::class, 'logger');
     }
 
     /**

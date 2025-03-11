@@ -2,8 +2,10 @@
 
 use Illuminate\Container\Container;
 use Ody\Core\Foundation\Logger;
+use Ody\Core\Foundation\Logging\LogManager;
 use Ody\Core\Foundation\Support\Config;
 use Ody\Core\Foundation\Support\Env;
+use Psr\Log\LoggerInterface;
 
 if (!function_exists('app')) {
     /**
@@ -212,5 +214,28 @@ if (!function_exists('database_path')) {
     function database_path($path = '')
     {
         return base_path('database') . ($path ? DIRECTORY_SEPARATOR . $path : $path);
+    }
+}
+
+if (!function_exists('logger')) {
+    /**
+     * Get a logger instance or log a message
+     *
+     * @param mixed $message
+     * @param array $context
+     * @param string|null $channel
+     * @return LoggerInterface
+     */
+    function logger($message = null, array $context = [], ?string $channel = null)
+    {
+        /** @var LogManager $logManager */
+        $logManager = app('log');
+        $logger = $channel ? $logManager->channel($channel) : $logManager->channel();
+
+        if (is_null($message)) {
+            return $logger;
+        }
+
+        return $logger->info($message, $context);
     }
 }
