@@ -34,11 +34,13 @@ class LoggingMiddleware implements MiddlewareInterface
      * @param ServerRequestInterface $request
      * @param RequestHandlerInterface $handler
      * @return ResponseInterface
+     * @throws \Throwable
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $startTime = microtime(true);
 
+        var_dump('dsd');
         $this->logger->info('Request started', [
             'method' => $request->getMethod(),
             'uri' => $request->getUri()->getPath(),

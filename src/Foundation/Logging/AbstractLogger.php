@@ -24,14 +24,14 @@ abstract class AbstractLogger extends \Psr\Log\AbstractLogger implements LoggerI
      * @var array Log level priorities (higher = more severe)
      */
     protected array $levelPriorities = [
-        LogLevel::DEBUG => 0,
-        LogLevel::INFO => 1,
-        LogLevel::NOTICE => 2,
-        LogLevel::WARNING => 3,
-        LogLevel::ERROR => 4,
-        LogLevel::CRITICAL => 5,
-        LogLevel::ALERT => 6,
-        LogLevel::EMERGENCY => 7
+        LogLevel::DEBUG => 0,     // 'debug'
+        LogLevel::INFO => 1,      // 'info'
+        LogLevel::NOTICE => 2,    // 'notice'
+        LogLevel::WARNING => 3,   // 'warning'
+        LogLevel::ERROR => 4,     // 'error'
+        LogLevel::CRITICAL => 5,  // 'critical'
+        LogLevel::ALERT => 6,     // 'alert'
+        LogLevel::EMERGENCY => 7  // 'emergency'
     ];
 
     /**
@@ -42,7 +42,7 @@ abstract class AbstractLogger extends \Psr\Log\AbstractLogger implements LoggerI
      */
     public function __construct(string $level = LogLevel::DEBUG, ?FormatterInterface $formatter = null)
     {
-        $this->level = $level;
+        $this->level = strtolower($level);
         $this->formatter = $formatter ?? new LineFormatter();
     }
 
@@ -55,7 +55,7 @@ abstract class AbstractLogger extends \Psr\Log\AbstractLogger implements LoggerI
             throw new \InvalidArgumentException("Invalid log level: $level");
         }
 
-        $this->level = $level;
+        $this->level = strtolower($level);
         return $this;
     }
 
@@ -92,6 +92,13 @@ abstract class AbstractLogger extends \Psr\Log\AbstractLogger implements LoggerI
      */
     protected function isLevelAllowed(string $level): bool
     {
+        // Make sure level exists in the priorities array
+        if (!isset($this->levelPriorities[$level])) {
+            // You could add a fallback or trigger a warning
+            error_log("Warning: Unknown log level '{$level}', defaulting to DEBUG");
+            $level = LogLevel::DEBUG;
+        }
+
         return $this->levelPriorities[$level] >= $this->levelPriorities[$this->level];
     }
 
@@ -100,6 +107,7 @@ abstract class AbstractLogger extends \Psr\Log\AbstractLogger implements LoggerI
      */
     public function log($level, $message, array $context = []): void
     {
+        error_log("Logging with level: " . $level);
         if (!$this->isLevelAllowed($level)) {
             return;
         }
