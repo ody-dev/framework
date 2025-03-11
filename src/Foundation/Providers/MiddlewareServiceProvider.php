@@ -7,7 +7,12 @@ use Ody\Core\Foundation\Http\Request;
 use Ody\Core\Foundation\Http\Response;
 use Ody\Core\Foundation\Logger;
 use Ody\Core\Foundation\Middleware\Middleware;
-use Ody\Core\Foundation\Middleware\RouteMiddlewareManager;
+use Ody\Core\Foundation\Middleware\CorsMiddleware;
+use Ody\Core\Foundation\Middleware\JsonBodyParserMiddleware;
+use Ody\Core\Foundation\Middleware\LoggingMiddleware;
+use Ody\Core\Foundation\Middleware\AuthMiddleware;
+use Ody\Core\Foundation\Middleware\RoleMiddleware;
+use Ody\Core\Foundation\Middleware\ThrottleMiddleware;
 
 /**
  * Service provider for middleware
@@ -21,15 +26,26 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
      */
     protected function registerServices(): void
     {
-        // Register RouteMiddlewareManager
-        $this->container->singleton(RouteMiddlewareManager::class, function ($container) {
-            return new RouteMiddlewareManager();
+        // Register Middleware
+        $this->container->singleton(Middleware::class, function ($container) {
+            return new Middleware($container);
         });
 
-        // Register Middleware with RouteMiddlewareManager
-        $this->container->singleton(Middleware::class, function ($container) {
-            $routeMiddlewareManager = $container->make(RouteMiddlewareManager::class);
-            return new Middleware($routeMiddlewareManager);
+        // Register PSR-15 middleware implementations
+        $this->container->singleton(CorsMiddleware::class, function ($container) {
+            $config = $container->make('config');
+            $corsConfig = $config['cors'] ?? [];
+
+            return new CorsMiddleware($corsConfig);
+        });
+
+        $this->container->singleton(JsonBodyParserMiddleware::class, function () {
+            return new JsonBodyParserMiddleware();
+        });
+
+        $this->container->singleton(LoggingMiddleware::class, function ($container) {
+            $logger = $container->make(Logger::class);
+            return new LoggingMiddleware($logger);
         });
     }
 
@@ -49,11 +65,7 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
         $this->registerNamedMiddleware($middleware, $logger);
 
         // Register global middleware
-        $this->registerCorsMiddleware($middleware);
-        $this->registerJsonBodyParserMiddleware($middleware);
-
-        // Register route-specific middleware
-        $this->registerRouteMiddleware($middleware, $logger);
+        $this->registerGlobalMiddleware($middleware, $container);
     }
 
     /**
@@ -66,125 +78,123 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
     protected function registerNamedMiddleware(Middleware $middleware, Logger $logger): void
     {
         // Register auth middleware
-        $middleware->addNamed('auth', function (Request $request, Response $response, callable $next) use ($logger) {
-            $authHeader = $request->getHeader('authorization', '');
+        $middleware->addNamed('auth', function (Request $request, callable $next) use ($logger) {
+            // Create auth middleware with 'web' guard
+            $authMiddleware = new AuthMiddleware('web', $logger);
 
-            // Simple token check - replace with proper auth in production
-            if (str_starts_with($authHeader, 'Bearer ')) {
-                $token = substr($authHeader, 7);
-                if ($token === 'valid-token') {
-                    $next($request, $response);
-                    return;
+            // Process the request
+            return $authMiddleware->process($request, new class ($next) implements \Psr\Http\Server\RequestHandlerInterface {
+                private $next;
+
+                public function __construct(callable $next) {
+                    $this->next = $next;
                 }
-            }
 
-            $logger->warning('Unauthorized access attempt', [
-                'ip' => $request->server['REMOTE_ADDR'] ?? 'unknown',
-                'uri' => $request->server['REQUEST_URI'] ?? '/'
-            ]);
-
-            $response->status(401)
-                ->json()
-                ->withJson([
-                    'error' => 'Unauthorized'
-                ]);
+                public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface {
+                    return call_user_func($this->next, $request);
+                }
+            });
         });
 
-        // Register logging middleware
-        $middleware->addNamed('logging', function (Request $request, Response $response, callable $next) use ($logger) {
-            $startTime = microtime(true);
+        // Register auth:api middleware
+        $middleware->addNamed('auth:api', function (Request $request, callable $next) use ($logger) {
+            // Create auth middleware with 'api' guard
+            $authMiddleware = new AuthMiddleware('api', $logger);
 
-            $logger->info('Request started', [
-                'method' => $request->getMethod(),
-                'uri' => $request->getPath(),
-            ]);
+            // Process the request
+            return $authMiddleware->process($request, new class ($next) implements \Psr\Http\Server\RequestHandlerInterface {
+                private $next;
 
-            $next($request, $response);
+                public function __construct(callable $next) {
+                    $this->next = $next;
+                }
 
-            $duration = microtime(true) - $startTime;
-            $logger->info('Request completed', [
-                'method' => $request->getMethod(),
-                'uri' => $request->getPath(),
-                'status' => $response->statusCode ?? 200,
-                'duration' => round($duration * 1000, 2) . 'ms'
-            ]);
+                public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface {
+                    return call_user_func($this->next, $request);
+                }
+            });
+        });
+
+        // Register auth:jwt middleware
+        $middleware->addNamed('auth:jwt', function (Request $request, callable $next) use ($logger) {
+            // Create auth middleware with 'jwt' guard
+            $authMiddleware = new AuthMiddleware('jwt', $logger);
+
+            // Process the request
+            return $authMiddleware->process($request, new class ($next) implements \Psr\Http\Server\RequestHandlerInterface {
+                private $next;
+
+                public function __construct(callable $next) {
+                    $this->next = $next;
+                }
+
+                public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface {
+                    return call_user_func($this->next, $request);
+                }
+            });
+        });
+
+        // Register role middleware
+        $middleware->addNamed('role', function (Request $request, callable $next) use ($logger) {
+            $role = $request->middlewareParams['role'] ?? 'user';
+
+            // Create role middleware
+            $roleMiddleware = new RoleMiddleware($role, $logger);
+
+            // Process the request
+            return $roleMiddleware->process($request, new class ($next) implements \Psr\Http\Server\RequestHandlerInterface {
+                private $next;
+
+                public function __construct(callable $next) {
+                    $this->next = $next;
+                }
+
+                public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface {
+                    return call_user_func($this->next, $request);
+                }
+            });
+        });
+
+        // Register throttle middleware
+        $middleware->addNamed('throttle', function (Request $request, callable $next) {
+            $rate = $request->middlewareParams['throttle'] ?? '60,1';
+            list($maxAttempts, $minutes) = explode(',', $rate);
+
+            // Create throttle middleware
+            $throttleMiddleware = new ThrottleMiddleware((int)$maxAttempts, (int)$minutes);
+
+            // Process the request
+            return $throttleMiddleware->process($request, new class ($next) implements \Psr\Http\Server\RequestHandlerInterface {
+                private $next;
+
+                public function __construct(callable $next) {
+                    $this->next = $next;
+                }
+
+                public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface {
+                    return call_user_func($this->next, $request);
+                }
+            });
         });
     }
 
     /**
-     * Register CORS middleware
+     * Register global middleware
      *
      * @param Middleware $middleware
+     * @param Container $container
      * @return void
+     * @throws BindingResolutionException
      */
-    protected function registerCorsMiddleware(Middleware $middleware): void
+    protected function registerGlobalMiddleware(Middleware $middleware, Container $container): void
     {
-        $middleware->add(function (Request $request, Response $response, callable $next) {
-            $response->header('Access-Control-Allow-Origin', '*');
-            $response->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-            $response->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        // Add PSR-15 CORS middleware
+        $middleware->add($container->make(CorsMiddleware::class));
 
-            if ($request->getMethod() === 'OPTIONS') {
-                $response->status(200);
-                return;
-            }
+        // Add PSR-15 JSON body parser middleware
+        $middleware->add($container->make(JsonBodyParserMiddleware::class));
 
-            $next($request, $response);
-        });
-    }
-
-    /**
-     * Register JSON body parser middleware
-     *
-     * @param Middleware $middleware
-     * @return void
-     */
-    protected function registerJsonBodyParserMiddleware(Middleware $middleware): void
-    {
-        $middleware->add(function (Request $request, Response $response, callable $next) {
-            $contentType = $request->getHeader('content-type');
-
-            if ($contentType && str_contains($contentType, 'application/json')) {
-                $request->parsedBody = $request->json();
-            }
-
-            $next($request, $response);
-        });
-    }
-
-    /**
-     * Register route-specific middleware
-     *
-     * @param Middleware $middleware
-     * @param Logger $logger
-     * @return void
-     */
-    protected function registerRouteMiddleware(Middleware $middleware, Logger $logger): void
-    {
-        // Apply 'auth' middleware to all /users routes
-        $middleware->addToGroup('*:/users*', 'auth');
-
-        // Apply 'auth' middleware to specific routes
-        $middleware->addToRoute('PUT', '/profile', 'auth');
-        $middleware->addToRoute('POST', '/logout', 'auth');
-
-        // Apply logging middleware to all routes
-        $middleware->addToGroup('*:*', 'logging');
-
-        // Don't require auth for these specific endpoints
-        $middleware->addToRoute('POST', '/login', function (Request $request, Response $response, callable $next) {
-            // Just pass through without auth check
-            $next($request, $response);
-        });
-
-        $middleware->addToRoute('POST', '/register', function (Request $request, Response $response, callable $next) {
-            // Just pass through without auth check
-            $next($request, $response);
-        });
-
-        $middleware->addToRoute('GET', '/health', function (Request $request, Response $response, callable $next) {
-            // Just pass through without auth check
-            $next($request, $response);
-        });
+        // Add PSR-15 logging middleware
+        $middleware->add($container->make(LoggingMiddleware::class));
     }
 }

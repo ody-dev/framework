@@ -1,60 +1,44 @@
 <?php
+
 namespace Ody\Core\Foundation\Http;
 
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UriInterface;
+use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\UploadedFileInterface;
+use Nyholm\Psr7\Factory\Psr17Factory;
+use Nyholm\Psr7\ServerRequest;
+use Nyholm\Psr7Server\ServerRequestCreator;
+
 /**
- * Standard HTTP Request wrapper
+ * PSR-7 compatible HTTP Request
  */
-class Request
+class Request implements ServerRequestInterface
 {
     /**
-     * @var array Request server variables
+     * @var ServerRequestInterface PSR-7 server request
      */
-    public $server = [];
-
-    /**
-     * @var array Request headers
-     */
-    public $header = [];
-
-    /**
-     * @var array Request GET parameters
-     */
-    public $get = [];
-
-    /**
-     * @var array Request POST parameters
-     */
-    public $post = [];
-
-    /**
-     * @var array Request files
-     */
-    public $files = [];
-
-    /**
-     * @var array Request cookies
-     */
-    public $cookie = [];
-
-    /**
-     * @var array Parsed request body
-     */
-    public $parsedBody = [];
-
-    /**
-     * @var array Middleware parameters
-     */
-    public $middlewareParams = [];
+    private ServerRequestInterface $psrRequest;
 
     /**
      * @var array Route parameters
      */
-    public $routeParams = [];
+    public array $routeParams = [];
 
     /**
-     * @var string|null Raw request body
+     * @var array Middleware parameters
      */
-    private $rawContent = null;
+    public array $middlewareParams = [];
+
+    /**
+     * Request constructor
+     *
+     * @param ServerRequestInterface $request
+     */
+    public function __construct(ServerRequestInterface $request)
+    {
+        $this->psrRequest = $request;
+    }
 
     /**
      * Create request from globals
@@ -63,35 +47,18 @@ class Request
      */
     public static function createFromGlobals(): self
     {
-        $request = new self();
+        $psr17Factory = new Psr17Factory();
 
-        // Server variables
-        $request->server = $_SERVER;
+        $creator = new ServerRequestCreator(
+            $psr17Factory, // ServerRequestFactory
+            $psr17Factory, // UriFactory
+            $psr17Factory, // UploadedFileFactory
+            $psr17Factory  // StreamFactory
+        );
 
-        // Headers
-        foreach ($_SERVER as $key => $value) {
-            if (strpos($key, 'HTTP_') === 0) {
-                $name = str_replace('_', '-', strtolower(substr($key, 5)));
-                $request->header[$name] = $value;
-            } elseif (in_array($key, ['CONTENT_TYPE', 'CONTENT_LENGTH'])) {
-                $name = str_replace('_', '-', strtolower($key));
-                $request->header[$name] = $value;
-            }
-        }
+        $serverRequest = $creator->fromGlobals();
 
-        // GET parameters
-        $request->get = $_GET;
-
-        // POST parameters
-        $request->post = $_POST;
-
-        // Files
-        $request->files = $_FILES;
-
-        // Cookies
-        $request->cookie = $_COOKIE;
-
-        return $request;
+        return new self($serverRequest);
     }
 
     /**
@@ -101,17 +68,27 @@ class Request
      */
     public function getMethod(): string
     {
-        return strtoupper($this->server['REQUEST_METHOD'] ?? 'GET');
+        return $this->psrRequest->getMethod();
     }
 
     /**
      * Get request URI
      *
+     * @return UriInterface
+     */
+    public function getUri(): UriInterface
+    {
+        return $this->psrRequest->getUri();
+    }
+
+    /**
+     * Get request URI as string
+     *
      * @return string
      */
-    public function getUri(): string
+    public function getUriString(): string
     {
-        return $this->server['REQUEST_URI'] ?? '/';
+        return (string) $this->psrRequest->getUri();
     }
 
     /**
@@ -121,14 +98,7 @@ class Request
      */
     public function getPath(): string
     {
-        $uri = $this->getUri();
-        $position = strpos($uri, '?');
-
-        if ($position !== false) {
-            return substr($uri, 0, $position);
-        }
-
-        return $uri;
+        return $this->psrRequest->getUri()->getPath();
     }
 
     /**
@@ -138,11 +108,7 @@ class Request
      */
     public function rawContent(): string
     {
-        if ($this->rawContent === null) {
-            $this->rawContent = file_get_contents('php://input');
-        }
-
-        return $this->rawContent;
+        return (string) $this->psrRequest->getBody();
     }
 
     /**
@@ -166,16 +132,16 @@ class Request
      */
     public function input(string $key, $default = null)
     {
-        if (isset($this->parsedBody[$key])) {
-            return $this->parsedBody[$key];
+        $parsedBody = $this->psrRequest->getParsedBody();
+
+        if (is_array($parsedBody) && isset($parsedBody[$key])) {
+            return $parsedBody[$key];
         }
 
-        if (isset($this->post[$key])) {
-            return $this->post[$key];
-        }
+        $queryParams = $this->psrRequest->getQueryParams();
 
-        if (isset($this->get[$key])) {
-            return $this->get[$key];
+        if (isset($queryParams[$key])) {
+            return $queryParams[$key];
         }
 
         return $default;
@@ -188,19 +154,193 @@ class Request
      */
     public function all(): array
     {
-        return array_merge($this->get, $this->post, $this->parsedBody);
+        $queryParams = $this->psrRequest->getQueryParams();
+        $parsedBody = $this->psrRequest->getParsedBody();
+
+        if (!is_array($parsedBody)) {
+            $parsedBody = [];
+        }
+
+        return array_merge($queryParams, $parsedBody);
+    }
+
+    /* PSR-7 ServerRequestInterface methods */
+
+    public function getProtocolVersion()
+    {
+        return $this->psrRequest->getProtocolVersion();
+    }
+
+    public function withProtocolVersion($version)
+    {
+        $new = clone $this;
+        $new->psrRequest = $this->psrRequest->withProtocolVersion($version);
+        return $new;
+    }
+
+    public function getHeaders()
+    {
+        return $this->psrRequest->getHeaders();
+    }
+
+    public function hasHeader($name)
+    {
+        return $this->psrRequest->hasHeader($name);
+    }
+
+    public function getHeader($name)
+    {
+        return $this->psrRequest->getHeader($name);
+    }
+
+    public function getHeaderLine($name)
+    {
+        return $this->psrRequest->getHeaderLine($name);
+    }
+
+    public function withHeader($name, $value)
+    {
+        $new = clone $this;
+        $new->psrRequest = $this->psrRequest->withHeader($name, $value);
+        return $new;
+    }
+
+    public function withAddedHeader($name, $value)
+    {
+        $new = clone $this;
+        $new->psrRequest = $this->psrRequest->withAddedHeader($name, $value);
+        return $new;
+    }
+
+    public function withoutHeader($name)
+    {
+        $new = clone $this;
+        $new->psrRequest = $this->psrRequest->withoutHeader($name);
+        return $new;
+    }
+
+    public function getBody()
+    {
+        return $this->psrRequest->getBody();
+    }
+
+    public function withBody(StreamInterface $body)
+    {
+        $new = clone $this;
+        $new->psrRequest = $this->psrRequest->withBody($body);
+        return $new;
+    }
+
+    public function getRequestTarget()
+    {
+        return $this->psrRequest->getRequestTarget();
+    }
+
+    public function withRequestTarget($requestTarget)
+    {
+        $new = clone $this;
+        $new->psrRequest = $this->psrRequest->withRequestTarget($requestTarget);
+        return $new;
+    }
+
+    public function withMethod($method)
+    {
+        $new = clone $this;
+        $new->psrRequest = $this->psrRequest->withMethod($method);
+        return $new;
+    }
+
+    public function withUri(UriInterface $uri, $preserveHost = false)
+    {
+        $new = clone $this;
+        $new->psrRequest = $this->psrRequest->withUri($uri, $preserveHost);
+        return $new;
+    }
+
+    public function getServerParams()
+    {
+        return $this->psrRequest->getServerParams();
+    }
+
+    public function getCookieParams()
+    {
+        return $this->psrRequest->getCookieParams();
+    }
+
+    public function withCookieParams(array $cookies)
+    {
+        $new = clone $this;
+        $new->psrRequest = $this->psrRequest->withCookieParams($cookies);
+        return $new;
+    }
+
+    public function getQueryParams()
+    {
+        return $this->psrRequest->getQueryParams();
+    }
+
+    public function withQueryParams(array $query)
+    {
+        $new = clone $this;
+        $new->psrRequest = $this->psrRequest->withQueryParams($query);
+        return $new;
+    }
+
+    public function getUploadedFiles()
+    {
+        return $this->psrRequest->getUploadedFiles();
+    }
+
+    public function withUploadedFiles(array $uploadedFiles)
+    {
+        $new = clone $this;
+        $new->psrRequest = $this->psrRequest->withUploadedFiles($uploadedFiles);
+        return $new;
+    }
+
+    public function getParsedBody()
+    {
+        return $this->psrRequest->getParsedBody();
+    }
+
+    public function withParsedBody($data)
+    {
+        $new = clone $this;
+        $new->psrRequest = $this->psrRequest->withParsedBody($data);
+        return $new;
+    }
+
+    public function getAttributes()
+    {
+        return $this->psrRequest->getAttributes();
+    }
+
+    public function getAttribute($name, $default = null)
+    {
+        return $this->psrRequest->getAttribute($name, $default);
+    }
+
+    public function withAttribute($name, $value)
+    {
+        $new = clone $this;
+        $new->psrRequest = $this->psrRequest->withAttribute($name, $value);
+        return $new;
+    }
+
+    public function withoutAttribute($name)
+    {
+        $new = clone $this;
+        $new->psrRequest = $this->psrRequest->withoutAttribute($name);
+        return $new;
     }
 
     /**
-     * Get a header value
+     * Get the underlying PSR-7 server request
      *
-     * @param string $name
-     * @param mixed $default
-     * @return mixed
+     * @return ServerRequestInterface
      */
-    public function getHeader(string $name, $default = null)
+    public function getPsrRequest(): ServerRequestInterface
     {
-        $name = strtolower($name);
-        return $this->header[$name] ?? $default;
+        return $this->psrRequest;
     }
 }

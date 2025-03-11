@@ -2,7 +2,8 @@
 
 namespace App\Controllers;
 
-use Ody\Core\Foundation\Http\Request;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface;
 use Ody\Core\Foundation\Http\Response;
 use Ody\Core\Foundation\Logger;
 
@@ -31,30 +32,38 @@ class UserController
 
     /**
      * Get all users
+     *
+     * @param ServerRequestInterface $request
+     * @param ResponseInterface $response
+     * @param array $params
+     * @return ResponseInterface
      */
-    public function index(Request $request, Response $response, array $params)
+    public function index(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
         $this->logger->info('Fetching all users');
 
         // In a real app, fetch from database
-         $stmt = $this->db->query('SELECT id, email FROM users');
-         $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $stmt = $this->db->query('SELECT id, email FROM users');
+        $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         // Mock data for example
-//        $users = [
-//            ['id' => 1, 'name' => 'John Doe', 'email' => 'john@example.com'],
-//            ['id' => 2, 'name' => 'Jane Smith', 'email' => 'jane@example.com']
-//        ];
+        // $users = [
+        //     ['id' => 1, 'name' => 'John Doe', 'email' => 'john@example.com'],
+        //     ['id' => 2, 'name' => 'Jane Smith', 'email' => 'jane@example.com']
+        // ];
 
-        $response->header('Content-Type', 'application/json');
-
-        return $response->json()->withJson($users);
+        return $this->jsonResponse($response, $users);
     }
 
     /**
      * Get a specific user by ID
+     *
+     * @param ServerRequestInterface $request
+     * @param ResponseInterface $response
+     * @param array $params
+     * @return ResponseInterface
      */
-    public function show(Request $request, Response $response, array $params)
+    public function show(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
         $id = $params['id'] ?? null;
 
@@ -68,28 +77,28 @@ class UserController
         // Mock data for example
         $user = ['id' => (int)$id, 'name' => 'John Doe', 'email' => 'john@example.com'];
 
-        $response->header('Content-Type', 'application/json');
-
-        return $response->json()->withJson($user);
+        return $this->jsonResponse($response, $user);
     }
 
     /**
      * Create a new user
+     *
+     * @param ServerRequestInterface $request
+     * @param ResponseInterface $response
+     * @param array $params
+     * @return ResponseInterface
      */
-    public function store(Request $request, Response $response, array $params)
+    public function store(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
-        $data = $request->parsedBody ?? [];
+        $data = $request->getParsedBody() ?? [];
 
         $this->logger->info('Creating user', $data);
 
         // Validate input
         if (empty($data['name']) || empty($data['email'])) {
-            $response->status(422);
-            $response->header('Content-Type', 'application/json');
-            $response->json()->withJson([
+            return $this->jsonResponse($response->withStatus(422), [
                 'error' => 'Name and email are required'
             ]);
-            return;
         }
 
         // In a real app, save to database
@@ -100,10 +109,7 @@ class UserController
         // Mock data for example
         $id = 3;
 
-        $response->status(201);
-        $response->header('Content-Type', 'application/json');
-
-        return $response->json()->withJson([
+        return $this->jsonResponse($response->withStatus(201), [
             'id' => $id,
             'name' => $data['name'],
             'email' => $data['email']
@@ -112,11 +118,16 @@ class UserController
 
     /**
      * Update an existing user
+     *
+     * @param ServerRequestInterface $request
+     * @param ResponseInterface $response
+     * @param array $params
+     * @return ResponseInterface
      */
-    public function update(Request $request, Response $response, array $params)
+    public function update(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
         $id = $params['id'] ?? null;
-        $data = $request->parsedBody ?? [];
+        $data = $request->getParsedBody() ?? [];
 
         $this->logger->info('Updating user', ['id' => $id, 'data' => $data]);
 
@@ -135,12 +146,9 @@ class UserController
         // }
 
         // if (empty($updateFields)) {
-        //     $response->status(422);
-        //     $response->header('Content-Type', 'application/json');
-        //     $response->end(json_encode([
+        //     return $this->jsonResponse($response->withStatus(422), [
         //         'error' => 'No fields to update'
-        //     ]));
-        //     return;
+        //     ]);
         // }
 
         // $updateParams[] = $id;
@@ -148,9 +156,7 @@ class UserController
         // $stmt->execute($updateParams);
 
         // Mock response for example
-        $response->header('Content-Type', 'application/json');
-
-        return $response->json()->withJson([
+        return $this->jsonResponse($response, [
             'id' => (int)$id,
             'name' => $data['name'] ?? 'John Doe',
             'email' => $data['email'] ?? 'john@example.com',
@@ -160,8 +166,13 @@ class UserController
 
     /**
      * Delete a user
+     *
+     * @param ServerRequestInterface $request
+     * @param ResponseInterface $response
+     * @param array $params
+     * @return ResponseInterface
      */
-    public function destroy(Request $request, Response $response, array $params)
+    public function destroy(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
         $id = $params['id'] ?? null;
 
@@ -175,10 +186,30 @@ class UserController
         // Mock data for example
         $affected = 1;
 
-        $response->header('Content-Type', 'application/json');
-        return $response->json()->withJson([
+        return $this->jsonResponse($response, [
             'deleted' => $affected > 0,
             'id' => (int)$id
         ]);
+    }
+
+    /**
+     * Helper method to create JSON responses
+     *
+     * @param ResponseInterface $response
+     * @param mixed $data
+     * @return ResponseInterface
+     */
+    private function jsonResponse(ResponseInterface $response, $data): ResponseInterface
+    {
+        $response = $response->withHeader('Content-Type', 'application/json');
+
+        // If using our custom Response class
+        if ($response instanceof Response) {
+            return $response->withJson($data);
+        }
+
+        // For other PSR-7 implementations
+        $response->getBody()->write(json_encode($data));
+        return $response;
     }
 }

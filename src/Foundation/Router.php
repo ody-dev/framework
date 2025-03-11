@@ -7,7 +7,6 @@ use FastRoute;
 use Illuminate\Container\Container;
 use Ody\Core\Foundation\Middleware\Middleware;
 
-
 class Router
 {
     private $dispatcher;
@@ -58,7 +57,8 @@ class Router
      */
     public function get(string $path, $handler): Route
     {
-        $route = new Route('GET', $path, $handler, $this, $this->middleware);
+        // Pass middleware instead of $this (router) to the Route constructor
+        $route = new Route('GET', $path, $handler, $this->middleware);
         $this->routes[] = ['GET', $path, $handler];
         return $route;
     }
@@ -72,7 +72,8 @@ class Router
      */
     public function post(string $path, $handler): Route
     {
-        $route = new Route('POST', $path, $handler, $this, $this->middleware);
+        // Pass middleware instead of $this
+        $route = new Route('POST', $path, $handler, $this->middleware);
         $this->routes[] = ['POST', $path, $handler];
         return $route;
     }
@@ -86,7 +87,8 @@ class Router
      */
     public function put(string $path, $handler): Route
     {
-        $route = new Route('PUT', $path, $handler, $this, $this->middleware);
+        // Pass middleware instead of $this
+        $route = new Route('PUT', $path, $handler, $this->middleware);
         $this->routes[] = ['PUT', $path, $handler];
         return $route;
     }
@@ -100,7 +102,8 @@ class Router
      */
     public function delete(string $path, $handler): Route
     {
-        $route = new Route('DELETE', $path, $handler, $this, $this->middleware);
+        // Pass middleware instead of $this
+        $route = new Route('DELETE', $path, $handler, $this->middleware);
         $this->routes[] = ['DELETE', $path, $handler];
         return $route;
     }
@@ -114,7 +117,8 @@ class Router
      */
     public function patch(string $path, $handler): Route
     {
-        $route = new Route('PATCH', $path, $handler, $this, $this->middleware);
+        // Pass middleware instead of $this
+        $route = new Route('PATCH', $path, $handler, $this->middleware);
         $this->routes[] = ['PATCH', $path, $handler];
         return $route;
     }
@@ -128,7 +132,8 @@ class Router
      */
     public function options(string $path, $handler): Route
     {
-        $route = new Route('OPTIONS', $path, $handler, $this, $this->middleware);
+        // Pass middleware instead of $this
+        $route = new Route('OPTIONS', $path, $handler, $this->middleware);
         $this->routes[] = ['OPTIONS', $path, $handler];
         return $route;
     }
@@ -161,42 +166,54 @@ class Router
             public function get($path, $handler)
             {
                 $route = $this->router->get($this->prefix . $path, $handler);
-                $route->middlewareList($this->middlewareList);
+                foreach ($this->middlewareList as $middleware) {
+                    $route->middleware($middleware);
+                }
                 return $route;
             }
 
             public function post($path, $handler)
             {
                 $route = $this->router->post($this->prefix . $path, $handler);
-                $route->middlewareList($this->middlewareList);
+                foreach ($this->middlewareList as $middleware) {
+                    $route->middleware($middleware);
+                }
                 return $route;
             }
 
             public function put($path, $handler)
             {
                 $route = $this->router->put($this->prefix . $path, $handler);
-                $route->middlewareList($this->middlewareList);
+                foreach ($this->middlewareList as $middleware) {
+                    $route->middleware($middleware);
+                }
                 return $route;
             }
 
             public function delete($path, $handler)
             {
                 $route = $this->router->delete($this->prefix . $path, $handler);
-                $route->middlewareList($this->middlewareList);
+                foreach ($this->middlewareList as $middleware) {
+                    $route->middleware($middleware);
+                }
                 return $route;
             }
 
             public function patch($path, $handler)
             {
                 $route = $this->router->patch($this->prefix . $path, $handler);
-                $route->middlewareList($this->middlewareList);
+                foreach ($this->middlewareList as $middleware) {
+                    $route->middleware($middleware);
+                }
                 return $route;
             }
 
             public function options($path, $handler)
             {
                 $route = $this->router->options($this->prefix . $path, $handler);
-                $route->middlewareList($this->middlewareList);
+                foreach ($this->middlewareList as $middleware) {
+                    $route->middleware($middleware);
+                }
                 return $route;
             }
         };

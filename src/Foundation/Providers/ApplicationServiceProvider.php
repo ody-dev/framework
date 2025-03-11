@@ -2,11 +2,20 @@
 namespace Ody\Core\Foundation\Providers;
 
 use Illuminate\Container\Container;
+use Illuminate\Contracts\Container\BindingResolutionException;
 use Ody\Core\Foundation\Application;
 use Ody\Core\Foundation\Logger;
 use Ody\Core\Foundation\Middleware\Middleware;
-use Ody\Core\Foundation\Middleware\RouteMiddlewareManager;
+use Ody\Core\Foundation\Middleware\CorsMiddleware;
+use Ody\Core\Foundation\Middleware\JsonBodyParserMiddleware;
+use Ody\Core\Foundation\Middleware\LoggingMiddleware;
 use Ody\Core\Foundation\Router;
+use Nyholm\Psr7\Factory\Psr17Factory;
+use Psr\Http\Message\ServerRequestFactoryInterface;
+use Psr\Http\Message\ResponseFactoryInterface;
+use Psr\Http\Message\StreamFactoryInterface;
+use Psr\Http\Message\UploadedFileFactoryInterface;
+use Psr\Http\Message\UriFactoryInterface;
 
 /**
  * Service provider for core application services
@@ -23,7 +32,7 @@ class ApplicationServiceProvider extends AbstractServiceProvider
         Router::class => null, // Custom registration in registerServices
         Logger::class => null, // Custom registration in registerServices
         Application::class => null, // Custom registration in registerServices
-        RouteMiddlewareManager::class => RouteMiddlewareManager::class,
+        CorsMiddleware::class => null, // Custom registration in registerServices
     ];
 
     /**
@@ -33,15 +42,12 @@ class ApplicationServiceProvider extends AbstractServiceProvider
      */
     protected function registerServices(): void
     {
-        // Register middleware manager
-        $this->container->singleton(RouteMiddlewareManager::class, function ($container) {
-            return new RouteMiddlewareManager();
-        });
+        // Register PSR-17 factories
+        $this->registerPsr17Factories();
 
         // Register middleware
         $this->container->singleton(Middleware::class, function ($container) {
-            $routeMiddlewareManager = $container->make(RouteMiddlewareManager::class);
-            return new Middleware($routeMiddlewareManager);
+            return new Middleware($container);
         });
 
         // Register logger with configuration
@@ -59,6 +65,9 @@ class ApplicationServiceProvider extends AbstractServiceProvider
             return new Router($container, $middleware);
         });
 
+        // Register PSR-15 middleware classes
+        $this->registerPsr15Middleware();
+
         // Register application
         $this->container->singleton(Application::class, function ($container) {
             $router = $container->make(Router::class);
@@ -70,61 +79,86 @@ class ApplicationServiceProvider extends AbstractServiceProvider
     }
 
     /**
+     * Register PSR-17 factories
+     *
+     * @return void
+     */
+    private function registerPsr17Factories(): void
+    {
+        // Use Nyholm's PSR-17 factory
+        $this->container->singleton(Psr17Factory::class, function () {
+            return new Psr17Factory();
+        });
+
+        // Bind PSR-17 interfaces to Nyholm implementation
+        $this->container->singleton(ServerRequestFactoryInterface::class, function ($container) {
+            return $container->make(Psr17Factory::class);
+        });
+
+        $this->container->singleton(ResponseFactoryInterface::class, function ($container) {
+            return $container->make(Psr17Factory::class);
+        });
+
+        $this->container->singleton(StreamFactoryInterface::class, function ($container) {
+            return $container->make(Psr17Factory::class);
+        });
+
+        $this->container->singleton(UploadedFileFactoryInterface::class, function ($container) {
+            return $container->make(Psr17Factory::class);
+        });
+
+        $this->container->singleton(UriFactoryInterface::class, function ($container) {
+            return $container->make(Psr17Factory::class);
+        });
+    }
+
+    /**
+     * Register PSR-15 middleware implementations
+     *
+     * @return void
+     */
+    private function registerPsr15Middleware(): void
+    {
+        // Register CORS middleware
+        $this->container->singleton(CorsMiddleware::class, function ($container) {
+            $config = $container->make('config');
+            $corsConfig = $config['cors'] ?? [
+                'origin' => '*',
+                'methods' => 'GET, POST, PUT, DELETE, OPTIONS',
+                'headers' => 'Content-Type, Authorization, X-API-Key',
+                'max_age' => 86400
+            ];
+
+            return new CorsMiddleware($corsConfig);
+        });
+
+        // Register JSON body parser middleware
+        $this->container->singleton(JsonBodyParserMiddleware::class, function () {
+            return new JsonBodyParserMiddleware();
+        });
+
+        // Register logging middleware
+        $this->container->singleton(LoggingMiddleware::class, function ($container) {
+            $logger = $container->make(Logger::class);
+            return new LoggingMiddleware($logger);
+        });
+    }
+
+    /**
      * Bootstrap any application services
      *
      * @param Container $container
      * @return void
+     * @throws BindingResolutionException
      */
     public function boot(Container $container): void
     {
-        // Add default middleware if needed
+        // Get middleware instance
         $middleware = $container->make(Middleware::class);
 
-        // Add global logging middleware
-        $middleware->addNamed('logging', function ($request, $response, $next) use ($container) {
-            $logger = $container->make(Logger::class);
-            $logger->info('Request started', [
-                'method' => $request->server['request_method'] ?? 'UNKNOWN',
-                'uri' => $request->server['request_uri'] ?? '/',
-            ]);
-
-            $start = microtime(true);
-            $next($request, $response);
-            $duration = microtime(true) - $start;
-
-            $logger->info('Request completed', [
-                'duration' => round($duration * 1000, 2) . 'ms',
-                'status' => $response->statusCode ?? 200,
-            ]);
-        });
-
-        // Add global cors middleware
-        $middleware->addNamed('cors', function ($request, $response, $next) {
-            $response->header('Access-Control-Allow-Origin', '*');
-            $response->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-            $response->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
-
-            if ($request->server['request_method'] === 'OPTIONS') {
-                $response->status(200);
-                return;
-            }
-
-            $next($request, $response);
-        });
-
-        // Register body parser middleware
-        $middleware->addNamed('json', function ($request, $response, $next) {
-            if (isset($request->header['content-type']) &&
-                strpos($request->header['content-type'], 'application/json') !== false) {
-                $request->parsedBody = json_decode($request->rawContent(), true) ?? [];
-            }
-
-            $next($request, $response);
-        });
-
-        // Apply global middlewares to all routes
-        $middleware->addToGroup('*:*', 'cors');
-        $middleware->addToGroup('*:*', 'json');
-        $middleware->addToGroup('*:*', 'logging');
+        // Add global PSR-15 middleware
+        $middleware->add($container->make(CorsMiddleware::class));
+        $middleware->add($container->make(JsonBodyParserMiddleware::class));
+        $middleware->add($container->make(LoggingMiddleware::class));
     }
 }

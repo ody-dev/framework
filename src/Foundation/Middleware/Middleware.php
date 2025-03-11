@@ -2,63 +2,64 @@
 
 namespace Ody\Core\Foundation\Middleware;
 
-use Ody\Core\Foundation\Http\Request;
+
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 use Ody\Core\Foundation\Http\Response;
+use Ody\Core\Foundation\Http\Request;
+use Illuminate\Container\Container;
 
 /**
- * Middleware handler
+ * PSR-15 compliant middleware implementation
  */
 class Middleware
 {
     /**
-     * @var array
+     * @var array Global middleware stack
      */
-    private $globalMiddleware = [];
+    private array $globalMiddleware = [];
 
     /**
-     * @var array
+     * @var array Named middleware
      */
-    private $namedMiddleware = [];
+    private array $namedMiddleware = [];
 
     /**
-     * @var array
+     * @var array Route-specific middleware
      */
-    private $routeMiddleware = [];
+    private array $routeMiddleware = [];
 
     /**
-     * @var array
+     * @var array Middleware groups
      */
-    private $groups = [];
+    private array $groups = [];
 
     /**
-     * @var RouteMiddlewareManager|null
+     * @var Container|null
      */
-    private $routeMiddlewareManager;
+    private ?Container $container;
 
     /**
      * Middleware constructor
      *
-     * @param RouteMiddlewareManager|null $routeMiddlewareManager
+     * @param Container|null $container
      */
-    public function __construct(?RouteMiddlewareManager $routeMiddlewareManager = null)
+    public function __construct(?Container $container = null)
     {
-        $this->routeMiddlewareManager = $routeMiddlewareManager;
+        $this->container = $container;
     }
 
     /**
      * Add global middleware
      *
-     * @param callable $middleware
+     * @param string|callable|MiddlewareInterface $middleware
      * @return self
      */
-    public function add(callable $middleware): self
+    public function add($middleware): self
     {
         $this->globalMiddleware[] = $middleware;
-
-        if ($this->routeMiddlewareManager) {
-            $this->routeMiddlewareManager->addGlobal($middleware);
-        }
-
         return $this;
     }
 
@@ -66,17 +67,12 @@ class Middleware
      * Register a named middleware
      *
      * @param string $name
-     * @param callable $middleware
+     * @param string|callable|MiddlewareInterface $middleware
      * @return self
      */
-    public function addNamed(string $name, callable $middleware): self
+    public function addNamed(string $name, $middleware): self
     {
         $this->namedMiddleware[$name] = $middleware;
-
-        if ($this->routeMiddlewareManager) {
-            $this->routeMiddlewareManager->addNamed($name, $middleware);
-        }
-
         return $this;
     }
 
@@ -84,9 +80,9 @@ class Middleware
      * Get a named middleware
      *
      * @param string $name
-     * @return callable|null
+     * @return callable|MiddlewareInterface|null
      */
-    public function getNamedMiddleware(string $name): ?callable
+    public function getNamedMiddleware(string $name)
     {
         return $this->namedMiddleware[$name] ?? null;
     }
@@ -96,7 +92,7 @@ class Middleware
      *
      * @param string $method HTTP method
      * @param string $path Route path
-     * @param string|callable $middleware Middleware name or callable
+     * @param string|callable|MiddlewareInterface $middleware
      * @return self
      */
     public function addToRoute(string $method, string $path, $middleware): self
@@ -108,11 +104,6 @@ class Middleware
         }
 
         $this->routeMiddleware[$route][] = $middleware;
-
-        if ($this->routeMiddlewareManager) {
-            $this->routeMiddlewareManager->addToRoute($method, $path, $middleware);
-        }
-
         return $this;
     }
 
@@ -120,7 +111,7 @@ class Middleware
      * Apply middleware to multiple routes using a pattern
      *
      * @param string $pattern Route pattern (uses fnmatch)
-     * @param string|callable $middleware Middleware name or callable
+     * @param string|callable|MiddlewareInterface $middleware
      * @return self
      */
     public function addToGroup(string $pattern, $middleware): self
@@ -129,11 +120,6 @@ class Middleware
             'pattern' => $pattern,
             'middleware' => $middleware
         ];
-
-        if ($this->routeMiddlewareManager) {
-            $this->routeMiddlewareManager->addToGroup($pattern, $middleware);
-        }
-
         return $this;
     }
 
@@ -176,14 +162,14 @@ class Middleware
         // Add route-specific middleware
         if (isset($this->routeMiddleware[$route])) {
             foreach ($this->routeMiddleware[$route] as $m) {
-                $middleware[] = $this->resolveMiddleware($m);
+                $middleware[] = $m;
             }
         }
 
         // Add group middleware
         foreach ($this->groups as $group) {
             if ($this->routeMatchesPattern($route, $group['pattern'])) {
-                $middleware[] = $this->resolveMiddleware($group['middleware']);
+                $middleware[] = $group['middleware'];
             }
         }
 
@@ -193,52 +179,94 @@ class Middleware
     /**
      * Resolve middleware from name or callable
      *
-     * @param string|callable $middleware
-     * @return callable
+     * @param string|callable|MiddlewareInterface $middleware
+     * @return MiddlewareInterface
      * @throws \InvalidArgumentException
      */
-    private function resolveMiddleware($middleware): callable
+    private function resolveMiddleware($middleware): MiddlewareInterface
     {
-        if (is_callable($middleware)) {
+        // If it's already a PSR-15 middleware, return it
+        if ($middleware instanceof MiddlewareInterface) {
             return $middleware;
         }
 
-        if (is_string($middleware) && isset($this->namedMiddleware[$middleware])) {
-            return $this->namedMiddleware[$middleware];
+        // If it's a string, try to resolve it from the container
+        if (is_string($middleware)) {
+            if (isset($this->namedMiddleware[$middleware])) {
+                return $this->resolveMiddleware($this->namedMiddleware[$middleware]);
+            }
+
+            if ($this->container && $this->container->has($middleware)) {
+                $resolvedMiddleware = $this->container->get($middleware);
+                if ($resolvedMiddleware instanceof MiddlewareInterface) {
+                    return $resolvedMiddleware;
+                }
+            }
+
+            throw new \InvalidArgumentException("Middleware '$middleware' not found or not a valid middleware");
         }
 
-        throw new \InvalidArgumentException("Middleware '$middleware' not found");
+        // If it's a callable, wrap it in a PSR-15 compatible middleware
+        if (is_callable($middleware)) {
+            return new CallableMiddlewareAdapter($middleware);
+        }
+
+        throw new \InvalidArgumentException('Middleware must be a string, callable, or MiddlewareInterface instance');
     }
 
     /**
      * Run middleware stack for a route
      *
-     * @param Request $request
-     * @param Response $response
-     * @param callable $handler
-     * @return mixed
+     * @param ServerRequestInterface $request
+     * @param callable $handler Final request handler
+     * @return ResponseInterface
      */
-    public function run(Request $request, Response $response, callable $handler)
+    public function run(ServerRequestInterface $request, callable $handler): ResponseInterface
     {
         $method = $request->getMethod();
-        $path = $request->getPath();
+        $path = $request->getUri()->getPath();
 
-        if ($this->routeMiddlewareManager) {
-            return $this->routeMiddlewareManager->run($request, $response, $handler, $method, $path);
+        $middlewareList = $this->getMiddlewareForRoute($method, $path);
+
+        // Resolve all middleware to PSR-15 compatible instances
+        $psr15Middleware = [];
+        foreach ($middlewareList as $middleware) {
+            try {
+                $psr15Middleware[] = $this->resolveMiddleware($middleware);
+            } catch (\InvalidArgumentException $e) {
+                // Log and continue, skipping this middleware
+                if ($this->container && $this->container->has('logger')) {
+                    $this->container->get('logger')->warning('Failed to resolve middleware', [
+                        'error' => $e->getMessage(),
+                        'middleware' => is_string($middleware) ? $middleware : get_class($middleware)
+                    ]);
+                }
+            }
         }
 
-        $middleware = $this->getMiddlewareForRoute($method, $path);
-        $next = $handler;
+        // Create callable adapter for the final handler
+        $handlerAdapter = function (ServerRequestInterface $request) use ($handler): ResponseInterface {
+            $response = call_user_func($handler, $request);
 
-        // Execute middleware in reverse order
-        $middlewareStack = array_reverse($middleware);
+            // Ensure we return a ResponseInterface
+            if (!$response instanceof ResponseInterface) {
+                // If handler returns something else, convert to Response
+                if (is_string($response)) {
+                    return (new Response())->body($response);
+                } elseif (is_array($response) || is_object($response)) {
+                    return (new Response())->json()->withJson($response);
+                } else {
+                    return new Response();
+                }
+            }
 
-        foreach ($middlewareStack as $m) {
-            $next = function ($request, $response) use ($m, $next) {
-                return $m($request, $response, $next);
-            };
-        }
+            return $response;
+        };
 
-        return $next($request, $response);
+        // Create request handler with middleware stack
+        $requestHandler = new RequestHandler($handlerAdapter, $psr15Middleware);
+
+        // Process the request through the middleware stack
+        return $requestHandler->handle($request);
     }
 }

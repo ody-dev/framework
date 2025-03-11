@@ -6,9 +6,16 @@ use Illuminate\Contracts\Container\BindingResolutionException;
 use Ody\Core\Foundation\Loaders\RouteLoader;
 use Ody\Core\Foundation\Logger;
 use Ody\Core\Foundation\Middleware\Middleware;
+use Ody\Core\Foundation\Middleware\AuthMiddleware;
+use Ody\Core\Foundation\Middleware\RoleMiddleware;
+use Ody\Core\Foundation\Middleware\ThrottleMiddleware;
 use Ody\Core\Foundation\Router;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 use Ody\Core\Foundation\Http\Request;
 use Ody\Core\Foundation\Http\Response;
+use Ody\Core\Foundation\Http\RequestHandler;
 
 /**
  * Service provider for routes
@@ -70,86 +77,129 @@ class RouteServiceProvider extends AbstractServiceProvider
         $logger = $container->make(Logger::class);
 
         // Auth middleware with guard support
-        $middleware->addNamed('auth', function ($request, $response, $next) use ($container, $logger) {
-            $guard = $request->middlewareParams['auth'] ?? 'web';
+        $middleware->addNamed('auth', function (ServerRequestInterface $request, callable $next) use ($container, $logger) {
+            // Create auth middleware with 'web' guard
+            $authMiddleware = new AuthMiddleware('web', $logger);
 
-            $authHeader = $request->header['authorization'] ?? '';
+            // Create a request handler for the next middleware
+            $handler = new class($next) implements RequestHandlerInterface {
+                private $next;
 
-            // Authenticate based on the guard
-            if ($guard === 'api') {
-                // API token auth
-                if (strpos($authHeader, 'Bearer ') === 0) {
-                    $token = substr($authHeader, 7);
-                    if ($token === 'valid-api-token') {
-                        $next($request, $response);
-                        return;
-                    }
+                public function __construct(callable $next) {
+                    $this->next = $next;
                 }
-            } elseif ($guard === 'jwt') {
-                // JWT auth
-                if (strpos($authHeader, 'Bearer ') === 0) {
-                    $token = substr($authHeader, 7);
-                    // Verify JWT token (simplified)
-                    if (strpos($token, 'jwt-') === 0) {
-                        $next($request, $response);
-                        return;
-                    }
+
+                public function handle(ServerRequestInterface $request): ResponseInterface {
+                    return call_user_func($this->next, $request);
                 }
-            } else {
-                // Regular auth (web)
-                if (strpos($authHeader, 'Bearer ') === 0) {
-                    $token = substr($authHeader, 7);
-                    if ($token === 'valid-token') {
-                        $next($request, $response);
-                        return;
-                    }
+            };
+
+            // Process the request through the auth middleware
+            return $authMiddleware->process($request, $handler);
+        });
+
+        // Auth:api middleware
+        $middleware->addNamed('auth:api', function (ServerRequestInterface $request, callable $next) use ($container, $logger) {
+            // Create auth middleware with 'api' guard
+            $authMiddleware = new AuthMiddleware('api', $logger);
+
+            // Create a request handler for the next middleware
+            $handler = new class($next) implements RequestHandlerInterface {
+                private $next;
+
+                public function __construct(callable $next) {
+                    $this->next = $next;
                 }
-            }
 
-            $logger->warning('Unauthorized access attempt', [
-                'guard' => $guard,
-                'ip' => $request->server['remote_addr'] ?? 'unknown'
-            ]);
+                public function handle(ServerRequestInterface $request): ResponseInterface {
+                    return call_user_func($this->next, $request);
+                }
+            };
 
-            $response->status(401);
-            $response->header('Content-Type', 'application/json');
+            // Process the request through the auth middleware
+            return $authMiddleware->process($request, $handler);
+        });
 
-            $response->end(json_encode([
-                'error' => 'Unauthorized',
-                'guard' => $guard
-            ]));
+        // Auth:jwt middleware
+        $middleware->addNamed('auth:jwt', function (ServerRequestInterface $request, callable $next) use ($container, $logger) {
+            // Create auth middleware with 'jwt' guard
+            $authMiddleware = new AuthMiddleware('jwt', $logger);
+
+            // Create a request handler for the next middleware
+            $handler = new class($next) implements RequestHandlerInterface {
+                private $next;
+
+                public function __construct(callable $next) {
+                    $this->next = $next;
+                }
+
+                public function handle(ServerRequestInterface $request): ResponseInterface {
+                    return call_user_func($this->next, $request);
+                }
+            };
+
+            // Process the request through the auth middleware
+            return $authMiddleware->process($request, $handler);
         });
 
         // Role middleware
-        $middleware->addNamed('role', function ($request, $response, $next) {
-            $requiredRole = $request->middlewareParams['role'] ?? '';
+        $middleware->addNamed('role', function (ServerRequestInterface $request, callable $next) use ($logger) {
+            $role = 'user';
 
-            // Check if user has the required role
-            // In a real app, fetch user role from database or JWT token
-            $userRole = 'admin'; // Example
-
-            if ($userRole === $requiredRole) {
-                $next($request, $response);
-                return;
+            // If it's our custom Request class with middlewareParams
+            if ($request instanceof Request && isset($request->middlewareParams['role'])) {
+                $role = $request->middlewareParams['role'];
             }
 
-            $response->status(403);
-            $response->header('Content-Type', 'application/json');
-            $response->end(json_encode([
-                'error' => 'Forbidden - Insufficient permissions'
-            ]));
+            // Create role middleware
+            $roleMiddleware = new RoleMiddleware($role, $logger);
+
+            // Create a request handler for the next middleware
+            $handler = new class($next) implements RequestHandlerInterface {
+                private $next;
+
+                public function __construct(callable $next) {
+                    $this->next = $next;
+                }
+
+                public function handle(ServerRequestInterface $request): ResponseInterface {
+                    return call_user_func($this->next, $request);
+                }
+            };
+
+            // Process the request through the role middleware
+            return $roleMiddleware->process($request, $handler);
         });
 
         // Throttle middleware
-        $middleware->addNamed('throttle', function ($request, $response, $next) {
-            $rate = $request->middlewareParams['throttle'] ?? '60,1';
+        $middleware->addNamed('throttle', function (ServerRequestInterface $request, callable $next) {
+            $rate = '60,1'; // Default rate
+
+            // If it's our custom Request class with middlewareParams
+            if ($request instanceof Request && isset($request->middlewareParams['throttle'])) {
+                $rate = $request->middlewareParams['throttle'];
+            }
+
             list($maxAttempts, $minutes) = explode(',', $rate);
 
-            // Simplified throttling check (for demo purposes)
-            $response->header('X-RateLimit-Limit', $maxAttempts);
-            $response->header('X-RateLimit-Remaining', $maxAttempts - 1);
+            // Create throttle middleware
+            $throttleMiddleware = new ThrottleMiddleware((int)$maxAttempts, (int)$minutes);
 
-            $next($request, $response);
+            // Create a request handler for the next middleware
+            $handler = new class($next) implements RequestHandlerInterface {
+                private $next;
+
+                public function __construct(callable $next) {
+                    $this->next = $next;
+                }
+
+                public function handle(ServerRequestInterface $request): ResponseInterface {
+                    return call_user_func($this->next, $request);
+                }
+            };
+
+            // Process the request through the throttle middleware
+            return $throttleMiddleware->process($request, $handler);
         });
     }
 

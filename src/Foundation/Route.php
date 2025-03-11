@@ -1,22 +1,29 @@
 <?php
+
 namespace Ody\Core\Foundation;
 
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use Ody\Core\Foundation\Http\Request;
+use Ody\Core\Foundation\Http\Response;
 use Ody\Core\Foundation\Middleware\Middleware;
+use Psr\Http\Server\RequestHandlerInterface;
+use Ody\Core\Foundation\Http\RequestHandler;
 
 /**
- * Route class for fluent middleware definition
+ * Route class for defining application routes
  */
 class Route
 {
     /**
      * @var string HTTP method
      */
-    private $method;
+    private string $method;
 
     /**
      * @var string Route path
      */
-    private $path;
+    private string $path;
 
     /**
      * @var mixed Route handler
@@ -24,14 +31,9 @@ class Route
     private $handler;
 
     /**
-     * @var Router
-     */
-    private $router;
-
-    /**
      * @var Middleware
      */
-    private $middleware;
+    private Middleware $middleware;
 
     /**
      * Route constructor
@@ -39,42 +41,62 @@ class Route
      * @param string $method
      * @param string $path
      * @param mixed $handler
-     * @param Router $router
      * @param Middleware $middleware
      */
-    public function __construct(string $method, string $path, $handler, Router $router, Middleware $middleware)
+    public function __construct(string $method, string $path, $handler, Middleware $middleware)
     {
         $this->method = $method;
         $this->path = $path;
         $this->handler = $handler;
-        $this->router = $router;
         $this->middleware = $middleware;
     }
 
     /**
-     * Apply middleware to this route
+     * Add middleware to the route
      *
-     * @param string|callable $middleware Middleware name(s) or callable
+     * @param string|callable $middleware
      * @return self
      */
     public function middleware($middleware): self
     {
-        // Handle middleware with parameters (auth:api)
+        // Check if this is a parameterized middleware (e.g., 'role:admin')
         if (is_string($middleware) && strpos($middleware, ':') !== false) {
-            list($name, $parameter) = explode(':', $middleware, 2);
+            [$name, $parameter] = explode(':', $middleware, 2);
 
             // Create a wrapper middleware that adds the parameter to the request
-            $this->middleware->addToRoute($this->method, $this->path, function ($request, $response, $next) use ($name, $parameter) {
+            $this->middleware->addToRoute($this->method, $this->path, function (ServerRequestInterface $request, callable $next) use ($name, $parameter) {
                 // Add parameter to request for the named middleware to use
-                $request->middlewareParams = $request->middlewareParams ?? [];
-                $request->middlewareParams[$name] = $parameter;
+                if ($request instanceof Request) {
+                    $request->middlewareParams = $request->middlewareParams ?? [];
+                    $request->middlewareParams[$name] = $parameter;
+                }
 
-                // Get the actual middleware and execute it
+                // Get the actual middleware
                 $namedMiddleware = $this->middleware->getNamedMiddleware($name);
-                return $namedMiddleware($request, $response, $next);
+
+                if ($namedMiddleware) {
+                    // Create a PSR-15 compatible request handler for the next middleware
+                    $handler = new class($next) implements RequestHandlerInterface {
+                        private $next;
+
+                        public function __construct(callable $next) {
+                            $this->next = $next;
+                        }
+
+                        public function handle(ServerRequestInterface $request): ResponseInterface {
+                            return call_user_func($this->next, $request);
+                        }
+                    };
+
+                    // Call the middleware with the request and next handler
+                    return $namedMiddleware($request, $next);
+                }
+
+                // If the middleware wasn't found, just continue to the next one
+                return $next($request);
             });
         } else {
-            // Standard middleware
+            // Regular middleware (no parameters)
             $this->middleware->addToRoute($this->method, $this->path, $middleware);
         }
 
@@ -82,22 +104,7 @@ class Route
     }
 
     /**
-     * Apply multiple middleware to this route
-     *
-     * @param array $middlewareList Array of middleware names or callables
-     * @return self
-     */
-    public function middlewareList(array $middlewareList): self
-    {
-        foreach ($middlewareList as $middleware) {
-            $this->middleware($middleware);
-        }
-
-        return $this;
-    }
-
-    /**
-     * Get HTTP method
+     * Get the route method
      *
      * @return string
      */
@@ -107,7 +114,7 @@ class Route
     }
 
     /**
-     * Get route path
+     * Get the route path
      *
      * @return string
      */
@@ -117,7 +124,7 @@ class Route
     }
 
     /**
-     * Get route handler
+     * Get the route handler
      *
      * @return mixed
      */

@@ -1,0 +1,72 @@
+<?php
+
+namespace Ody\Core\Foundation\Middleware;
+
+use Ody\Core\Foundation\Http\Response;
+use Ody\Core\Foundation\Logger;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
+
+/**
+ * Role-based Access Control Middleware (PSR-15)
+ */
+class RoleMiddleware implements MiddlewareInterface
+{
+    /**
+     * @var string Required role
+     */
+    private string $requiredRole;
+
+    /**
+     * @var Logger
+     */
+    private Logger $logger;
+
+    /**
+     * RoleMiddleware constructor
+     *
+     * @param string $requiredRole
+     * @param Logger|null $logger
+     */
+    public function __construct(string $requiredRole, Logger $logger = null)
+    {
+        $this->requiredRole = $requiredRole;
+        $this->logger = $logger ?? new Logger();
+    }
+
+    /**
+     * Process an incoming server request
+     *
+     * @param ServerRequestInterface $request
+     * @param RequestHandlerInterface $handler
+     * @return ResponseInterface
+     */
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
+    {
+        // Get the user role (in a real app, fetch from JWT token or session)
+        // This is a simplified example
+        $userRole = 'admin'; // Example user role
+
+        if ($userRole === $this->requiredRole) {
+            return $handler->handle($request);
+        }
+
+        // Access denied
+        $this->logger->warning('Insufficient permissions', [
+            'required_role' => $this->requiredRole,
+            'user_role' => $userRole,
+            'uri' => $request->getUri()->getPath()
+        ]);
+
+        $response = new Response();
+        return $response
+            ->withStatus(403)
+            ->json()
+            ->withJson([
+                'error' => 'Forbidden - Insufficient permissions',
+                'required_role' => $this->requiredRole
+            ]);
+    }
+}

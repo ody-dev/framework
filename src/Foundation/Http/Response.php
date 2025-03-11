@@ -1,30 +1,36 @@
 <?php
+
 namespace Ody\Core\Foundation\Http;
 
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamInterface;
+use Nyholm\Psr7\Factory\Psr17Factory;
+use Nyholm\Psr7\Response as PsrResponse;
+
 /**
- * Standard HTTP Response wrapper
+ * PSR-7 compatible HTTP Response
  */
-class Response
+class Response implements ResponseInterface
 {
     /**
-     * @var int HTTP status code
+     * @var ResponseInterface PSR-7 response
      */
-    public $statusCode = 200;
-
-    /**
-     * @var array Response headers
-     */
-    private $headers = [];
-
-    /**
-     * @var string Response body
-     */
-    private $body = '';
+    private ResponseInterface $psrResponse;
 
     /**
      * @var bool Whether the response has been sent
      */
-    private $sent = false;
+    private bool $sent = false;
+
+    /**
+     * Response constructor
+     *
+     * @param ResponseInterface|null $response
+     */
+    public function __construct(?ResponseInterface $response = null)
+    {
+        $this->psrResponse = $response ?? new PsrResponse();
+    }
 
     /**
      * Set HTTP status code
@@ -34,8 +40,9 @@ class Response
      */
     public function status(int $statusCode): self
     {
-        $this->statusCode = $statusCode;
-        return $this;
+        $new = clone $this;
+        $new->psrResponse = $this->psrResponse->withStatus($statusCode);
+        return $new;
     }
 
     /**
@@ -47,8 +54,9 @@ class Response
      */
     public function header(string $name, string $value): self
     {
-        $this->headers[$name] = $value;
-        return $this;
+        $new = clone $this;
+        $new->psrResponse = $this->psrResponse->withHeader($name, $value);
+        return $new;
     }
 
     /**
@@ -59,8 +67,7 @@ class Response
      */
     public function contentType(string $contentType): self
     {
-        $this->header('Content-Type', $contentType);
-        return $this;
+        return $this->header('Content-Type', $contentType);
     }
 
     /**
@@ -70,8 +77,7 @@ class Response
      */
     public function json(): self
     {
-        $this->contentType('application/json');
-        return $this;
+        return $this->contentType('application/json');
     }
 
     /**
@@ -81,8 +87,7 @@ class Response
      */
     public function text(): self
     {
-        $this->contentType('text/plain');
-        return $this;
+        return $this->contentType('text/plain');
     }
 
     /**
@@ -92,8 +97,7 @@ class Response
      */
     public function html(): self
     {
-        $this->contentType('text/html');
-        return $this;
+        return $this->contentType('text/html');
     }
 
     /**
@@ -104,8 +108,12 @@ class Response
      */
     public function body(string $content): self
     {
-        $this->body = $content;
-        return $this;
+        $factory = new Psr17Factory();
+        $body = $factory->createStream($content);
+
+        $new = clone $this;
+        $new->psrResponse = $this->psrResponse->withBody($body);
+        return $new;
     }
 
     /**
@@ -117,9 +125,11 @@ class Response
      */
     public function withJson($data, int $options = 0): self
     {
-        $this->json();
-        $this->body(json_encode($data, $options));
-        return $this;
+        $json = json_encode($data, $options);
+
+        return $this
+            ->json()
+            ->body($json);
     }
 
     /**
@@ -131,7 +141,7 @@ class Response
     public function end(?string $content = null): void
     {
         if ($content !== null) {
-            $this->body = $content;
+            $this->body($content);
         }
 
         $this->send();
@@ -149,15 +159,17 @@ class Response
         }
 
         // Set status code
-        http_response_code($this->statusCode);
+        http_response_code($this->psrResponse->getStatusCode());
 
         // Set headers
-        foreach ($this->headers as $name => $value) {
-            header("$name: $value");
+        foreach ($this->psrResponse->getHeaders() as $name => $values) {
+            foreach ($values as $value) {
+                header(sprintf('%s: %s', $name, $value), false);
+            }
         }
 
         // Output body
-        echo $this->body;
+        echo (string) $this->psrResponse->getBody();
 
         $this->sent = true;
     }
@@ -177,18 +189,107 @@ class Response
      *
      * @return string
      */
-    public function getBody(): string
+    public function getBodyAsString(): string
     {
-        return $this->body;
+        return (string) $this->psrResponse->getBody();
     }
 
     /**
-     * Get headers
+     * Get status code
      *
-     * @return array
+     * @return int
      */
-    public function getHeaders(): array
+    public function getStatusCode(): int
     {
-        return $this->headers;
+        return $this->psrResponse->getStatusCode();
+    }
+
+    /* PSR-7 ResponseInterface methods */
+
+    public function getProtocolVersion()
+    {
+        return $this->psrResponse->getProtocolVersion();
+    }
+
+    public function withProtocolVersion($version)
+    {
+        $new = clone $this;
+        $new->psrResponse = $this->psrResponse->withProtocolVersion($version);
+        return $new;
+    }
+
+    public function getHeaders()
+    {
+        return $this->psrResponse->getHeaders();
+    }
+
+    public function hasHeader($name)
+    {
+        return $this->psrResponse->hasHeader($name);
+    }
+
+    public function getHeader($name)
+    {
+        return $this->psrResponse->getHeader($name);
+    }
+
+    public function getHeaderLine($name)
+    {
+        return $this->psrResponse->getHeaderLine($name);
+    }
+
+    public function withHeader($name, $value)
+    {
+        $new = clone $this;
+        $new->psrResponse = $this->psrResponse->withHeader($name, $value);
+        return $new;
+    }
+
+    public function withAddedHeader($name, $value)
+    {
+        $new = clone $this;
+        $new->psrResponse = $this->psrResponse->withAddedHeader($name, $value);
+        return $new;
+    }
+
+    public function withoutHeader($name)
+    {
+        $new = clone $this;
+        $new->psrResponse = $this->psrResponse->withoutHeader($name);
+        return $new;
+    }
+
+    public function getBody()
+    {
+        return $this->psrResponse->getBody();
+    }
+
+    public function withBody(StreamInterface $body)
+    {
+        $new = clone $this;
+        $new->psrResponse = $this->psrResponse->withBody($body);
+        return $new;
+    }
+
+    public function withStatus($code, $reasonPhrase = '')
+    {
+        $new = clone $this;
+        $new->psrResponse = $this->psrResponse->withStatus($code, $reasonPhrase);
+        return $new;
+    }
+
+    public function getReasonPhrase()
+    {
+        return $this->psrResponse->getReasonPhrase();
+    }
+
+    /**
+     * Get the underlying PSR-7 response
+     *
+     * @return ResponseInterface
+     */
+    public function getPsrResponse(): ResponseInterface
+    {
+        return $this->psrResponse;
     }
 }

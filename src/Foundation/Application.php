@@ -7,31 +7,34 @@ use Illuminate\Contracts\Container\BindingResolutionException;
 use Ody\Core\Foundation\Http\Request;
 use Ody\Core\Foundation\Http\Response;
 use Ody\Core\Foundation\Middleware\Middleware;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
 /**
- * Main application class
+ * Main application class (PSR-7 and PSR-15 compatible)
  */
 class Application
 {
     /**
      * @var Router
      */
-    private $router;
+    private Router $router;
 
     /**
      * @var Middleware
      */
-    private $middleware;
+    private Middleware $middleware;
 
     /**
      * @var Logger
      */
-    private $logger;
+    private Logger $logger;
 
     /**
      * @var Container
      */
-    private $container;
+    private Container $container;
 
     /**
      * Application constructor
@@ -59,8 +62,8 @@ class Application
         }
 
         if (!$this->container->bound(Middleware::class) && $middleware === null) {
-            $this->container->singleton(Middleware::class, function () {
-                return new Middleware();
+            $this->container->singleton(Middleware::class, function ($container) {
+                return new Middleware($container);
             });
         }
 
@@ -124,91 +127,105 @@ class Application
     /**
      * Handle HTTP request
      *
-     * @param Request|null $request
-     * @return Response
+     * @param ServerRequestInterface|null $request
+     * @return ResponseInterface
      */
-    public function handleRequest(?Request $request = null): Response
+    public function handleRequest(?ServerRequestInterface $request = null): ResponseInterface
     {
         // Create request from globals if not provided
         $request = $request ?? Request::createFromGlobals();
-        $response = new Response();
 
         $method = $request->getMethod();
-        $path = $request->getPath();
+        $path = $request->getUri()->getPath();
 
         // Log incoming request
         $this->logger->info('Request received', [
             'method' => $method,
             'path' => $path,
-            'ip' => $request->server['REMOTE_ADDR'] ?? 'unknown'
+            'ip' => $request->getServerParams()['REMOTE_ADDR'] ?? 'unknown'
         ]);
 
         // Find matching route
         $routeInfo = $this->router->match($method, $path);
 
-        switch ($routeInfo['status']) {
-            case 'found':
-                try {
-                    // Add route parameters to request for middleware access
-                    $request->routeParams = $routeInfo['vars'];
+        // Create a handler for the request based on route info
+        $handler = function (ServerRequestInterface $req) use ($routeInfo, $method, $path, $request): ResponseInterface {
+            $response = new Response();
 
-                    // The handler should now be callable at this point
-                    $handler = $routeInfo['handler'];
+            switch ($routeInfo['status']) {
+                case 'found':
+                    try {
+                        // Add route parameters to request attributes
+                        foreach ($routeInfo['vars'] as $key => $value) {
+                            $req = $req->withAttribute($key, $value);
+                        }
 
-                    // Run middleware stack and route handler
-                    $this->middleware->run($request, $response, function ($req, $res) use ($handler, $routeInfo) {
-                        return call_user_func($handler, $req, $res, $routeInfo['vars']);
-                    });
-                } catch (\Throwable $e) {
-                    $this->logger->error('Error handling request', [
-                        'message' => $e->getMessage(),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        // If request is our custom Request class, also set routeParams for backward compatibility
+                        if ($req instanceof Request) {
+                            $req->routeParams = $routeInfo['vars'];
+                        }
+
+                        // The handler should now be callable at this point
+                        $handler = $routeInfo['handler'];
+
+                        // Call the route handler with the PSR-7 request and response
+                        $result = call_user_func($handler, $req, $response, $routeInfo['vars']);
+
+                        // If a response was returned, use that
+                        if ($result instanceof ResponseInterface) {
+                            return $result;
+                        }
+
+                        // If nothing was returned, return the response
+                        return $response;
+
+                    } catch (\Throwable $e) {
+                        $this->logger->error('Error handling request', [
+                            'message' => $e->getMessage(),
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine()
+                        ]);
+
+                        return $response->status(500)
+                            ->json()
+                            ->withJson([
+                                'error' => 'Internal Server Error'
+                            ]);
+                    }
+
+                case 'method_not_allowed':
+                    $this->logger->warning('Method not allowed', [
+                        'method' => $method,
+                        'path' => $path,
+                        'allowed_methods' => implode(', ', $routeInfo['allowed_methods'])
                     ]);
 
-                    $response->status(500)
+                    return $response->status(405)
+                        ->header('Allow', implode(', ', $routeInfo['allowed_methods']))
                         ->json()
                         ->withJson([
-                            'error' => 'Internal Server Error'
+                            'error' => 'Method Not Allowed'
                         ]);
-                }
-                break;
 
-            case 'method_not_allowed':
-                $this->logger->warning('Method not allowed', [
-                    'method' => $method,
-                    'path' => $path,
-                    'allowed_methods' => implode(', ', $routeInfo['allowed_methods'])
-                ]);
-
-                $response->status(405)
-                    ->header('Allow', implode(', ', $routeInfo['allowed_methods']))
-                    ->json()
-                    ->withJson([
-                        'error' => 'Method Not Allowed'
+                case 'not_found':
+                default:
+                    $this->logger->warning('Route not found', [
+                        'method' => $method,
+                        'path' => $path
                     ]);
-                break;
 
-            case 'not_found':
-            default:
-                $this->logger->warning('Route not found', [
-                    'method' => $method,
-                    'path' => $path
-                ]);
+                    return $response->status(404)
+                        ->json()
+                        ->withJson([
+                            'error' => 'Not Found'
+                        ]);
+            }
+        };
 
-                $response->status(404)
-                    ->json()
-                    ->withJson([
-                        'error' => 'Not Found'
-                    ]);
-                break;
-        }
+        // Process the request through the middleware
+        $response = $this->middleware->run($request, $handler);
 
-        // Ensure response is sent
-        if (!$response->isSent()) {
-            $response->send();
-        }
-
+        // Ensure PSR-7 response is returned
         return $response;
     }
 
@@ -219,6 +236,38 @@ class Application
      */
     public function run(): void
     {
-        $this->handleRequest();
+        $response = $this->handleRequest();
+
+        // Send the response
+        if ($response instanceof Response) {
+            if (!$response->isSent()) {
+                $response->send();
+            }
+        } else {
+            // For non-Response PSR-7 responses, extract and send them
+            $this->sendPsr7Response($response);
+        }
+    }
+
+    /**
+     * Send a PSR-7 response
+     *
+     * @param ResponseInterface $response
+     * @return void
+     */
+    private function sendPsr7Response(ResponseInterface $response): void
+    {
+        // Set status code
+        http_response_code($response->getStatusCode());
+
+        // Set headers
+        foreach ($response->getHeaders() as $name => $values) {
+            foreach ($values as $value) {
+                header(sprintf('%s: %s', $name, $value), false);
+            }
+        }
+
+        // Output body
+        echo (string) $response->getBody();
     }
 }
