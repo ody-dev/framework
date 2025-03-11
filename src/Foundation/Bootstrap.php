@@ -7,6 +7,7 @@ use Illuminate\Container\Container;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Ody\Core\Foundation\Loaders\ServiceProviderLoader;
 use Ody\Core\Foundation\Providers\ConfigServiceProvider;
+use Ody\Core\Foundation\Providers\FacadeServiceProvider;
 use Ody\Core\Foundation\Providers\ServiceProviderManager;
 use Ody\Core\Foundation\Support\Config;
 use Ody\Core\Foundation\Support\Env;
@@ -152,10 +153,17 @@ class Bootstrap
         $providerManager = new ServiceProviderManager($container);
         $container->instance(ServiceProviderManager::class, $providerManager);
 
-        // Register the ConfigServiceProvider first
+        // Register the ConfigServiceProvider first - it needs to be loaded before
+        // other providers as they may depend on configuration
         $configProvider = new ConfigServiceProvider();
         $providerManager->register($configProvider);
         $providerManager->bootProvider($configProvider);
+
+        // Register the FacadeServiceProvider early to allow facades to work
+        // throughout the application bootstrap process
+        $facadeProvider = new FacadeServiceProvider();
+        $providerManager->register($facadeProvider);
+        $providerManager->bootProvider($facadeProvider);
 
         // Create and use the service provider loader
         $serviceProviderLoader = new ServiceProviderLoader($container, $providerManager, $config, $logger);

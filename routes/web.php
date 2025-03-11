@@ -7,6 +7,7 @@
  * Variables $router, $middleware, and $container are available from the RouteLoader.
  */
 
+use Ody\Core\Foundation\Facades\Route;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Ody\Core\Foundation\Http\Response;
@@ -14,7 +15,7 @@ use Ody\Core\Foundation\Middleware\AuthMiddleware;
 use Ody\Core\Foundation\Middleware\RoleMiddleware;
 
 // Public routes
-$router->get('/health', function (ServerRequestInterface $request, ResponseInterface $response) {
+Route::get('/health', function (ServerRequestInterface $request, ResponseInterface $response) {
     $response = $response->withHeader('Content-Type', 'application/json');
 
     if ($response instanceof Response) {
@@ -32,7 +33,7 @@ $router->get('/health', function (ServerRequestInterface $request, ResponseInter
     return $response;
 });
 
-$router->get('/version', function (ServerRequestInterface $request, ResponseInterface $response) {
+Route::get('/version', function (ServerRequestInterface $request, ResponseInterface $response) {
     $response = $response->withHeader('Content-Type', 'application/json');
 
     $data = [
@@ -50,28 +51,27 @@ $router->get('/version', function (ServerRequestInterface $request, ResponseInte
 });
 
 // User routes with middleware
-$router->get('/users', 'App\\Controllers\\UserController@index')
+Route::get('/users', 'App\\Controllers\\UserController@index');
+
+Route::get('/users/{id:\\d+}', 'App\\Controllers\\UserController@show')
     ->middleware('auth:api');
 
-$router->get('/users/{id:\\d+}', 'App\\Controllers\\UserController@show')
-    ->middleware('auth:api');
-
-$router->post('/users', 'App\\Controllers\\UserController@store')
+Route::post('/users', 'App\\Controllers\\UserController@store')
     ->middleware('auth:api')
     ->middleware('role:admin');
 
-$router->put('/users/{id:\\d+}', 'App\\Controllers\\UserController@update')
+Route::put('/users/{id:\\d+}', 'App\\Controllers\\UserController@update')
     ->middleware('auth:api')
     ->middleware('role:admin');
 
-$router->delete('/users/{id:\\d+}', 'App\\Controllers\\UserController@destroy')
+Route::delete('/users/{id:\\d+}', 'App\\Controllers\\UserController@destroy')
     ->middleware('auth:api')
     ->middleware('role:admin');
 
 // API route groups
-$router->group(['prefix' => '/api/v1', 'middleware' => ['throttle:60,1']], function ($router) {
+Route::group(['prefix' => '/api/v1', 'middleware' => ['throttle:60,1']], function ($router) {
     // API routes will be defined here
-    $router->get('/status', function (ServerRequestInterface $request, ResponseInterface $response) {
+    Route::get('/status', function (ServerRequestInterface $request, ResponseInterface $response) {
         $response = $response->withHeader('Content-Type', 'application/json');
 
         $data = [
@@ -90,9 +90,9 @@ $router->group(['prefix' => '/api/v1', 'middleware' => ['throttle:60,1']], funct
 });
 
 // Admin routes
-$router->group(['prefix' => '/admin', 'middleware' => ['auth:jwt', 'role:admin']], function ($router) {
+Route::group(['prefix' => '/admin', 'middleware' => ['auth:jwt', 'role:admin']], function ($router) {
     // Admin routes will be defined here
-    $router->get('/dashboard', function (ServerRequestInterface $request, ResponseInterface $response) {
+    Route::get('/dashboard', function (ServerRequestInterface $request, ResponseInterface $response) {
         $response = $response->withHeader('Content-Type', 'application/json');
 
         $data = [

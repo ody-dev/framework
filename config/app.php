@@ -72,7 +72,6 @@ return [
     */
     'providers' => [
         // Core Service Providers
-        Ody\Core\Foundation\Providers\ConfigServiceProvider::class,
         Ody\Core\Foundation\Providers\LoggingServiceProvider::class,
         Ody\Core\Foundation\Providers\ApplicationServiceProvider::class,
         Ody\Core\Foundation\Providers\DatabaseServiceProvider::class,

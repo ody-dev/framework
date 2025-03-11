@@ -25,7 +25,7 @@ class LoggingServiceProvider extends AbstractServiceProvider
             // Get log configuration
             $channel = $config->get('logging.default', 'file');
             $level = $config->get('logging.level', Logger::LEVEL_INFO);
-            $path = $config->get("logging.channels.{$channel}.path", 'storage/logs/api.log');
+            $path = $config->get("logging.channels.{$channel}.path", base_path('/storage/logs/api.log'));
 
             // Ensure log directory exists
             $logDir = dirname($path);
