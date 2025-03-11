@@ -7,8 +7,8 @@ use Ody\Core\Foundation\Loaders\RouteLoader;
 use Ody\Core\Foundation\Logger;
 use Ody\Core\Foundation\Middleware\Middleware;
 use Ody\Core\Foundation\Router;
-use Swoole\HTTP\Request;
-use Swoole\HTTP\Response;
+use Ody\Core\Foundation\Http\Request;
+use Ody\Core\Foundation\Http\Response;
 
 /**
  * Service provider for routes
@@ -113,6 +113,7 @@ class RouteServiceProvider extends AbstractServiceProvider
 
             $response->status(401);
             $response->header('Content-Type', 'application/json');
+
             $response->end(json_encode([
                 'error' => 'Unauthorized',
                 'guard' => $guard

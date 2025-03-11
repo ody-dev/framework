@@ -106,7 +106,6 @@ class ApplicationServiceProvider extends AbstractServiceProvider
 
             if ($request->server['request_method'] === 'OPTIONS') {
                 $response->status(200);
-                $response->end();
                 return;
             }
 

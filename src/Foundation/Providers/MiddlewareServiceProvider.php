@@ -9,6 +9,9 @@ use Ody\Core\Foundation\Logger;
 use Ody\Core\Foundation\Middleware\Middleware;
 use Ody\Core\Foundation\Middleware\RouteMiddlewareManager;
 
+/**
+ * Service provider for middleware
+ */
 class MiddlewareServiceProvider extends AbstractServiceProvider
 {
     /**
@@ -64,10 +67,10 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
     {
         // Register auth middleware
         $middleware->addNamed('auth', function (Request $request, Response $response, callable $next) use ($logger) {
-            $authHeader = $request->header['authorization'] ?? '';
+            $authHeader = $request->getHeader('authorization', '');
 
             // Simple token check - replace with proper auth in production
-            if (strpos($authHeader, 'Bearer ') === 0) {
+            if (str_starts_with($authHeader, 'Bearer ')) {
                 $token = substr($authHeader, 7);
                 if ($token === 'valid-token') {
                     $next($request, $response);
@@ -76,27 +79,32 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
             }
 
             $logger->warning('Unauthorized access attempt', [
-                'ip' => $request->server['remote_addr'] ?? 'unknown',
-                'uri' => $request->server['request_uri'] ?? '/'
+                'ip' => $request->server['REMOTE_ADDR'] ?? 'unknown',
+                'uri' => $request->server['REQUEST_URI'] ?? '/'
             ]);
 
-            $response->status(401);
-            $response->header('Content-Type', 'application/json');
-            $response->end(json_encode([
-                'error' => 'Unauthorized'
-            ]));
+            $response->status(401)
+                ->json()
+                ->withJson([
+                    'error' => 'Unauthorized'
+                ]);
         });
 
         // Register logging middleware
         $middleware->addNamed('logging', function (Request $request, Response $response, callable $next) use ($logger) {
             $startTime = microtime(true);
 
+            $logger->info('Request started', [
+                'method' => $request->getMethod(),
+                'uri' => $request->getPath(),
+            ]);
+
             $next($request, $response);
 
             $duration = microtime(true) - $startTime;
             $logger->info('Request completed', [
-                'method' => $request->server['request_method'] ?? 'UNKNOWN',
-                'uri' => $request->server['request_uri'] ?? '/',
+                'method' => $request->getMethod(),
+                'uri' => $request->getPath(),
                 'status' => $response->statusCode ?? 200,
                 'duration' => round($duration * 1000, 2) . 'ms'
             ]);
@@ -116,9 +124,8 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
             $response->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
             $response->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-            if ($request->server['request_method'] === 'OPTIONS') {
+            if ($request->getMethod() === 'OPTIONS') {
                 $response->status(200);
-                $response->end();
                 return;
             }
 
@@ -135,9 +142,10 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
     protected function registerJsonBodyParserMiddleware(Middleware $middleware): void
     {
         $middleware->add(function (Request $request, Response $response, callable $next) {
-            if (isset($request->header['content-type']) &&
-                strpos($request->header['content-type'], 'application/json') !== false) {
-                $request->parsedBody = json_decode($request->rawContent(), true) ?? [];
+            $contentType = $request->getHeader('content-type');
+
+            if ($contentType && str_contains($contentType, 'application/json')) {
+                $request->parsedBody = $request->json();
             }
 
             $next($request, $response);
@@ -154,7 +162,7 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
     protected function registerRouteMiddleware(Middleware $middleware, Logger $logger): void
     {
         // Apply 'auth' middleware to all /users routes
-//        $middleware->addToGroup('*:/users*', 'auth');
+        $middleware->addToGroup('*:/users*', 'auth');
 
         // Apply 'auth' middleware to specific routes
         $middleware->addToRoute('PUT', '/profile', 'auth');

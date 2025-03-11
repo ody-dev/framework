@@ -36,7 +36,7 @@ function bootstrap(string $configFile = null): Container
     } else {
         // Default configuration
         $config = [
-            'log_file' => __DIR__ . '/../logs/api.log',
+            'log_file' => __DIR__ . '/../../storage/logs/api.log',
             'log_level' => Logger::LEVEL_INFO,
             'server' => [
                 'host' => '0.0.0.0',
@@ -49,7 +49,7 @@ function bootstrap(string $configFile = null): Container
                 'host' => 'localhost',
                 'database' => 'clockwork',
                 'username' => 'root',
-                'password' => 'x3tjVsnfWs8K'
+                'password' => 'supersecretpassword!'
             ]
         ];
     }

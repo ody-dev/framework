@@ -47,7 +47,8 @@ class UserController
 //        ];
 
         $response->header('Content-Type', 'application/json');
-        $response->end(json_encode($users));
+
+        return $response->json()->withJson($users);
     }
 
     /**
@@ -68,7 +69,8 @@ class UserController
         $user = ['id' => (int)$id, 'name' => 'John Doe', 'email' => 'john@example.com'];
 
         $response->header('Content-Type', 'application/json');
-        $response->end(json_encode($user));
+
+        return $response->json()->withJson($user);
     }
 
     /**
@@ -84,9 +86,9 @@ class UserController
         if (empty($data['name']) || empty($data['email'])) {
             $response->status(422);
             $response->header('Content-Type', 'application/json');
-            $response->end(json_encode([
+            $response->json()->withJson([
                 'error' => 'Name and email are required'
-            ]));
+            ]);
             return;
         }
 
@@ -100,11 +102,12 @@ class UserController
 
         $response->status(201);
         $response->header('Content-Type', 'application/json');
-        $response->end(json_encode([
+
+        return $response->json()->withJson([
             'id' => $id,
             'name' => $data['name'],
             'email' => $data['email']
-        ]));
+        ]);
     }
 
     /**
@@ -146,12 +149,13 @@ class UserController
 
         // Mock response for example
         $response->header('Content-Type', 'application/json');
-        $response->end(json_encode([
+
+        return $response->json()->withJson([
             'id' => (int)$id,
             'name' => $data['name'] ?? 'John Doe',
             'email' => $data['email'] ?? 'john@example.com',
             'updated' => true
-        ]));
+        ]);
     }
 
     /**
@@ -172,9 +176,9 @@ class UserController
         $affected = 1;
 
         $response->header('Content-Type', 'application/json');
-        $response->end(json_encode([
+        return $response->json()->withJson([
             'deleted' => $affected > 0,
             'id' => (int)$id
-        ]));
+        ]);
     }
 }
