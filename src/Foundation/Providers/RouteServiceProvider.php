@@ -189,6 +189,7 @@ class RouteServiceProvider extends AbstractServiceProvider
      */
     protected function loadRouteFiles(RouteLoader $routeLoader, Logger $logger): void
     {
+
         // Ensure routes directory exists
         if (!is_dir($this->routesPath)) {
             $logger->warning('Routes directory not found', ['path' => $this->routesPath]);
@@ -203,7 +204,6 @@ class RouteServiceProvider extends AbstractServiceProvider
         }
 
         // Load API routes file
-        var_dump($this->routesPath);
         $apiRoutesFile = $this->routesPath . '/api.php';
         if (file_exists($apiRoutesFile)) {
             $logger->info('Loading API routes file', ['file' => $apiRoutesFile]);

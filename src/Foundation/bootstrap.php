@@ -10,6 +10,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 use Illuminate\Container\Container;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Ody\Core\Foundation\Loaders\ServiceProviderLoader;
+use Ody\Core\Foundation\Logger;
 use Ody\Core\Foundation\Providers\ConfigServiceProvider;
 use Ody\Core\Foundation\Providers\ServiceProviderManager;
 use Ody\Core\Foundation\Support\Config;
@@ -40,15 +41,14 @@ function bootstrap(string $configPath = null, string $environment = null): Conta
 
     // Create container
     $container = new Container();
-
-    // Set as global container
     Container::setInstance($container);
-
-    // Register environment in container
     $container->instance(Env::class, $env);
 
     // Initialize configuration
     $config = initializeConfig($container, $configPath);
+
+    // Initialize logger
+    $logger = initializeLogger($container, $config);
 
     // Register PSR-17 factories
     registerPsr17Factories($container);
@@ -58,11 +58,12 @@ function bootstrap(string $configPath = null, string $environment = null): Conta
     $container->instance(ServiceProviderManager::class, $providerManager);
 
     // Register the ConfigServiceProvider first as it's required by other providers
-    $providerManager->register(new ConfigServiceProvider());
-    $providerManager->bootProvider(new ConfigServiceProvider());
+    $configProvider = new ConfigServiceProvider();
+    $providerManager->register($configProvider);
+    $providerManager->bootProvider($configProvider);
 
     // Create and use the service provider loader
-    $serviceProviderLoader = new ServiceProviderLoader($container, $providerManager, $config);
+    $serviceProviderLoader = new ServiceProviderLoader($container, $providerManager, $config, $logger);
     $container->instance(ServiceProviderLoader::class, $serviceProviderLoader);
 
     // Register and boot all providers defined in config
@@ -87,11 +88,6 @@ function initializeConfig(Container $container, ?string $configPath = null): Con
     // Set configuration path
     $configPath = $configPath ?? env('CONFIG_PATH', APP_BASE_PATH . '/config');
 
-    // Ensure config directory exists
-    if (!is_dir($configPath)) {
-        mkdir($configPath, 0755, true);
-    }
-
     // Load configuration files
     $config->loadFromDirectory($configPath);
 
@@ -99,13 +95,32 @@ function initializeConfig(Container $container, ?string $configPath = null): Con
     $container->instance('config', $config);
     $container->instance(Config::class, $config);
 
-    // Ensure storage/logs directory exists
-    $logDir = storage_path('logs');
+    return $config;
+}
+
+/**
+ * Initialize logger
+ *
+ * @param Container $container
+ * @param Config $config
+ * @return Logger
+ */
+function initializeLogger(Container $container, Config $config): Logger
+{
+    $logFile = $config->get('logging.channels.file.path', APP_BASE_PATH . '/storage/logs/api.log');
+    $logLevel = $config->get('logging.level', Logger::LEVEL_INFO);
+
+    // Ensure directory exists
+    $logDir = dirname($logFile);
     if (!is_dir($logDir)) {
         mkdir($logDir, 0755, true);
     }
 
-    return $config;
+    $logger = new Logger($logFile, $logLevel);
+    $container->instance(Logger::class, $logger);
+    $container->alias(Logger::class, 'logger');
+
+    return $logger;
 }
 
 /**

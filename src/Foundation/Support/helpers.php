@@ -188,3 +188,29 @@ if (!function_exists('logger')) {
         return $logger->info($message, $context);
     }
 }
+
+if (!function_exists('config_path')) {
+    /**
+     * Get the config path.
+     *
+     * @param string $path Path to append to the config path
+     * @return string
+     */
+    function config_path($path = '')
+    {
+        return base_path('config') . ($path ? DIRECTORY_SEPARATOR . $path : $path);
+    }
+}
+
+if (!function_exists('database_path')) {
+    /**
+     * Get the database path.
+     *
+     * @param string $path Path to append to the database path
+     * @return string
+     */
+    function database_path($path = '')
+    {
+        return base_path('database') . ($path ? DIRECTORY_SEPARATOR . $path : $path);
+    }
+}

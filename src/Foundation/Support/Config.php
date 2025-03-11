@@ -54,22 +54,23 @@ class Config
             return $this->items;
         }
 
+        // Direct key access
         if (isset($this->items[$key])) {
             return $this->processValue($this->items[$key]);
         }
 
+        // Dot notation access (e.g. 'app.providers')
         $segments = explode('.', $key);
-        $items = $this->items;
+        $current = $this->items;
 
         foreach ($segments as $segment) {
-            if (!is_array($items) || !array_key_exists($segment, $items)) {
+            if (!is_array($current) || !array_key_exists($segment, $current)) {
                 return $this->processValue($default);
             }
-
-            $items = $items[$segment];
+            $current = $current[$segment];
         }
 
-        return $this->processValue($items);
+        return $this->processValue($current);
     }
 
     /**
@@ -135,6 +136,7 @@ class Config
     {
         // Early return if not a directory or it's not readable
         if (!is_dir($path) || !is_readable($path)) {
+            error_log("Config directory not found or not readable: {$path}");
             return;
         }
 
@@ -144,6 +146,7 @@ class Config
         // First, collect all files without actually loading them
         $dirContents = scandir($path);
         if ($dirContents === false) {
+            error_log("Failed to scan config directory: {$path}");
             return;
         }
 
@@ -167,6 +170,14 @@ class Config
         foreach ($files as $file) {
             $this->loadFile($file['name'], $file['path']);
         }
+
+        // Debug output of loaded configuration
+        error_log("Loaded configuration keys: " . implode(', ', array_keys($this->items)));
+        if (isset($this->items['app']) && isset($this->items['app']['providers'])) {
+            error_log("Found providers in app config: " . count($this->items['app']['providers']));
+        } else {
+            error_log("No providers found in app config");
+        }
     }
 
     /**
@@ -188,11 +199,15 @@ class Config
 
         try {
             // Load the file which should return an array
+            error_log("Loading config file: {$path}");
             $config = require $path;
 
             // Only store if it's an array
             if (is_array($config)) {
                 $this->items[$name] = $config;
+                error_log("Successfully loaded config file: {$name}");
+            } else {
+                error_log("Config file did not return an array: {$path}");
             }
         } catch (\Throwable $e) {
             // Log error but continue processing other files
@@ -222,19 +237,12 @@ class Config
     }
 
     /**
-     * Merge configuration items for a specific key
+     * Dump configuration for debugging
      *
-     * @param string $key
-     * @param array $items
-     * @return void
+     * @return string
      */
-    public function mergeKey(string $key, array $items): void
+    public function dump(): string
     {
-        $current = $this->get($key, []);
-        if (is_array($current)) {
-            $this->set($key, array_merge_recursive($current, $items));
-        } else {
-            $this->set($key, $items);
-        }
+        return var_export($this->items, true);
     }
 }

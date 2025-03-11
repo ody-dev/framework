@@ -146,7 +146,7 @@ return [
     |
     */
     'routes' => [
-        'path' => env('ROUTES_PATH', base_path('routes')),
+        'path' => env('ROUTES_PATH', route_path()),
         'middleware' => [
             'global' => [
                 Ody\Core\Foundation\Middleware\CorsMiddleware::class,
