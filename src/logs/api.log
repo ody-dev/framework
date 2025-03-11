@@ -1,0 +1,171 @@
+[2025-03-11 09:05:13] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 09:05:16] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:16] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:16] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:16] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:16] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:16] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:16] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:16] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:16] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:16] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:47] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 09:05:49] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:49] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:49] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:49] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:49] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:49] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:49] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:49] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:49] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:05:49] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:06:31] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 09:06:32] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:06:32] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:06:32] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:06:32] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:06:32] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:06:32] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:06:32] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:06:32] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:06:32] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:06:32] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:07:02] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 09:07:04] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:07:04] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:07:04] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:07:04] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:07:04] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:07:04] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:07:04] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:07:04] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:07:04] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:07:04] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:07:24] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 09:07:26] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:07:26] [INFO] Request started {"method":"GET","uri":"\/users"}
+[2025-03-11 09:07:26] [WARNING] Unauthorized access attempt {"ip":"127.0.0.1","uri":"\/users"}
+[2025-03-11 09:07:26] [INFO] Request completed {"duration":"0.13ms","status":200}
+[2025-03-11 09:07:26] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:07:26] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:19:15] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 09:19:19] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:19:19] [INFO] Request started {"method":"GET","uri":"\/users"}
+[2025-03-11 09:19:19] [WARNING] Unauthorized access attempt {"ip":"127.0.0.1","uri":"\/users"}
+[2025-03-11 09:19:19] [INFO] Request completed {"duration":"0.07ms","status":200}
+[2025-03-11 09:19:19] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:19:19] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:20:00] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 09:20:02] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:20:02] [INFO] Request started {"method":"GET","uri":"\/users"}
+[2025-03-11 09:20:02] [INFO] Fetching all users
+[2025-03-11 09:20:02] [INFO] Request completed {"method":"GET","uri":"\/users","status":200,"duration":"0.05ms"}
+[2025-03-11 09:20:02] [INFO] Request completed {"duration":"0.07ms","status":200}
+[2025-03-11 09:20:02] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:20:02] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:20:36] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:20:36] [INFO] Request started {"method":"GET","uri":"\/users"}
+[2025-03-11 09:20:36] [INFO] Fetching all users
+[2025-03-11 09:20:36] [INFO] Request completed {"method":"GET","uri":"\/users","status":200,"duration":"0.05ms"}
+[2025-03-11 09:20:36] [INFO] Request completed {"duration":"0.07ms","status":200}
+[2025-03-11 09:20:36] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:20:36] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:20:39] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 09:20:40] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:20:40] [INFO] Request started {"method":"GET","uri":"\/users"}
+[2025-03-11 09:20:40] [INFO] Fetching all users
+[2025-03-11 09:20:40] [INFO] Request completed {"method":"GET","uri":"\/users","status":200,"duration":"68.91ms"}
+[2025-03-11 09:20:40] [INFO] Request completed {"duration":"68.98ms","status":200}
+[2025-03-11 09:20:40] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:20:40] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:20:46] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:20:46] [INFO] Request started {"method":"GET","uri":"\/users"}
+[2025-03-11 09:20:46] [INFO] Fetching all users
+[2025-03-11 09:20:46] [INFO] Request completed {"method":"GET","uri":"\/users","status":200,"duration":"0.25ms"}
+[2025-03-11 09:20:46] [INFO] Request completed {"duration":"0.27ms","status":200}
+[2025-03-11 09:20:46] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:20:46] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:21:16] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 09:21:17] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:21:17] [INFO] Request started {"method":"GET","uri":"\/users"}
+[2025-03-11 09:21:17] [INFO] Fetching all users
+[2025-03-11 09:21:17] [ERROR] Error handling request {"message":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'name' in 'field list'","file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Controllers\/UserController.php","line":40}
+[2025-03-11 09:21:18] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:21:18] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:21:53] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 09:21:54] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:21:54] [INFO] Request started {"method":"GET","uri":"\/users"}
+[2025-03-11 09:21:54] [INFO] Fetching all users
+[2025-03-11 09:21:54] [INFO] Request completed {"method":"GET","uri":"\/users","status":200,"duration":"7.46ms"}
+[2025-03-11 09:21:54] [INFO] Request completed {"duration":"7.53ms","status":200}
+[2025-03-11 09:21:54] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:21:54] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:24:57] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 09:24:58] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:24:58] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:24:58] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:24:58] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:24:58] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:24:58] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:24:58] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:24:59] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:24:59] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:24:59] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:25:17] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 09:25:18] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:25:19] [INFO] Request started {"method":"GET","uri":"\/users"}
+[2025-03-11 09:25:19] [INFO] Fetching all users
+[2025-03-11 09:25:19] [INFO] Request completed {"method":"GET","uri":"\/users","status":200,"duration":"3.3ms"}
+[2025-03-11 09:25:19] [INFO] Request completed {"duration":"3.37ms","status":200}
+[2025-03-11 09:25:19] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:25:19] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:31:59] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 09:32:02] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:32:02] [WARNING] Route not found {"method":"GET","path":"\/users"}
+[2025-03-11 09:32:02] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:32:02] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:32:30] [INFO] Request received {"method":"GET","path":"\/helth","ip":"127.0.0.1"}
+[2025-03-11 09:32:30] [WARNING] Route not found {"method":"GET","path":"\/helth"}
+[2025-03-11 09:32:30] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:32:30] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:32:35] [INFO] Request received {"method":"GET","path":"\/health","ip":"127.0.0.1"}
+[2025-03-11 09:32:35] [INFO] Request completed {"method":"GET","uri":"\/health","status":200,"duration":"0.04ms"}
+[2025-03-11 09:32:35] [INFO] Request completed {"method":"GET","uri":"\/health","status":200,"duration":"0.06ms"}
+[2025-03-11 09:32:35] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:32:35] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:32:46] [INFO] Request received {"method":"GET","path":"\/api\/users","ip":"127.0.0.1"}
+[2025-03-11 09:32:46] [WARNING] Unauthorized access attempt {"guard":"api","ip":"127.0.0.1"}
+[2025-03-11 09:32:46] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:32:46] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:45:44] [INFO] Loading main routes file {"file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Providers\/..\/routes\/web.php"}
+[2025-03-11 09:45:44] [INFO] Loading API routes file {"file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Providers\/..\/routes\/api.php"}
+[2025-03-11 09:45:44] [INFO] Loaded additional route files {"count":0}
+[2025-03-11 09:45:44] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 09:45:48] [INFO] Request received {"method":"GET","path":"\/api\/users","ip":"127.0.0.1"}
+[2025-03-11 09:45:48] [WARNING] Route not found {"method":"GET","path":"\/api\/users"}
+[2025-03-11 09:45:48] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:45:48] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:45:53] [INFO] Request received {"method":"GET","path":"\/api\/v1\/users","ip":"127.0.0.1"}
+[2025-03-11 09:45:53] [WARNING] Route not found {"method":"GET","path":"\/api\/v1\/users"}
+[2025-03-11 09:45:53] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:45:53] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:46:05] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:46:05] [WARNING] Unauthorized access attempt {"guard":"api","ip":"127.0.0.1"}
+[2025-03-11 09:46:05] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:46:05] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:46:21] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:46:21] [WARNING] Unauthorized access attempt {"guard":"api","ip":"127.0.0.1"}
+[2025-03-11 09:46:21] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:46:21] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 09:46:28] [INFO] Loading main routes file {"file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Providers\/..\/routes\/web.php"}
+[2025-03-11 09:46:38] [INFO] Loading main routes file {"file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Providers\/..\/routes\/web.php"}
+[2025-03-11 09:46:38] [INFO] Loading API routes file {"file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Providers\/..\/routes\/api.php"}
+[2025-03-11 09:46:38] [INFO] Loaded additional route files {"count":0}
+[2025-03-11 09:46:38] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 09:46:39] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 09:46:39] [INFO] Fetching all users
+[2025-03-11 09:46:39] [INFO] Request completed {"method":"GET","uri":"\/users","status":200,"duration":"4.05ms"}
+[2025-03-11 09:46:39] [INFO] Request completed {"method":"GET","uri":"\/users","status":200,"duration":"4.09ms"}
+[2025-03-11 09:46:40] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 09:46:40] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
