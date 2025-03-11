@@ -2,9 +2,9 @@
 
 namespace App\Controllers;
 
-use Swoole\HTTP\Request;
-use Swoole\HTTP\Response;
-use Ody\Core\Logger;
+use Ody\Core\Foundation\Http\Request;
+use Ody\Core\Foundation\Http\Response;
+use Ody\Core\Foundation\Logger;
 
 class UserController
 {

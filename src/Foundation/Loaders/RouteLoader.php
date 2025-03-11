@@ -1,9 +1,9 @@
 <?php
-namespace Ody\Core\Loaders;
+namespace Ody\Core\Foundation\Loaders;
 
 use Illuminate\Container\Container;
-use Ody\Core\Middleware\Middleware;
-use Ody\Core\Router;
+use Ody\Core\Foundation\Middleware\Middleware;
+use Ody\Core\Foundation\Router;
 
 /**
  * Route loader for loading routes from separate files

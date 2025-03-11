@@ -1,12 +1,12 @@
 <?php
-namespace Ody\Core\Providers;
+namespace Ody\Core\Foundation\Providers;
 
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Container\BindingResolutionException;
-use Ody\Core\Loaders\RouteLoader;
-use Ody\Core\Logger;
-use Ody\Core\Middleware\Middleware;
-use Ody\Core\Router;
+use Ody\Core\Foundation\Loaders\RouteLoader;
+use Ody\Core\Foundation\Logger;
+use Ody\Core\Foundation\Middleware\Middleware;
+use Ody\Core\Foundation\Router;
 use Swoole\HTTP\Request;
 use Swoole\HTTP\Response;
 
@@ -38,7 +38,7 @@ class RouteServiceProvider extends AbstractServiceProvider
 
         // Set routes path based on config or default
         $config = $this->container->make('config');
-        $this->routesPath = $config['routes_path'] ?? __DIR__ . '/../routes';
+        $this->routesPath = $config['routes_path'] ?? __DIR__ . '/../../../routes';
     }
 
     /**

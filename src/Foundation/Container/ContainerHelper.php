@@ -1,7 +1,8 @@
 <?php
-namespace Ody\Core;
+namespace Ody\Core\Foundation\Container;
 
 use Illuminate\Container\Container;
+use Ody\Core\Foundation\Logger;
 
 /**
  * Helper class for container service registration

@@ -1,11 +1,12 @@
 <?php
-namespace Ody\Core\Providers;
+namespace Ody\Core\Foundation\Providers;
 
 use Illuminate\Container\Container;
-use Ody\Core\Application;
-use Ody\Core\Logger;
-use Ody\Core\Middleware\Middleware;
-use Ody\Core\Router;
+use Ody\Core\Foundation\Application;
+use Ody\Core\Foundation\Logger;
+use Ody\Core\Foundation\Middleware\Middleware;
+use Ody\Core\Foundation\Middleware\RouteMiddlewareManager;
+use Ody\Core\Foundation\Router;
 
 /**
  * Service provider for core application services

@@ -1,6 +1,6 @@
 <?php
 
-namespace Ody\Core;
+namespace Ody\Core\Foundation;
 
 class Logger
 {

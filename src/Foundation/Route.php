@@ -1,8 +1,7 @@
 <?php
-namespace Ody\Core;
+namespace Ody\Core\Foundation;
 
-use Ody\Core\Middleware\Middleware;
-use Ody\Core\Router;
+use Ody\Core\Foundation\Middleware\Middleware;
 
 /**
  * Route class for fluent middleware definition

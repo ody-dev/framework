@@ -1,9 +1,9 @@
 <?php
 
-namespace Ody\Core\Middleware;
+namespace Ody\Core\Foundation\Middleware;
 
-use Swoole\HTTP\Request;
-use Swoole\HTTP\Response;
+use Ody\Core\Foundation\Http\Request;
+use Ody\Core\Foundation\Http\Response;
 
 /**
  * Middleware handler
@@ -220,8 +220,8 @@ class Middleware
      */
     public function run(Request $request, Response $response, callable $handler)
     {
-        $method = $request->server['request_method'] ?? 'GET';
-        $path = $request->server['request_uri'] ?? '/';
+        $method = $request->getMethod();
+        $path = $request->getPath();
 
         if ($this->routeMiddlewareManager) {
             return $this->routeMiddlewareManager->run($request, $response, $handler, $method, $path);

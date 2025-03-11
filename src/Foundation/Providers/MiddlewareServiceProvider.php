@@ -1,13 +1,13 @@
 <?php
-namespace Ody\Core\Providers;
+namespace Ody\Core\Foundation\Providers;
 
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Container\BindingResolutionException;
-use Ody\Core\Logger;
-use Ody\Core\Middleware\Middleware;
-use Ody\Core\Middleware\RouteMiddlewareManager;
-use Swoole\HTTP\Request;
-use Swoole\HTTP\Response;
+use Ody\Core\Foundation\Http\Request;
+use Ody\Core\Foundation\Http\Response;
+use Ody\Core\Foundation\Logger;
+use Ody\Core\Foundation\Middleware\Middleware;
+use Ody\Core\Foundation\Middleware\RouteMiddlewareManager;
 
 class MiddlewareServiceProvider extends AbstractServiceProvider
 {

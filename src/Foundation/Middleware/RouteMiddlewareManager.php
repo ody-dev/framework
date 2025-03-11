@@ -1,10 +1,16 @@
 <?php
 
-namespace Ody\Core\Middleware;
+namespace Ody\Core\Foundation\Middleware;
 
-use Swoole\HTTP\Request;
-use Swoole\HTTP\Response;
 
+use Ody\Core\Foundation\Http\Request;
+use Ody\Core\Foundation\Http\Response;
+
+/**
+ * Route Middleware Manager
+ *
+ * Handles route-specific middleware
+ */
 /**
  * Route Middleware Manager
  *

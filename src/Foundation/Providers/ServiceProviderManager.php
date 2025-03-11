@@ -1,10 +1,10 @@
 <?php
 
-namespace Ody\Core;
+namespace Ody\Core\Foundation\Providers;
 
 use Illuminate\Container\Container;
-use Ody\Core\Providers\ApplicationServiceProvider;
-use Ody\Core\Providers\ServiceProvider;
+use Ody\Core\Foundation\Providers\ApplicationServiceProvider;
+use Ody\Core\Foundation\Providers\ServiceProvider;
 
 /**
  * Service provider manager

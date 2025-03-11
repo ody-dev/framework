@@ -1,21 +1,47 @@
 <?php
-declare(strict_types=1);
-namespace Ody\Core;
+
+namespace Ody\Core\Foundation\Providers;
 
 use Illuminate\Container\Container;
-use Ody\Core\Middleware\Middleware;
-use Swoole\Http\Request;
-use Swoole\Http\Response;
-use Swoole\Http\Server;
+use Ody\Core\Foundation\Http\Request;
+use Ody\Core\Foundation\Http\Response;
+use Ody\Core\Foundation\Logger;
+use Ody\Core\Foundation\Middleware\Middleware;
+use Ody\Core\Router;
 
+/**
+ * Main application class
+ */
 class Application
 {
-    private Router $router;
-    private Middleware $middleware;
-    private Logger $logger;
-    private Server $server;
-    private Container $container;
+    /**
+     * @var Router
+     */
+    private $router;
 
+    /**
+     * @var Middleware
+     */
+    private $middleware;
+
+    /**
+     * @var Logger
+     */
+    private $logger;
+
+    /**
+     * @var Container
+     */
+    private $container;
+
+    /**
+     * Application constructor
+     *
+     * @param Router|null $router
+     * @param Middleware|null $middleware
+     * @param Logger|null $logger
+     * @param Container|null $container
+     */
     public function __construct(
         ?Router $router = null,
         ?Middleware $middleware = null,
@@ -53,48 +79,68 @@ class Application
         if (!$this->container->bound(Application::class)) {
             $this->container->instance(Application::class, $this);
         }
-
-        // Initialize Swoole HTTP Server
-        $this->server = new Server('0.0.0.0', 9501);
-        $this->server->set([
-            'worker_num' => 4,
-            'max_request' => 10000,
-            'daemonize' => false,
-        ]);
-
-        $this->server->on('request', [$this, 'handleRequest']);
     }
 
+    /**
+     * Get router
+     *
+     * @return Router
+     */
     public function getRouter(): Router
     {
         return $this->router;
     }
 
+    /**
+     * Get middleware
+     *
+     * @return Middleware
+     */
     public function getMiddleware(): Middleware
     {
         return $this->middleware;
     }
 
+    /**
+     * Get logger
+     *
+     * @return Logger
+     */
     public function getLogger(): Logger
     {
         return $this->logger;
     }
 
+    /**
+     * Get container
+     *
+     * @return Container
+     */
     public function getContainer(): Container
     {
         return $this->container;
     }
 
-    public function handleRequest(Request $request, Response $response): void
+    /**
+     * Handle HTTP request
+     *
+     * @param Request|null $request
+     * @return Response
+     */
+    public function handleRequest(?Request $request = null): Response
     {
-        $method = $request->server['request_method'] ?? 'GET';
-        $path = $request->server['request_uri'] ?? '/';
+        // Create request from globals if not provided
+        $request = $request ?? Request::createFromGlobals();
+        $response = new Response();
+
+        $method = $request->getMethod();
+        $path = $request->getPath();
 
         // Log incoming request
         $this->logger->info('Request received', [
             'method' => $method,
             'path' => $path,
-            'ip' => $request->server['remote_addr'] ?? 'unknown'
+            'ip' => $request->server['REMOTE_ADDR'] ?? 'unknown'
         ]);
 
         // Find matching route
@@ -110,7 +156,7 @@ class Application
                     $handler = $routeInfo['handler'];
 
                     // Run middleware stack and route handler
-                    $this->middleware->run($request, $response, function (Request $req, Response $res) use ($handler, $routeInfo) {
+                    $this->middleware->run($request, $response, function ($req, $res) use ($handler, $routeInfo) {
                         return call_user_func($handler, $req, $res, $routeInfo['vars']);
                     });
                 } catch (\Throwable $e) {
@@ -120,11 +166,11 @@ class Application
                         'line' => $e->getLine()
                     ]);
 
-                    $response->status(500);
-                    $response->header('Content-Type', 'application/json');
-                    $response->end(json_encode([
-                        'error' => 'Internal Server Error'
-                    ]));
+                    $response->status(500)
+                        ->json()
+                        ->withJson([
+                            'error' => 'Internal Server Error'
+                        ]);
                 }
                 break;
 
@@ -135,12 +181,12 @@ class Application
                     'allowed_methods' => implode(', ', $routeInfo['allowed_methods'])
                 ]);
 
-                $response->status(405);
-                $response->header('Allow', implode(', ', $routeInfo['allowed_methods']));
-                $response->header('Content-Type', 'application/json');
-                $response->end(json_encode([
-                    'error' => 'Method Not Allowed'
-                ]));
+                $response->status(405)
+                    ->header('Allow', implode(', ', $routeInfo['allowed_methods']))
+                    ->json()
+                    ->withJson([
+                        'error' => 'Method Not Allowed'
+                    ]);
                 break;
 
             case 'not_found':
@@ -150,18 +196,29 @@ class Application
                     'path' => $path
                 ]);
 
-                $response->status(404);
-                $response->header('Content-Type', 'application/json');
-                $response->end(json_encode([
-                    'error' => 'Not Found'
-                ]));
+                $response->status(404)
+                    ->json()
+                    ->withJson([
+                        'error' => 'Not Found'
+                    ]);
                 break;
         }
+
+        // Ensure response is sent
+        if (!$response->isSent()) {
+            $response->send();
+        }
+
+        return $response;
     }
 
-    public function start(): void
+    /**
+     * Run the application
+     *
+     * @return void
+     */
+    public function run(): void
     {
-        $this->logger->info('Server starting on http://0.0.0.0:9501');
-        $this->server->start();
+        $this->handleRequest();
     }
 }

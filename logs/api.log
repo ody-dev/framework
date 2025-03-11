@@ -169,3 +169,49 @@
 [2025-03-11 09:46:39] [INFO] Request completed {"method":"GET","uri":"\/users","status":200,"duration":"4.09ms"}
 [2025-03-11 09:46:40] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
 [2025-03-11 09:46:40] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 10:18:50] [WARNING] Routes directory not found {"path":"\/home\/ilyas\/script\/ody\/api-core\/src\/Foundation\/Providers\/..\/routes"}
+[2025-03-11 10:19:03] [WARNING] Routes directory not found {"path":"\/home\/ilyas\/script\/ody\/api-core\/src\/Foundation\/Providers\/..\/routes"}
+[2025-03-11 10:19:11] [WARNING] Routes directory not found {"path":"\/home\/ilyas\/script\/ody\/api-core\/src\/Foundation\/Providers\/..\/routes"}
+[2025-03-11 10:19:11] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 10:19:17] [INFO] Request received {"method":"GET","path":"\/","ip":"127.0.0.1"}
+[2025-03-11 10:19:17] [WARNING] Route not found {"method":"GET","path":"\/"}
+[2025-03-11 10:19:17] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 10:19:17] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 10:19:21] [INFO] Request received {"method":"GET","path":"\/users\/","ip":"127.0.0.1"}
+[2025-03-11 10:19:21] [WARNING] Route not found {"method":"GET","path":"\/users\/"}
+[2025-03-11 10:19:21] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 10:19:21] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 10:19:24] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 10:19:24] [WARNING] Route not found {"method":"GET","path":"\/users"}
+[2025-03-11 10:19:24] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 10:19:24] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 10:20:00] [INFO] Loading main routes file {"file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Foundation\/Providers\/..\/..\/routes\/web.php"}
+[2025-03-11 10:20:11] [INFO] Loading main routes file {"file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Foundation\/Providers\/..\/..\/routes\/web.php"}
+[2025-03-11 10:20:11] [INFO] Loading API routes file {"file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Foundation\/Providers\/..\/..\/routes\/api.php"}
+[2025-03-11 10:20:11] [INFO] Loaded additional route files {"count":0}
+[2025-03-11 10:20:11] [INFO] Server starting on http://0.0.0.0:9501
+[2025-03-11 10:20:13] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 10:20:13] [INFO] Fetching all users
+[2025-03-11 10:20:13] [INFO] Request completed {"method":"GET","uri":"\/users","status":200,"duration":"5.15ms"}
+[2025-03-11 10:20:13] [INFO] Request completed {"method":"GET","uri":"\/users","status":200,"duration":"5.21ms"}
+[2025-03-11 10:20:13] [INFO] Request received {"method":"GET","path":"\/favicon.ico","ip":"127.0.0.1"}
+[2025-03-11 10:20:13] [WARNING] Route not found {"method":"GET","path":"\/favicon.ico"}
+[2025-03-11 10:36:28] [INFO] Loading main routes file {"file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Foundation\/Providers\/..\/..\/routes\/web.php"}
+[2025-03-11 10:36:28] [INFO] Loading API routes file {"file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Foundation\/Providers\/..\/..\/routes\/api.php"}
+[2025-03-11 10:36:28] [INFO] Loaded additional route files {"count":0}
+[2025-03-11 10:36:28] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 10:36:28] [ERROR] Error handling request {"message":"Ody\\Core\\Foundation\\Providers\\MiddlewareServiceProvider::Ody\\Core\\Foundation\\Providers\\{closure}(): Argument #1 ($request) must be of type Swoole\\HTTP\\Request, Ody\\Core\\Foundation\\Http\\Request given, called in \/home\/ilyas\/script\/ody\/api-core\/src\/Foundation\/Middleware\/RouteMiddlewareManager.php on line 197","file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Foundation\/Providers\/MiddlewareServiceProvider.php","line":114}
+[2025-03-11 10:37:27] [INFO] Loading main routes file {"file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Foundation\/Providers\/..\/..\/routes\/web.php"}
+[2025-03-11 10:37:27] [INFO] Loading API routes file {"file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Foundation\/Providers\/..\/..\/routes\/api.php"}
+[2025-03-11 10:37:27] [INFO] Loaded additional route files {"count":0}
+[2025-03-11 10:37:27] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 10:37:27] [INFO] Fetching all users
+[2025-03-11 10:37:27] [INFO] Request completed {"method":"UNKNOWN","uri":"\/","status":200,"duration":"3.62ms"}
+[2025-03-11 10:37:27] [INFO] Request completed {"method":"UNKNOWN","uri":"\/","status":200,"duration":"3.67ms"}
+[2025-03-11 10:40:00] [INFO] Loading main routes file {"file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Foundation\/Providers\/..\/..\/routes\/web.php"}
+[2025-03-11 10:40:00] [INFO] Loading API routes file {"file":"\/home\/ilyas\/script\/ody\/api-core\/src\/Foundation\/Providers\/..\/..\/routes\/api.php"}
+[2025-03-11 10:40:00] [INFO] Loaded additional route files {"count":0}
+[2025-03-11 10:40:00] [INFO] Request received {"method":"GET","path":"\/users","ip":"127.0.0.1"}
+[2025-03-11 10:40:00] [INFO] Fetching all users
+[2025-03-11 10:40:00] [INFO] Request completed {"method":"UNKNOWN","uri":"\/","status":200,"duration":"3.2ms"}
+[2025-03-11 10:40:00] [INFO] Request completed {"method":"UNKNOWN","uri":"\/","status":200,"duration":"3.24ms"}

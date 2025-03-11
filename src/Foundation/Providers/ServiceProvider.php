@@ -1,6 +1,6 @@
 <?php
 
-namespace Ody\Core\Providers;
+namespace Ody\Core\Foundation\Providers;
 
 use Illuminate\Container\Container;
 

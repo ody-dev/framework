@@ -1,15 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace Ody\Core;
+namespace Ody\Core\Foundation;
 
 use FastRoute;
-use FastRoute\Dispatcher;
 use Illuminate\Container\Container;
-use Illuminate\Contracts\Container\BindingResolutionException;
-use Ody\Core\Middleware\Middleware;
-use Swoole\HTTP\Request;
-use Swoole\HTTP\Response;
+use Ody\Core\Foundation\Middleware\Middleware;
+
 
 class Router
 {
@@ -213,7 +210,7 @@ class Router
     /**
      * Create FastRoute dispatcher
      *
-     * @return Dispatcher
+     * @return FastRoute\Dispatcher
      */
     private function createDispatcher()
     {
@@ -229,13 +226,12 @@ class Router
     }
 
     /**
-     * Convert string controller@method to callable
+     * Convert string `controller@method` to callable
      *
      * @param string|callable $handler
      * @return callable
-     * @throws BindingResolutionException
      */
-    private function resolveController($handler): callable|array|string
+    private function resolveController($handler)
     {
         // Only process string handlers in Controller@method format
         if (is_string($handler) && strpos($handler, '@') !== false) {
@@ -269,14 +265,14 @@ class Router
         $routeInfo = $dispatcher->dispatch($method, $path);
 
         switch ($routeInfo[0]) {
-            case Dispatcher::NOT_FOUND:
+            case \FastRoute\Dispatcher::NOT_FOUND:
                 return ['status' => 'not_found'];
-            case Dispatcher::METHOD_NOT_ALLOWED:
+            case \FastRoute\Dispatcher::METHOD_NOT_ALLOWED:
                 return [
                     'status' => 'method_not_allowed',
                     'allowed_methods' => $routeInfo[1]
                 ];
-            case Dispatcher::FOUND:
+            case \FastRoute\Dispatcher::FOUND:
                 $handler = $routeInfo[1];
                 // Try to convert string controller@method to callable
                 $callable = $this->resolveController($handler);
