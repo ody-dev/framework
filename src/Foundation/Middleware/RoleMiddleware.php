@@ -3,11 +3,11 @@
 namespace Ody\Core\Foundation\Middleware;
 
 use Ody\Core\Foundation\Http\Response;
-use Ody\Core\Foundation\Logger;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * Role-based Access Control Middleware (PSR-15)
@@ -20,20 +20,20 @@ class RoleMiddleware implements MiddlewareInterface
     private string $requiredRole;
 
     /**
-     * @var Logger
+     * @var LoggerInterface
      */
-    private Logger $logger;
+    private LoggerInterface $logger;
 
     /**
      * RoleMiddleware constructor
      *
      * @param string $requiredRole
-     * @param Logger|null $logger
+     * @param LoggerInterface|null $logger
      */
-    public function __construct(string $requiredRole, Logger $logger = null)
+    public function __construct(string $requiredRole, ?LoggerInterface $logger = null)
     {
         $this->requiredRole = $requiredRole;
-        $this->logger = $logger ?? new Logger();
+        $this->logger = $logger ?? app(LoggerInterface::class);
     }
 
     /**
@@ -52,6 +52,12 @@ class RoleMiddleware implements MiddlewareInterface
         if ($userRole === $this->requiredRole) {
             return $handler->handle($request);
         }
+
+        $this->logger->warning('Insufficient permissions', [
+            'required_role' => $this->requiredRole,
+            'user_role' => $userRole,
+            'ip' => $request->getServerParams()['REMOTE_ADDR'] ?? 'unknown'
+        ]);
 
         $response = new Response();
         return $response
