@@ -25,7 +25,7 @@ class JsonBodyParserMiddleware implements MiddlewareInterface
     {
         $contentType = $request->getHeaderLine('Content-Type');
 
-        if (strpos($contentType, 'application/json') !== false) {
+        if (str_contains($contentType, 'application/json')) {
             $contents = (string) $request->getBody();
 
             if (!empty($contents)) {

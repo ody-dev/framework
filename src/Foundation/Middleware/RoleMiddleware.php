@@ -53,13 +53,6 @@ class RoleMiddleware implements MiddlewareInterface
             return $handler->handle($request);
         }
 
-        // Access denied
-        $this->logger->warning('Insufficient permissions', [
-            'required_role' => $this->requiredRole,
-            'user_role' => $userRole,
-            'uri' => $request->getUri()->getPath()
-        ]);
-
         $response = new Response();
         return $response
             ->withStatus(403)

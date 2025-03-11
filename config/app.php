@@ -104,19 +104,83 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Autoloaded Service Providers
+    | Routes Configuration
     |--------------------------------------------------------------------------
     |
-    | The service providers listed here will be automatically loaded on the
-    | request to your application.
+    | Routes settings and configuration
     |
     */
-    'autoload' => [
-        'classmap' => [
-            // Add directories to classmap if needed
+    'routes' => [
+        'path' => env('ROUTES_PATH', base_path('routes')),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Middleware Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Define middleware settings and available middleware
+    |
+    */
+    'middleware' => [
+        // Global middleware applied to all routes
+        'global' => [
+            Ody\Core\Foundation\Middleware\CorsMiddleware::class,
+            Ody\Core\Foundation\Middleware\JsonBodyParserMiddleware::class,
+            Ody\Core\Foundation\Middleware\LoggingMiddleware::class,
         ],
-        'files' => [
-            // Add files to autoload if needed
+
+        // Named middleware that can be referenced in routes
+        'named' => [
+            // Authentication middleware with different guards
+            'auth' => Ody\Core\Foundation\Middleware\AuthMiddleware::class,
+            'auth:api' => Ody\Core\Foundation\Middleware\AuthMiddleware::class,
+            'auth:jwt' => Ody\Core\Foundation\Middleware\AuthMiddleware::class,
+            'auth:session' => Ody\Core\Foundation\Middleware\AuthMiddleware::class,
+
+            // Role-based access control
+            'role' => Ody\Core\Foundation\Middleware\RoleMiddleware::class,
+            'role:admin' => Ody\Core\Foundation\Middleware\RoleMiddleware::class,
+            'role:user' => Ody\Core\Foundation\Middleware\RoleMiddleware::class,
+            'role:guest' => Ody\Core\Foundation\Middleware\RoleMiddleware::class,
+
+            // Rate limiting
+            'throttle' => Ody\Core\Foundation\Middleware\ThrottleMiddleware::class,
+            'throttle:60,1' => Ody\Core\Foundation\Middleware\ThrottleMiddleware::class,  // 60 requests per minute
+            'throttle:1000,60' => Ody\Core\Foundation\Middleware\ThrottleMiddleware::class, // 1000 requests per hour
+
+            // Other middleware
+            'cors' => Ody\Core\Foundation\Middleware\CorsMiddleware::class,
+            'json' => Ody\Core\Foundation\Middleware\JsonBodyParserMiddleware::class,
+            'log' => Ody\Core\Foundation\Middleware\LoggingMiddleware::class,
+
+            // Add your custom middleware here
+            // 'cache' => App\Http\Middleware\CacheMiddleware::class,
+            // 'csrf' => App\Http\Middleware\CsrfMiddleware::class,
+        ],
+
+        // Middleware groups for route groups
+        'groups' => [
+            'web' => [
+                'auth',
+                'json',
+            ],
+            'api' => [
+                'throttle:60,1',
+                'auth:api',
+                'json',
+            ],
+            'admin' => [
+                'auth',
+                'role:admin',
+                'json',
+            ],
+        ],
+
+        // Middleware resolver options
+        'resolvers' => [
+            // Add custom resolver classes here if needed
+            // 'custom' => App\Http\Middleware\Resolvers\CustomResolver::class,
         ],
     ],
 
@@ -135,24 +199,5 @@ return [
         'headers' => env('CORS_ALLOW_HEADERS', 'Content-Type, Authorization, X-Requested-With, X-API-Key'),
         'credentials' => env('CORS_ALLOW_CREDENTIALS', false),
         'max_age' => env('CORS_MAX_AGE', 86400), // 24 hours
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Routes Configuration
-    |--------------------------------------------------------------------------
-    |
-    | Routes settings and configuration
-    |
-    */
-    'routes' => [
-        'path' => env('ROUTES_PATH', route_path()),
-        'middleware' => [
-            'global' => [
-                Ody\Core\Foundation\Middleware\CorsMiddleware::class,
-                Ody\Core\Foundation\Middleware\JsonBodyParserMiddleware::class,
-                Ody\Core\Foundation\Middleware\LoggingMiddleware::class,
-            ],
-        ],
     ],
 ];

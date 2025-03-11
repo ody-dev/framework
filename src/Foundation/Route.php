@@ -61,18 +61,24 @@ class Route
     {
         // Check if this is a parameterized middleware (e.g., 'role:admin')
         if (is_string($middleware) && strpos($middleware, ':') !== false) {
-            [$name, $parameter] = explode(':', $middleware, 2);
+            list($name, $parameter) = explode(':', $middleware, 2);
 
             // Create a wrapper middleware that adds the parameter to the request
-            $this->middleware->addToRoute($this->method, $this->path, function (ServerRequestInterface $request, callable $next) use ($name, $parameter) {
+            $this->middleware->addToRoute($this->method, $this->path, function (ServerRequestInterface $request, callable $next) use ($name, $parameter, $middleware) {
                 // Add parameter to request for the named middleware to use
                 if ($request instanceof Request) {
                     $request->middlewareParams = $request->middlewareParams ?? [];
                     $request->middlewareParams[$name] = $parameter;
                 }
 
-                // Get the actual middleware
-                $namedMiddleware = $this->middleware->getNamedMiddleware($name);
+                // Get the actual middleware by the full name including parameter
+                // First try the full parameterized name (e.g., 'auth:api')
+                $namedMiddleware = $this->middleware->getNamedMiddleware($middleware);
+
+                // If not found, fall back to the base name (e.g., 'auth')
+                if (!$namedMiddleware) {
+                    $namedMiddleware = $this->middleware->getNamedMiddleware($name);
+                }
 
                 if ($namedMiddleware) {
                     // Create a PSR-15 compatible request handler for the next middleware
@@ -88,8 +94,14 @@ class Route
                         }
                     };
 
-                    // Call the middleware with the request and next handler
-                    return $namedMiddleware($request, $next);
+                    // Call the middleware with the request and handler
+                    if (method_exists($namedMiddleware, 'process')) {
+                        // If it's a PSR-15 middleware, use the process method with handler
+                        return $namedMiddleware->process($request, $handler);
+                    } else {
+                        // Otherwise assume it's a callable middleware
+                        return $namedMiddleware($request, $next);
+                    }
                 }
 
                 // If the middleware wasn't found, just continue to the next one
