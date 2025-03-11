@@ -2,6 +2,7 @@
 namespace Ody\Core\Foundation\Providers;
 
 use Illuminate\Container\Container;
+use Ody\Core\Foundation\Support\Config;
 use PDO;
 
 /**
@@ -18,22 +19,30 @@ class DatabaseServiceProvider extends AbstractServiceProvider
     {
         // Register PDO connection
         $this->container->singleton(PDO::class, function ($container) {
-            $config = $container->make('config');
+            /** @var Config $config */
+            $config = $container->make(Config::class);
 
-            if (!isset($config['database'])) {
-                throw new \RuntimeException('Database configuration not found');
+            // Get default connection name
+            $default = $config->get('database.default', 'mysql');
+
+            // Get connection configuration
+            $connection = $config->get("database.connections.{$default}");
+
+            if (!$connection) {
+                throw new \RuntimeException("Database connection [{$default}] not configured");
             }
-
-            $dbConfig = $config['database'];
 
             // Create PDO connection
             $dsn = sprintf(
-                'mysql:host=%s;dbname=%s;charset=utf8mb4',
-                $dbConfig['host'],
-                $dbConfig['database']
+                '%s:host=%s;port=%s;dbname=%s;charset=%s',
+                $connection['driver'] ?? 'mysql',
+                $connection['host'] ?? 'localhost',
+                $connection['port'] ?? '3306',
+                $connection['database'] ?? 'api',
+                $connection['charset'] ?? 'utf8mb4'
             );
 
-            $options = [
+            $options = $connection['options'] ?? [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
@@ -41,8 +50,8 @@ class DatabaseServiceProvider extends AbstractServiceProvider
 
             return new PDO(
                 $dsn,
-                $dbConfig['username'],
-                $dbConfig['password'],
+                $connection['username'] ?? 'root',
+                $connection['password'] ?? '',
                 $options
             );
         });

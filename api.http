@@ -1,5 +1,7 @@
 ### GET request to example server
 GET http://127.0.0.1:9501/version
-accept: applicatio/json
+accept: application/json
 
 ###
+GET http://127.0.0.1:9501/users
+accept: application/json

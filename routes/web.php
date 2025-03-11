@@ -50,8 +50,7 @@ $router->get('/version', function (ServerRequestInterface $request, ResponseInte
 });
 
 // User routes with middleware
-$router->get('/users', 'App\\Controllers\\UserController@index')
-    ->middleware('auth:api');
+$router->get('/users', 'App\\Controllers\\UserController@index');
 
 $router->get('/users/{id:\\d+}', 'App\\Controllers\\UserController@show')
     ->middleware('auth:api');

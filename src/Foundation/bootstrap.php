@@ -8,18 +8,22 @@
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use Illuminate\Container\Container;
+use Nyholm\Psr7\Factory\Psr17Factory;
 use Ody\Core\Foundation\Logger;
 use Ody\Core\Foundation\Providers\ApplicationServiceProvider;
+use Ody\Core\Foundation\Providers\ConfigServiceProvider;
 use Ody\Core\Foundation\Providers\DatabaseServiceProvider;
+use Ody\Core\Foundation\Providers\LoggingServiceProvider;
 use Ody\Core\Foundation\Providers\MiddlewareServiceProvider;
 use Ody\Core\Foundation\Providers\RouteServiceProvider;
 use Ody\Core\Foundation\Providers\ServiceProviderManager;
-use Psr\Http\Message\ServerRequestFactoryInterface;
+use Ody\Core\Foundation\Support\Config;
+use Ody\Core\Foundation\Support\Env;
 use Psr\Http\Message\ResponseFactoryInterface;
+use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\UploadedFileFactoryInterface;
 use Psr\Http\Message\UriFactoryInterface;
-use Nyholm\Psr7\Factory\Psr17Factory;
 
 /**
  * Bootstrap the application
@@ -27,44 +31,42 @@ use Nyholm\Psr7\Factory\Psr17Factory;
  * @param string|null $configFile Path to configuration file
  * @return Container
  */
-function bootstrap(string $configFile = null): Container
+function bootstrap(string $configFile = null, string $environment = null): Container
 {
+    $env = new Env();
+    $env->load($environment);
+
     // Create container
     $container = new Container();
 
     // Set as global container
     Container::setInstance($container);
 
+    // Register environment in container
+    $container->instance(Env::class, $env);
+
     // Load configuration
-    $config = [];
-    if ($configFile && file_exists($configFile)) {
-        $config = require $configFile;
+    $config = new Config();
+
+    // Set base configuration path
+    $configPath = Env::get('CONFIG_PATH', dirname(__DIR__, 3) . '/config');
+
+    // Load configuration files from directory if exists
+    if (is_dir($configPath)) {
+        $config->loadFromDirectory($configPath);
     } else {
-        // Default configuration
-        $config = [
-            'log_file' => __DIR__ . '/../../storage/logs/api.log',
-            'log_level' => Logger::LEVEL_INFO,
-            'server' => [
-                'host' => '0.0.0.0',
-                'port' => 9501,
-                'worker_num' => 4,
-                'max_request' => 10000,
-                'daemonize' => false,
-            ],
-            'database' => [
-                'host' => 'localhost',
-                'database' => 'clockwork',
-                'username' => 'root',
-                'password' => 'supersecretpassword!'
-            ],
-            'cors' => [
-                'origin' => '*',
-                'methods' => 'GET, POST, PUT, DELETE, OPTIONS',
-                'headers' => 'Content-Type, Authorization, X-API-Key',
-                'max_age' => 86400
-            ]
-        ];
+        throw new \Exception('Config file not found: ' . $configPath);
     }
+
+    // If a specific config file was provided, merge it
+    if ($configFile && file_exists($configFile)) {
+        $customConfig = require $configFile;
+        $config->merge($customConfig);
+    }
+
+    // Register configuration in container
+    $container->instance('config', $config);
+    $container->instance(Config::class, $config);
 
     // Register configuration in container
     $container->instance('config', $config);
@@ -84,6 +86,9 @@ function bootstrap(string $configFile = null): Container
 
     // Register core service providers
     $providers = [
+        // ConfigServiceProvider must be first as other providers might depend on it
+        ConfigServiceProvider::class,
+        LoggingServiceProvider::class,
         ApplicationServiceProvider::class,
         DatabaseServiceProvider::class,
         MiddlewareServiceProvider::class,

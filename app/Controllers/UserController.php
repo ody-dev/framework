@@ -40,6 +40,7 @@ class UserController
      */
     public function index(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
+        dd(config('app'));
         $this->logger->info('Fetching all users');
 
         // In a real app, fetch from database
