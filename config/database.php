@@ -37,14 +37,7 @@ return [
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
             ],
-        ],
-
-        'sqlite' => [
-            'driver' => 'sqlite',
-            'database' => env('DB_DATABASE', 'storage/database.sqlite'),
-            'prefix' => env('DB_PREFIX', ''),
-            'foreign_key_constraints' => (bool) env('DB_FOREIGN_KEYS', true),
-        ],
+        ]
 
         // Add other database connections as needed
     ],

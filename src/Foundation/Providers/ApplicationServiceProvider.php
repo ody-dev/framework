@@ -4,6 +4,7 @@ namespace Ody\Core\Foundation\Providers;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Ody\Core\Foundation\Application;
+use Ody\Core\Foundation\Support\Config;
 use Ody\Core\Foundation\Logger;
 use Ody\Core\Foundation\Middleware\Middleware;
 use Ody\Core\Foundation\Middleware\CorsMiddleware;
@@ -52,9 +53,10 @@ class ApplicationServiceProvider extends AbstractServiceProvider
 
         // Register logger with configuration
         $this->container->singleton(Logger::class, function ($container) {
-            $config = $container->make('config');
-            $logFile = $config['log_file'] ?? 'api.log';
-            $logLevel = $config['log_level'] ?? Logger::LEVEL_INFO;
+            /** @var Config $config */
+            $config = $container->make(Config::class);
+            $logFile = $config->get('logging.channels.file.path', 'api.log');
+            $logLevel = $config->get('logging.level', Logger::LEVEL_INFO);
 
             return new Logger($logFile, $logLevel);
         });
@@ -121,13 +123,14 @@ class ApplicationServiceProvider extends AbstractServiceProvider
     {
         // Register CORS middleware
         $this->container->singleton(CorsMiddleware::class, function ($container) {
-            $config = $container->make('config');
-            $corsConfig = $config['cors'] ?? [
+            /** @var Config $config */
+            $config = $container->make(Config::class);
+            $corsConfig = $config->get('cors', [
                 'origin' => '*',
                 'methods' => 'GET, POST, PUT, DELETE, OPTIONS',
                 'headers' => 'Content-Type, Authorization, X-API-Key',
                 'max_age' => 86400
-            ];
+            ]);
 
             return new CorsMiddleware($corsConfig);
         });

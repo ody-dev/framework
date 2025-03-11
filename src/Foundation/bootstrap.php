@@ -49,7 +49,7 @@ function bootstrap(string $configFile = null, string $environment = null): Conta
     $config = new Config();
 
     // Set base configuration path
-    $configPath = Env::get('CONFIG_PATH', dirname(__DIR__, 3) . '/config');
+    $configPath = Env::get('CONFIG_PATH', dirname(__DIR__, 2) . '/config');
 
     // Load configuration files from directory if exists
     if (is_dir($configPath)) {
@@ -72,7 +72,9 @@ function bootstrap(string $configFile = null, string $environment = null): Conta
     $container->instance('config', $config);
 
     // Create logs directory if it doesn't exist
-    $logDir = dirname($config['log_file']);
+    $logDir = dirname($config->get('logging.channels.file.path', 'storage/logs/'));
+    var_dump(!is_dir($logDir));
+    var_dump($logDir);
     if (!is_dir($logDir)) {
         mkdir($logDir, 0755, true);
     }
@@ -102,6 +104,7 @@ function bootstrap(string $configFile = null, string $environment = null): Conta
     $providerManager->registerProviders($providers);
 
     // Boot all service providers
+    $providerManager->boot();
     $providerManager->boot();
 
     return $container;

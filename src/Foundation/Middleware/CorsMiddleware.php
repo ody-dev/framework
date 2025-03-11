@@ -49,7 +49,7 @@ class CorsMiddleware implements MiddlewareInterface
                 ->withHeader('Access-Control-Allow-Origin', $this->config['origin'])
                 ->withHeader('Access-Control-Allow-Methods', $this->config['methods'])
                 ->withHeader('Access-Control-Allow-Headers', $this->config['headers'])
-                ->withHeader('Access-Control-Max-Age', $this->config['max_age'])
+                ->withHeader('Access-Control-Max-Age', (string)$this->config['max_age'])
                 ->withStatus(204);
 
             return $response;

@@ -34,7 +34,7 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
         // Register PSR-15 middleware implementations
         $this->container->singleton(CorsMiddleware::class, function ($container) {
             $config = $container->make('config');
-            $corsConfig = $config['cors'] ?? [];
+            $corsConfig = config('app.cors') ?? [];
 
             return new CorsMiddleware($corsConfig);
         });

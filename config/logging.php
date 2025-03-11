@@ -36,7 +36,7 @@ return [
     */
     'channels' => [
         'file' => [
-            'path' => env('LOG_FILE', 'storage/logs/api.log'),
+            'path' => env('LOG_FILE', 'storage/logs/'),
         ],
 
         // Add other log channels as needed
