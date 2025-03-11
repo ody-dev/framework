@@ -3,6 +3,7 @@ namespace Ody\Core\Foundation\Providers;
 
 use Illuminate\Container\Container;
 use Ody\Core\Foundation\Support\Config;
+use Ody\Core\Foundation\Support\Env;
 
 /**
  * Service provider for configuration
@@ -16,9 +17,19 @@ class ConfigServiceProvider extends AbstractServiceProvider
      */
     protected function registerServices(): void
     {
-        // Config is already registered in the bootstrap process
-        // This provider exists mainly to ensure Config is available
-        // for other providers and to maintain the service provider pattern
+        // Ensure Config class is registered
+        if (!$this->container->bound(Config::class)) {
+            $config = new Config();
+
+            // Load config files from default location
+            $configPath = env('CONFIG_PATH', base_path('config'));
+            if (is_dir($configPath)) {
+                $config->loadFromDirectory($configPath);
+            }
+
+            $this->container->instance('config', $config);
+            $this->container->instance(Config::class, $config);
+        }
     }
 
     /**
@@ -29,6 +40,37 @@ class ConfigServiceProvider extends AbstractServiceProvider
      */
     public function boot(Container $container): void
     {
-        // No bootstrapping needed for config
+        // Register helper functions if not already registered
+        if (!function_exists('config')) {
+            $this->registerHelpers();
+        }
+    }
+
+    /**
+     * Register helper functions related to config
+     *
+     * @return void
+     */
+    protected function registerHelpers(): void
+    {
+        // This is just a safeguard in case the helpers.php file wasn't autoloaded
+        if (!function_exists('config')) {
+            /**
+             * Get configuration value
+             *
+             * @param string|null $key
+             * @param mixed $default
+             * @return mixed|Config
+             */
+            function config($key = null, $default = null) {
+                $config = app(Config::class);
+
+                if (is_null($key)) {
+                    return $config;
+                }
+
+                return $config->get($key, $default);
+            }
+        }
     }
 }

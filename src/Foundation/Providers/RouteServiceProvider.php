@@ -44,10 +44,9 @@ class RouteServiceProvider extends AbstractServiceProvider
             return new RouteLoader($router, $middleware, $container);
         });
 
-        // Set routes path based on config or default
-        /** @var Config $config */
+        // Set routes path based on config
         $config = $this->container->make(Config::class);
-        $this->routesPath = $config->get('app.routes_path', route_path());
+        $this->routesPath = $config->get('app.routes.path', route_path());
     }
 
     /**
@@ -62,8 +61,21 @@ class RouteServiceProvider extends AbstractServiceProvider
         $logger = $container->make(Logger::class);
         $routeLoader = $container->make(RouteLoader::class);
 
-        $this->registerNamedMiddleware($container);
-        $this->loadRouteFiles($routeLoader, $logger);
+        try {
+            $this->registerNamedMiddleware($container);
+            $this->loadRouteFiles($routeLoader, $logger);
+        } catch (\Throwable $e) {
+            $logger->error('Failed to load routes', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            // Rethrow in development, swallow in production
+            if (env('APP_DEBUG', false)) {
+                throw $e;
+            }
+        }
     }
 
     /**
@@ -77,132 +89,95 @@ class RouteServiceProvider extends AbstractServiceProvider
     {
         $middleware = $container->make(Middleware::class);
         $logger = $container->make(Logger::class);
+        $config = $container->make(Config::class);
 
-        // Auth middleware with guard support
-        $middleware->addNamed('auth', function (ServerRequestInterface $request, callable $next) use ($container, $logger) {
-            // Create auth middleware with 'web' guard
-            $authMiddleware = new AuthMiddleware('web', $logger);
+        // Register configured middleware
+        $namedMiddleware = $config->get('app.routes.middleware.named', [
+            'auth' => function (ServerRequestInterface $request, callable $next) use ($container, $logger) {
+                // Create auth middleware with 'web' guard
+                $authMiddleware = new AuthMiddleware('web', $logger);
 
-            // Create a request handler for the next middleware
-            $handler = new class($next) implements RequestHandlerInterface {
-                private $next;
+                // Create a request handler for the next middleware
+                $handler = new class($next) implements RequestHandlerInterface {
+                    private $next;
 
-                public function __construct(callable $next) {
-                    $this->next = $next;
+                    public function __construct(callable $next) {
+                        $this->next = $next;
+                    }
+
+                    public function handle(ServerRequestInterface $request): ResponseInterface {
+                        return call_user_func($this->next, $request);
+                    }
+                };
+
+                // Process the request through the auth middleware
+                return $authMiddleware->process($request, $handler);
+            },
+            'auth:api' => function (ServerRequestInterface $request, callable $next) use ($container, $logger) {
+                $authMiddleware = new AuthMiddleware('api', $logger);
+                $handler = $this->createNextHandler($next);
+                return $authMiddleware->process($request, $handler);
+            },
+            'auth:jwt' => function (ServerRequestInterface $request, callable $next) use ($container, $logger) {
+                $authMiddleware = new AuthMiddleware('jwt', $logger);
+                $handler = $this->createNextHandler($next);
+                return $authMiddleware->process($request, $handler);
+            },
+            'role' => function (ServerRequestInterface $request, callable $next) use ($logger) {
+                $role = 'user';
+
+                // If it's our custom Request class with middlewareParams
+                if ($request instanceof Request && isset($request->middlewareParams['role'])) {
+                    $role = $request->middlewareParams['role'];
                 }
 
-                public function handle(ServerRequestInterface $request): ResponseInterface {
-                    return call_user_func($this->next, $request);
-                }
-            };
+                // Create role middleware
+                $roleMiddleware = new RoleMiddleware($role, $logger);
+                $handler = $this->createNextHandler($next);
+                return $roleMiddleware->process($request, $handler);
+            },
+            'throttle' => function (ServerRequestInterface $request, callable $next) {
+                $rate = '60,1'; // Default rate
 
-            // Process the request through the auth middleware
-            return $authMiddleware->process($request, $handler);
-        });
-
-        // Auth:api middleware
-        $middleware->addNamed('auth:api', function (ServerRequestInterface $request, callable $next) use ($container, $logger) {
-            // Create auth middleware with 'api' guard
-            $authMiddleware = new AuthMiddleware('api', $logger);
-
-            // Create a request handler for the next middleware
-            $handler = new class($next) implements RequestHandlerInterface {
-                private $next;
-
-                public function __construct(callable $next) {
-                    $this->next = $next;
+                // If it's our custom Request class with middlewareParams
+                if ($request instanceof Request && isset($request->middlewareParams['throttle'])) {
+                    $rate = $request->middlewareParams['throttle'];
                 }
 
-                public function handle(ServerRequestInterface $request): ResponseInterface {
-                    return call_user_func($this->next, $request);
-                }
-            };
+                list($maxAttempts, $minutes) = explode(',', $rate);
 
-            // Process the request through the auth middleware
-            return $authMiddleware->process($request, $handler);
-        });
+                // Create throttle middleware
+                $throttleMiddleware = new ThrottleMiddleware((int)$maxAttempts, (int)$minutes);
+                $handler = $this->createNextHandler($next);
+                return $throttleMiddleware->process($request, $handler);
+            }
+        ]);
 
-        // Auth:jwt middleware
-        $middleware->addNamed('auth:jwt', function (ServerRequestInterface $request, callable $next) use ($container, $logger) {
-            // Create auth middleware with 'jwt' guard
-            $authMiddleware = new AuthMiddleware('jwt', $logger);
+        // Register each middleware
+        foreach ($namedMiddleware as $name => $middlewareHandler) {
+            $middleware->addNamed($name, $middlewareHandler);
+        }
+    }
 
-            // Create a request handler for the next middleware
-            $handler = new class($next) implements RequestHandlerInterface {
-                private $next;
+    /**
+     * Create a handler for the next middleware
+     *
+     * @param callable $next
+     * @return RequestHandlerInterface
+     */
+    protected function createNextHandler(callable $next): RequestHandlerInterface
+    {
+        return new class($next) implements RequestHandlerInterface {
+            private $next;
 
-                public function __construct(callable $next) {
-                    $this->next = $next;
-                }
-
-                public function handle(ServerRequestInterface $request): ResponseInterface {
-                    return call_user_func($this->next, $request);
-                }
-            };
-
-            // Process the request through the auth middleware
-            return $authMiddleware->process($request, $handler);
-        });
-
-        // Role middleware
-        $middleware->addNamed('role', function (ServerRequestInterface $request, callable $next) use ($logger) {
-            $role = 'user';
-
-            // If it's our custom Request class with middlewareParams
-            if ($request instanceof Request && isset($request->middlewareParams['role'])) {
-                $role = $request->middlewareParams['role'];
+            public function __construct(callable $next) {
+                $this->next = $next;
             }
 
-            // Create role middleware
-            $roleMiddleware = new RoleMiddleware($role, $logger);
-
-            // Create a request handler for the next middleware
-            $handler = new class($next) implements RequestHandlerInterface {
-                private $next;
-
-                public function __construct(callable $next) {
-                    $this->next = $next;
-                }
-
-                public function handle(ServerRequestInterface $request): ResponseInterface {
-                    return call_user_func($this->next, $request);
-                }
-            };
-
-            // Process the request through the role middleware
-            return $roleMiddleware->process($request, $handler);
-        });
-
-        // Throttle middleware
-        $middleware->addNamed('throttle', function (ServerRequestInterface $request, callable $next) {
-            $rate = '60,1'; // Default rate
-
-            // If it's our custom Request class with middlewareParams
-            if ($request instanceof Request && isset($request->middlewareParams['throttle'])) {
-                $rate = $request->middlewareParams['throttle'];
+            public function handle(ServerRequestInterface $request): ResponseInterface {
+                return call_user_func($this->next, $request);
             }
-
-            list($maxAttempts, $minutes) = explode(',', $rate);
-
-            // Create throttle middleware
-            $throttleMiddleware = new ThrottleMiddleware((int)$maxAttempts, (int)$minutes);
-
-            // Create a request handler for the next middleware
-            $handler = new class($next) implements RequestHandlerInterface {
-                private $next;
-
-                public function __construct(callable $next) {
-                    $this->next = $next;
-                }
-
-                public function handle(ServerRequestInterface $request): ResponseInterface {
-                    return call_user_func($this->next, $request);
-                }
-            };
-
-            // Process the request through the throttle middleware
-            return $throttleMiddleware->process($request, $handler);
-        });
+        };
     }
 
     /**
@@ -228,6 +203,7 @@ class RouteServiceProvider extends AbstractServiceProvider
         }
 
         // Load API routes file
+        var_dump($this->routesPath);
         $apiRoutesFile = $this->routesPath . '/api.php';
         if (file_exists($apiRoutesFile)) {
             $logger->info('Loading API routes file', ['file' => $apiRoutesFile]);

@@ -37,7 +37,14 @@ return [
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
             ],
-        ]
+        ],
+
+        'sqlite' => [
+            'driver' => 'sqlite',
+            'database' => env('DB_DATABASE', database_path('database.sqlite')),
+            'prefix' => env('DB_PREFIX', ''),
+            'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
+        ],
 
         // Add other database connections as needed
     ],
@@ -53,4 +60,30 @@ return [
     |
     */
     'migrations' => 'migrations',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Redis Databases
+    |--------------------------------------------------------------------------
+    |
+    | Redis is an open source, fast, and advanced key-value store that also
+    | provides a richer body of commands than a typical key-value system
+    | such as Memcached. You may specify your Redis servers here.
+    |
+    */
+    'redis' => [
+        'client' => env('REDIS_CLIENT', 'phpredis'),
+        'default' => [
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'password' => env('REDIS_PASSWORD', null),
+            'port' => env('REDIS_PORT', 6379),
+            'database' => env('REDIS_DB', 0),
+        ],
+        'cache' => [
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'password' => env('REDIS_PASSWORD', null),
+            'port' => env('REDIS_PORT', 6379),
+            'database' => env('REDIS_CACHE_DB', 1),
+        ],
+    ],
 ];

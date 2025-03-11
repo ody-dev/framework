@@ -3,8 +3,7 @@
 namespace Ody\Core\Foundation\Providers;
 
 use Illuminate\Container\Container;
-use Ody\Core\Foundation\Providers\ApplicationServiceProvider;
-use Ody\Core\Foundation\Providers\ServiceProvider;
+use Ody\Core\Foundation\Support\Config;
 
 /**
  * Service provider manager
@@ -84,6 +83,10 @@ class ServiceProviderManager
      */
     protected function resolveProvider(string $provider): ServiceProvider
     {
+        if ($this->container->has($provider)) {
+            return $this->container->make($provider);
+        }
+
         return new $provider();
     }
 
@@ -95,7 +98,7 @@ class ServiceProviderManager
      */
     protected function isDeferredProvider(ServiceProvider $provider): bool
     {
-        return method_exists($provider, 'provides') && $provider->provides();
+        return method_exists($provider, 'provides') && !empty($provider->provides());
     }
 
     /**
@@ -107,8 +110,10 @@ class ServiceProviderManager
     protected function registerDeferredProvider(ServiceProvider $provider): void
     {
         // Record the provider for each service it provides
-        foreach ($provider->provides() as $service) {
-            $this->deferredServices[$service] = get_class($provider);
+        if (method_exists($provider, 'provides')) {
+            foreach ($provider->provides() as $service) {
+                $this->deferredServices[$service] = get_class($provider);
+            }
         }
     }
 
@@ -130,7 +135,7 @@ class ServiceProviderManager
      * @param ServiceProvider $provider
      * @return void
      */
-    protected function bootProvider(ServiceProvider $provider): void
+    public function bootProvider(ServiceProvider $provider): void
     {
         $providerClass = get_class($provider);
 
@@ -175,7 +180,17 @@ class ServiceProviderManager
     public function registerProviders(array $providers): void
     {
         foreach ($providers as $provider) {
-            $this->register($provider);
+            try {
+                $this->register($provider);
+            } catch (\Throwable $e) {
+                // Log error but continue with other providers
+                if ($this->container->has('logger')) {
+                    $this->container->make('logger')->error('Failed to register provider', [
+                        'provider' => is_string($provider) ? $provider : get_class($provider),
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
         }
     }
 
@@ -187,5 +202,47 @@ class ServiceProviderManager
     public function getProviders(): array
     {
         return $this->providers;
+    }
+
+    /**
+     * Get booted providers
+     *
+     * @return array
+     */
+    public function getBootedProviders(): array
+    {
+        return $this->booted;
+    }
+
+    /**
+     * Get deferred services
+     *
+     * @return array
+     */
+    public function getDeferredServices(): array
+    {
+        return $this->deferredServices;
+    }
+
+    /**
+     * Check if provider is registered
+     *
+     * @param string $provider
+     * @return bool
+     */
+    public function isRegistered(string $provider): bool
+    {
+        return isset($this->providers[$provider]);
+    }
+
+    /**
+     * Check if provider is booted
+     *
+     * @param string $provider
+     * @return bool
+     */
+    public function isBooted(string $provider): bool
+    {
+        return isset($this->booted[$provider]);
     }
 }

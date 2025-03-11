@@ -72,6 +72,8 @@ return [
     */
     'providers' => [
         // Core Service Providers
+        Ody\Core\Foundation\Providers\ConfigServiceProvider::class,
+        Ody\Core\Foundation\Providers\LoggingServiceProvider::class,
         Ody\Core\Foundation\Providers\ApplicationServiceProvider::class,
         Ody\Core\Foundation\Providers\DatabaseServiceProvider::class,
         Ody\Core\Foundation\Providers\MiddlewareServiceProvider::class,
@@ -79,5 +81,78 @@ return [
 
         // Add your application service providers here
         // App\Providers\CustomServiceProvider::class,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Class Aliases
+    |--------------------------------------------------------------------------
+    |
+    | This array of class aliases will be registered when this application
+    | is started. However, feel free to register as many as you wish as
+    | the aliases are "lazy" loaded so they don't hinder performance.
+    |
+    */
+    'aliases' => [
+        'App' => Ody\Core\Foundation\Application::class,
+        'Config' => Ody\Core\Foundation\Support\Config::class,
+        'Env' => Ody\Core\Foundation\Support\Env::class,
+        'Router' => Ody\Core\Foundation\Router::class,
+        'Request' => Ody\Core\Foundation\Http\Request::class,
+        'Response' => Ody\Core\Foundation\Http\Response::class,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Autoloaded Service Providers
+    |--------------------------------------------------------------------------
+    |
+    | The service providers listed here will be automatically loaded on the
+    | request to your application.
+    |
+    */
+    'autoload' => [
+        'classmap' => [
+            // Add directories to classmap if needed
+        ],
+        'files' => [
+            // Add files to autoload if needed
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | CORS Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Cross-Origin Resource Sharing (CORS) allows browsers to make cross-origin
+    | requests from web applications running at one origin to server at another origin.
+    |
+    */
+    'cors' => [
+        'origin' => env('CORS_ALLOW_ORIGIN', '*'),
+        'methods' => env('CORS_ALLOW_METHODS', 'GET, POST, PUT, DELETE, OPTIONS'),
+        'headers' => env('CORS_ALLOW_HEADERS', 'Content-Type, Authorization, X-Requested-With, X-API-Key'),
+        'credentials' => env('CORS_ALLOW_CREDENTIALS', false),
+        'max_age' => env('CORS_MAX_AGE', 86400), // 24 hours
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Routes Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Routes settings and configuration
+    |
+    */
+    'routes' => [
+        'path' => env('ROUTES_PATH', base_path('routes')),
+        'middleware' => [
+            'global' => [
+                Ody\Core\Foundation\Middleware\CorsMiddleware::class,
+                Ody\Core\Foundation\Middleware\JsonBodyParserMiddleware::class,
+                Ody\Core\Foundation\Middleware\LoggingMiddleware::class,
+            ],
+        ],
     ],
 ];

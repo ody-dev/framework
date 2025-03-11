@@ -55,7 +55,7 @@ class Config
         }
 
         if (isset($this->items[$key])) {
-            return $this->items[$key];
+            return $this->processValue($this->items[$key]);
         }
 
         $segments = explode('.', $key);
@@ -63,13 +63,43 @@ class Config
 
         foreach ($segments as $segment) {
             if (!is_array($items) || !array_key_exists($segment, $items)) {
-                return $default;
+                return $this->processValue($default);
             }
 
             $items = $items[$segment];
         }
 
-        return $items;
+        return $this->processValue($items);
+    }
+
+    /**
+     * Process configuration value, resolving env variables if needed
+     *
+     * @param mixed $value
+     * @return mixed
+     */
+    protected function processValue($value)
+    {
+        // If value is an array, process each item recursively
+        if (is_array($value)) {
+            foreach ($value as $key => $item) {
+                $value[$key] = $this->processValue($item);
+            }
+            return $value;
+        }
+
+        // Process string values for environment variable placeholders
+        if (is_string($value) && strpos($value, 'env(') === 0) {
+            // Extract env key and default value
+            $matches = [];
+            if (preg_match('/env\(([^,]+)(?:,\s*([^)]+))?\)/', $value, $matches)) {
+                $envKey = trim($matches[1], '\'"`');
+                $envDefault = isset($matches[2]) ? trim($matches[2], '\'"`') : null;
+                return env($envKey, $envDefault);
+            }
+        }
+
+        return $value;
     }
 
     /**
@@ -188,6 +218,23 @@ class Config
      */
     public function merge(array $items): void
     {
-        $this->items = array_merge($this->items, $items);
+        $this->items = array_merge_recursive($this->items, $items);
+    }
+
+    /**
+     * Merge configuration items for a specific key
+     *
+     * @param string $key
+     * @param array $items
+     * @return void
+     */
+    public function mergeKey(string $key, array $items): void
+    {
+        $current = $this->get($key, []);
+        if (is_array($current)) {
+            $this->set($key, array_merge_recursive($current, $items));
+        } else {
+            $this->set($key, $items);
+        }
     }
 }
