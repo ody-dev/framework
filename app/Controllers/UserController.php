@@ -6,6 +6,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Ody\Core\Foundation\Http\Response;
 use Ody\Core\Foundation\Logger;
+use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
 class UserController
@@ -25,7 +26,7 @@ class UserController
      *
      * Dependencies are automatically injected by the container
      */
-    public function __construct(\PDO $db, Logger $logger)
+    public function __construct(\PDO $db, LoggerInterface $logger)
     {
         $this->db = $db;
         $this->logger = $logger;
@@ -42,8 +43,8 @@ class UserController
     public function index(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
         logger()->info('This is an informational message');
-        dd(LogLevel::DEBUG);
-        $this->logger->info('Fetching all users');
+//        dd(LogLevel::DEBUG);
+//        $this->logger->info('Fetching all users');
 
         // In a real app, fetch from database
         $stmt = $this->db->query('SELECT id, email FROM users');

@@ -5,7 +5,6 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Ody\Core\Foundation\Http\Request;
 use Ody\Core\Foundation\Http\Response;
-use Ody\Core\Foundation\Logger;
 use Ody\Core\Foundation\Middleware\Middleware;
 use Ody\Core\Foundation\Middleware\CorsMiddleware;
 use Ody\Core\Foundation\Middleware\JsonBodyParserMiddleware;
@@ -13,6 +12,8 @@ use Ody\Core\Foundation\Middleware\LoggingMiddleware;
 use Ody\Core\Foundation\Middleware\AuthMiddleware;
 use Ody\Core\Foundation\Middleware\RoleMiddleware;
 use Ody\Core\Foundation\Middleware\ThrottleMiddleware;
+use Ody\Core\Foundation\Support\Config;
+use Psr\Log\LoggerInterface;
 
 /**
  * Service provider for middleware
@@ -33,8 +34,8 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
 
         // Register PSR-15 middleware implementations
         $this->container->singleton(CorsMiddleware::class, function ($container) {
-            $config = $container->make('config');
-            $corsConfig = config('app.cors') ?? [];
+            $config = $container->make(Config::class);
+            $corsConfig = $config->get('app.cors', []);
 
             return new CorsMiddleware($corsConfig);
         });
@@ -44,7 +45,7 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
         });
 
         $this->container->singleton(LoggingMiddleware::class, function ($container) {
-            $logger = $container->make(Logger::class);
+            $logger = $container->make(LoggerInterface::class);
             return new LoggingMiddleware($logger);
         });
     }
@@ -59,23 +60,24 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
     public function boot(Container $container): void
     {
         $middleware = $container->make(Middleware::class);
-        $logger = $container->make(Logger::class);
+        $logger = $container->make(LoggerInterface::class);
+        $config = $container->make(Config::class);
 
         // Register named middleware
         $this->registerNamedMiddleware($middleware, $logger);
 
-        // Register global middleware
-        $this->registerGlobalMiddleware($middleware, $container);
+        // Register global middleware from configuration
+        $this->registerGlobalMiddleware($middleware, $container, $config);
     }
 
     /**
      * Register named middleware for use in routes
      *
      * @param Middleware $middleware
-     * @param Logger $logger
+     * @param LoggerInterface $logger
      * @return void
      */
-    protected function registerNamedMiddleware(Middleware $middleware, Logger $logger): void
+    protected function registerNamedMiddleware(Middleware $middleware, LoggerInterface $logger): void
     {
         // Register auth middleware
         $middleware->addNamed('auth', function (Request $request, callable $next) use ($logger) {
@@ -179,22 +181,25 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
     }
 
     /**
-     * Register global middleware
+     * Register global middleware from configuration
      *
      * @param Middleware $middleware
      * @param Container $container
+     * @param Config $config
      * @return void
      * @throws BindingResolutionException
      */
-    protected function registerGlobalMiddleware(Middleware $middleware, Container $container): void
+    protected function registerGlobalMiddleware(Middleware $middleware, Container $container, Config $config): void
     {
-        // Add PSR-15 CORS middleware
-        $middleware->add($container->make(CorsMiddleware::class));
+        // Get global middleware from configuration
+        $globalMiddleware = $config->get('app.middleware.global', []);
 
-        // Add PSR-15 JSON body parser middleware
-        $middleware->add($container->make(JsonBodyParserMiddleware::class));
-
-        // Add PSR-15 logging middleware
-        $middleware->add($container->make(LoggingMiddleware::class));
+        // Register each middleware class
+        foreach ($globalMiddleware as $middlewareClass) {
+            // Ensure the class exists before trying to make it
+            if (class_exists($middlewareClass)) {
+                $middleware->add($container->make($middlewareClass));
+            }
+        }
     }
 }

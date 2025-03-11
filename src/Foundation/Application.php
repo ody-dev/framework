@@ -10,6 +10,7 @@ use Ody\Core\Foundation\Middleware\Middleware;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * Main application class (PSR-7 and PSR-15 compatible)
@@ -27,9 +28,9 @@ class Application
     private Middleware $middleware;
 
     /**
-     * @var Logger
+     * @var LoggerInterface
      */
-    private Logger $logger;
+    private LoggerInterface $logger;
 
     /**
      * @var Container
@@ -41,14 +42,14 @@ class Application
      *
      * @param Router|null $router
      * @param Middleware|null $middleware
-     * @param Logger|null $logger
+     * @param LoggerInterface|null $logger
      * @param Container|null $container
      * @throws BindingResolutionException
      */
     public function __construct(
         ?Router $router = null,
         ?Middleware $middleware = null,
-        ?Logger $logger = null,
+        ?LoggerInterface $logger = null,
         ?Container $container = null
     ) {
         // Initialize container
@@ -67,16 +68,10 @@ class Application
             });
         }
 
-        if (!$this->container->bound(Logger::class) && $logger === null) {
-            $this->container->singleton(Logger::class, function () {
-                return new Logger();
-            });
-        }
-
         // Resolve core components
         $this->router = $router ?? $this->container->make(Router::class);
         $this->middleware = $middleware ?? $this->container->make(Middleware::class);
-        $this->logger = $logger ?? $this->container->make(Logger::class);
+        $this->logger = $logger ?? $this->container->make(LoggerInterface::class);
 
         // Register self in container
         if (!$this->container->bound(Application::class)) {
@@ -107,9 +102,9 @@ class Application
     /**
      * Get logger
      *
-     * @return Logger
+     * @return LoggerInterface
      */
-    public function getLogger(): Logger
+    public function getLogger(): LoggerInterface
     {
         return $this->logger;
     }

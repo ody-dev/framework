@@ -3,7 +3,7 @@
 namespace Ody\Core\Foundation\Middleware\Resolvers;
 
 use Illuminate\Container\Container;
-use Ody\Core\Foundation\Logger;
+use Psr\Log\LoggerInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -15,7 +15,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 class ClassMiddlewareResolver implements MiddlewareResolverInterface
 {
     /**
-     * @var Logger
+     * @var LoggerInterface
      */
     protected $logger;
 
@@ -32,11 +32,11 @@ class ClassMiddlewareResolver implements MiddlewareResolverInterface
     /**
      * Constructor
      *
-     * @param Logger $logger
+     * @param LoggerInterface $logger
      * @param Container $container
      * @param array $middlewareMap
      */
-    public function __construct(Logger $logger, Container $container, array $middlewareMap = [])
+    public function __construct(LoggerInterface $logger, Container $container, array $middlewareMap = [])
     {
         $this->logger = $logger;
         $this->container = $container;

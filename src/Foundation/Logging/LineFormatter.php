@@ -66,9 +66,14 @@ class LineFormatter implements FormatterInterface
         // Replace {placeholders} with context values
         $replace = [];
         foreach ($context as $key => $val) {
-            if (is_string($val) || method_exists($val, '__toString')) {
+            // Check if value can be converted to string
+            if (is_string($val) || (is_object($val) && method_exists($val, '__toString'))) {
                 $replace['{' . $key . '}'] = $val;
+            } else if (is_scalar($val)) {
+                // Handle scalar values (int, float, bool) by converting them to string
+                $replace['{' . $key . '}'] = (string)$val;
             }
+            // Non-scalar values (arrays, resources, etc.) are ignored for placeholder replacement
         }
 
         return strtr($message, $replace);

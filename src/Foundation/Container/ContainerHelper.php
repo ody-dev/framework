@@ -2,7 +2,6 @@
 namespace Ody\Core\Foundation\Container;
 
 use Illuminate\Container\Container;
-use Ody\Core\Foundation\Logger;
 
 /**
  * Helper class for container service registration
@@ -20,15 +19,6 @@ class ContainerHelper
     {
         // Register configuration
         $container->instance('config', $config);
-
-        // Configure base logger
-        $container->singleton(Logger::class, function ($container) {
-            $config = $container->make('config');
-            $logFile = $config['log_file'] ?? 'api.log';
-            $logLevel = $config['log_level'] ?? Logger::LEVEL_INFO;
-
-            return new Logger($logFile, $logLevel);
-        });
 
         // Register db connection if configured
         if (isset($config['database'])) {

@@ -11,6 +11,8 @@ use Ody\Core\Foundation\Providers\FacadeServiceProvider;
 use Ody\Core\Foundation\Providers\ServiceProviderManager;
 use Ody\Core\Foundation\Support\Config;
 use Ody\Core\Foundation\Support\Env;
+use Ody\Core\Foundation\Logging\LogManager;
+use Psr\Log\LoggerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
@@ -47,14 +49,11 @@ class Bootstrap
         // Initialize configuration
         $config = self::initConfiguration($container, $configPath);
 
-        // Initialize logger
-        $logger = self::initLogger($container, $config);
-
         // Initialize PSR-17 factories
         self::initPsr17Factories($container);
 
         // Initialize service providers
-        $application = self::initServiceProviders($container, $config, $logger);
+        $application = self::initServiceProviders($container, $config);
 
         return $application;
     }
@@ -97,31 +96,6 @@ class Bootstrap
     }
 
     /**
-     * Initialize logger
-     *
-     * @param Container $container
-     * @param Config $config
-     * @return Logger
-     */
-    private static function initLogger(Container $container, Config $config): Logger
-    {
-        $logFile = $config->get('logging.channels.file.path', APP_BASE_PATH . '/storage/logs/api.log');
-        $logLevel = $config->get('logging.level', Logger::LEVEL_INFO);
-
-        // Ensure directory exists
-        $logDir = dirname($logFile);
-        if (!is_dir($logDir)) {
-            mkdir($logDir, 0755, true);
-        }
-
-        $logger = new Logger($logFile, $logLevel);
-        $container->instance(Logger::class, $logger);
-        $container->alias(Logger::class, 'logger');
-
-        return $logger;
-    }
-
-    /**
      * Initialize PSR-17 factories
      *
      * @param Container $container
@@ -144,10 +118,9 @@ class Bootstrap
      *
      * @param Container $container
      * @param Config $config
-     * @param Logger $logger
      * @return Application
      */
-    private static function initServiceProviders(Container $container, Config $config, Logger $logger): Application
+    private static function initServiceProviders(Container $container, Config $config): Application
     {
         // Create service provider manager
         $providerManager = new ServiceProviderManager($container);
@@ -166,7 +139,7 @@ class Bootstrap
         $providerManager->bootProvider($facadeProvider);
 
         // Create and use the service provider loader
-        $serviceProviderLoader = new ServiceProviderLoader($container, $providerManager, $config, $logger);
+        $serviceProviderLoader = new ServiceProviderLoader($container, $providerManager, $config);
         $container->instance(ServiceProviderLoader::class, $serviceProviderLoader);
 
         // Register and boot all providers defined in config

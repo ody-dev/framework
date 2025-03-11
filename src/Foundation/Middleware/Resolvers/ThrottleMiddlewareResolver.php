@@ -3,11 +3,11 @@
 namespace Ody\Core\Foundation\Middleware\Resolvers;
 
 use Ody\Core\Foundation\Http\Request;
-use Ody\Core\Foundation\Logger;
 use Ody\Core\Foundation\Middleware\ThrottleMiddleware;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * Resolver for throttle middleware
@@ -15,16 +15,16 @@ use Psr\Http\Server\RequestHandlerInterface;
 class ThrottleMiddlewareResolver implements MiddlewareResolverInterface
 {
     /**
-     * @var Logger
+     * @var LoggerInterface
      */
     protected $logger;
 
     /**
      * Constructor
      *
-     * @param Logger $logger
+     * @param LoggerInterface $logger
      */
-    public function __construct(Logger $logger)
+    public function __construct(LoggerInterface $logger)
     {
         $this->logger = $logger;
     }

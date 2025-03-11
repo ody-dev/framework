@@ -3,11 +3,11 @@
 namespace Ody\Core\Foundation\Middleware;
 
 use Ody\Core\Foundation\Http\Response;
-use Ody\Core\Foundation\Logger;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * Authentication Middleware (PSR-15)
@@ -20,20 +20,20 @@ class AuthMiddleware implements MiddlewareInterface
     private string $guard;
 
     /**
-     * @var Logger
+     * @var LoggerInterface
      */
-    private Logger $logger;
+    private LoggerInterface $logger;
 
     /**
      * AuthMiddleware constructor
      *
      * @param string $guard
-     * @param Logger $logger
+     * @param LoggerInterface|null $logger
      */
-    public function __construct(string $guard = 'web', Logger $logger = null)
+    public function __construct(string $guard = 'web', ?LoggerInterface $logger = null)
     {
         $this->guard = $guard;
-        $this->logger = $logger ?? new Logger();
+        $this->logger = $logger ?? app(LoggerInterface::class);
     }
 
     /**

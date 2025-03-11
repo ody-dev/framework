@@ -5,10 +5,10 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Ody\Core\Foundation\Support\Config;
 use Ody\Core\Foundation\Loaders\RouteLoader;
-use Ody\Core\Foundation\Logger;
 use Ody\Core\Foundation\Middleware\Middleware;
 use Ody\Core\Foundation\Middleware\Resolvers\MiddlewareResolverFactory;
 use Ody\Core\Foundation\Router;
+use Psr\Log\LoggerInterface;
 
 /**
  * Service provider for routes
@@ -47,7 +47,7 @@ class RouteServiceProvider extends AbstractServiceProvider
 
         // Register resolver factory
         $this->container->singleton(MiddlewareResolverFactory::class, function ($container) {
-            $logger = $container->make(Logger::class);
+            $logger = $container->make(LoggerInterface::class);
             $config = $container->make(Config::class);
 
             return new MiddlewareResolverFactory($logger, $container, $config);

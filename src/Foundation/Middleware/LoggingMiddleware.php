@@ -2,7 +2,7 @@
 
 namespace Ody\Core\Foundation\Middleware;
 
-use Ody\Core\Foundation\Logger;
+use Psr\Log\LoggerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -14,16 +14,16 @@ use Psr\Http\Server\RequestHandlerInterface;
 class LoggingMiddleware implements MiddlewareInterface
 {
     /**
-     * @var Logger
+     * @var LoggerInterface
      */
-    private Logger $logger;
+    private LoggerInterface $logger;
 
     /**
      * LoggingMiddleware constructor
      *
-     * @param Logger $logger
+     * @param LoggerInterface $logger
      */
-    public function __construct(Logger $logger)
+    public function __construct(LoggerInterface $logger)
     {
         $this->logger = $logger;
     }
@@ -34,13 +34,11 @@ class LoggingMiddleware implements MiddlewareInterface
      * @param ServerRequestInterface $request
      * @param RequestHandlerInterface $handler
      * @return ResponseInterface
-     * @throws \Throwable
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $startTime = microtime(true);
 
-        var_dump('dsd');
         $this->logger->info('Request started', [
             'method' => $request->getMethod(),
             'uri' => $request->getUri()->getPath(),

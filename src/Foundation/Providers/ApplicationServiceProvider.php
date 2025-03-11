@@ -5,7 +5,6 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Ody\Core\Foundation\Application;
 use Ody\Core\Foundation\Support\Config;
-use Ody\Core\Foundation\Logger;
 use Ody\Core\Foundation\Middleware\Middleware;
 use Ody\Core\Foundation\Middleware\CorsMiddleware;
 use Ody\Core\Foundation\Middleware\JsonBodyParserMiddleware;
@@ -17,6 +16,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\UploadedFileFactoryInterface;
 use Psr\Http\Message\UriFactoryInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * Service provider for core application services
@@ -31,7 +31,6 @@ class ApplicationServiceProvider extends AbstractServiceProvider
     protected $singletons = [
         Middleware::class => null, // Custom registration in registerServices
         Router::class => null, // Custom registration in registerServices
-        Logger::class => null, // Custom registration in registerServices
         Application::class => null, // Custom registration in registerServices
         CorsMiddleware::class => null, // Custom registration in registerServices
     ];
@@ -51,16 +50,6 @@ class ApplicationServiceProvider extends AbstractServiceProvider
             return new Middleware($container);
         });
 
-        // Register logger with configuration
-        $this->container->singleton(Logger::class, function ($container) {
-            /** @var Config $config */
-            $config = $container->make(Config::class);
-            $logFile = $config->get('logging.channels.file.path', 'api.log');
-            $logLevel = $config->get('logging.level', Logger::LEVEL_INFO);
-
-            return new Logger($logFile, $logLevel);
-        });
-
         // Register router with container and middleware
         $this->container->singleton(Router::class, function ($container) {
             $middleware = $container->make(Middleware::class);
@@ -74,7 +63,7 @@ class ApplicationServiceProvider extends AbstractServiceProvider
         $this->container->singleton(Application::class, function ($container) {
             $router = $container->make(Router::class);
             $middleware = $container->make(Middleware::class);
-            $logger = $container->make(Logger::class);
+            $logger = $container->make(LoggerInterface::class);
 
             return new Application($router, $middleware, $logger, $container);
         });
@@ -142,7 +131,7 @@ class ApplicationServiceProvider extends AbstractServiceProvider
 
         // Register logging middleware
         $this->container->singleton(LoggingMiddleware::class, function ($container) {
-            $logger = $container->make(Logger::class);
+            $logger = $container->make(LoggerInterface::class);
             return new LoggingMiddleware($logger);
         });
     }
@@ -156,12 +145,7 @@ class ApplicationServiceProvider extends AbstractServiceProvider
      */
     public function boot(Container $container): void
     {
-        // Get middleware instance
-        $middleware = $container->make(Middleware::class);
-
-        // Add global PSR-15 middleware
-        $middleware->add($container->make(CorsMiddleware::class));
-        $middleware->add($container->make(JsonBodyParserMiddleware::class));
-        $middleware->add($container->make(LoggingMiddleware::class));
+        // No need to register global middleware here if it's being registered
+        // through middleware configuration and MiddlewareServiceProvider
     }
 }

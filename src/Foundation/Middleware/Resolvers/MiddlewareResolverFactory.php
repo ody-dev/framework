@@ -3,8 +3,8 @@
 namespace Ody\Core\Foundation\Middleware\Resolvers;
 
 use Illuminate\Container\Container;
-use Ody\Core\Foundation\Logger;
 use Ody\Core\Foundation\Support\Config;
+use Psr\Log\LoggerInterface;
 
 /**
  * Factory for middleware resolvers
@@ -12,7 +12,7 @@ use Ody\Core\Foundation\Support\Config;
 class MiddlewareResolverFactory
 {
     /**
-     * @var Logger
+     * @var LoggerInterface
      */
     protected $logger;
 
@@ -34,11 +34,11 @@ class MiddlewareResolverFactory
     /**
      * Constructor
      *
-     * @param Logger $logger
+     * @param LoggerInterface $logger
      * @param Container $container
      * @param Config $config
      */
-    public function __construct(Logger $logger, Container $container, Config $config)
+    public function __construct(LoggerInterface $logger, Container $container, Config $config)
     {
         $this->logger = $logger;
         $this->container = $container;
