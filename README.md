@@ -1,4 +1,4 @@
-# PHP api
+# REST api
 A case study on how to build a functional API framework in PHP.
 
 - Fastroute for routing
