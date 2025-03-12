@@ -4,9 +4,8 @@ namespace Ody\Core\Foundation\Middleware\Resolvers;
 
 use Ody\Core\Foundation\Http\Request;
 use Ody\Core\Foundation\Middleware\ThrottleMiddleware;
+use Ody\Core\Foundation\Middleware\Adapters\CallableHandlerAdapter;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -58,31 +57,17 @@ class ThrottleMiddlewareResolver implements MiddlewareResolverInterface
                 ? $request->middlewareParams['throttle']
                 : $defaultRate;
 
+            // Parse rate configuration
             list($maxAttempts, $minutes) = explode(',', $rate);
+
+            // Create throttle middleware with parsed configuration
             $throttleMiddleware = new ThrottleMiddleware((int)$maxAttempts, (int)$minutes);
-            $handler = $this->createNextHandler($next);
+
+            // Use our adapter instead of anonymous class
+            $handler = new CallableHandlerAdapter($next);
+
+            // Process the request
             return $throttleMiddleware->process($request, $handler);
-        };
-    }
-
-    /**
-     * Create a next handler
-     *
-     * @param callable $next
-     * @return RequestHandlerInterface
-     */
-    protected function createNextHandler(callable $next): RequestHandlerInterface
-    {
-        return new class($next) implements RequestHandlerInterface {
-            private $next;
-
-            public function __construct(callable $next) {
-                $this->next = $next;
-            }
-
-            public function handle(ServerRequestInterface $request): ResponseInterface {
-                return call_user_func($this->next, $request);
-            }
         };
     }
 }

@@ -5,6 +5,7 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Ody\Core\Foundation\Http\Request;
 use Ody\Core\Foundation\Http\Response;
+use Ody\Core\Foundation\Middleware\Adapters\CallableHandlerAdapter;
 use Ody\Core\Foundation\Middleware\Middleware;
 use Ody\Core\Foundation\Middleware\CorsMiddleware;
 use Ody\Core\Foundation\Middleware\JsonBodyParserMiddleware;
@@ -84,18 +85,11 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
             // Create auth middleware with 'web' guard
             $authMiddleware = new AuthMiddleware('web', $logger);
 
+            // Use our adapter instead of anonymous class
+            $handler = new CallableHandlerAdapter($next);
+
             // Process the request
-            return $authMiddleware->process($request, new class ($next) implements \Psr\Http\Server\RequestHandlerInterface {
-                private $next;
-
-                public function __construct(callable $next) {
-                    $this->next = $next;
-                }
-
-                public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface {
-                    return call_user_func($this->next, $request);
-                }
-            });
+            return $authMiddleware->process($request, $handler);
         });
 
         // Register auth:api middleware
@@ -103,80 +97,50 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
             // Create auth middleware with 'api' guard
             $authMiddleware = new AuthMiddleware('api', $logger);
 
+            // Use our adapter instead of anonymous class
+            $handler = new CallableHandlerAdapter($next);
+
             // Process the request
-            return $authMiddleware->process($request, new class ($next) implements \Psr\Http\Server\RequestHandlerInterface {
-                private $next;
-
-                public function __construct(callable $next) {
-                    $this->next = $next;
-                }
-
-                public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface {
-                    return call_user_func($this->next, $request);
-                }
-            });
+            return $authMiddleware->process($request, $handler);
         });
 
         // Register auth:jwt middleware
         $middleware->addNamed('auth:jwt', function (Request $request, callable $next) use ($logger) {
-            // Create auth middleware with 'jwt' guard
+            // Create auth middleware with 'api' guard
             $authMiddleware = new AuthMiddleware('jwt', $logger);
 
+            // Use our adapter instead of anonymous class
+            $handler = new CallableHandlerAdapter($next);
+
             // Process the request
-            return $authMiddleware->process($request, new class ($next) implements \Psr\Http\Server\RequestHandlerInterface {
-                private $next;
-
-                public function __construct(callable $next) {
-                    $this->next = $next;
-                }
-
-                public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface {
-                    return call_user_func($this->next, $request);
-                }
-            });
+            return $authMiddleware->process($request, $handler);
         });
 
-        // Register role middleware
         $middleware->addNamed('role', function (Request $request, callable $next) use ($logger) {
             $role = $request->middlewareParams['role'] ?? 'user';
 
             // Create role middleware
             $roleMiddleware = new RoleMiddleware($role, $logger);
 
+            // Use our adapter instead of anonymous class
+            $handler = new CallableHandlerAdapter($next);
+
             // Process the request
-            return $roleMiddleware->process($request, new class ($next) implements \Psr\Http\Server\RequestHandlerInterface {
-                private $next;
-
-                public function __construct(callable $next) {
-                    $this->next = $next;
-                }
-
-                public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface {
-                    return call_user_func($this->next, $request);
-                }
-            });
+            return $roleMiddleware->process($request, $handler);
         });
 
-        // Register throttle middleware
-        $middleware->addNamed('throttle', function (Request $request, callable $next) {
+        $middleware->addNamed('role', function (Request $request, callable $next) use ($logger) {
             $rate = $request->middlewareParams['throttle'] ?? '60,1';
             list($maxAttempts, $minutes) = explode(',', $rate);
 
             // Create throttle middleware
             $throttleMiddleware = new ThrottleMiddleware((int)$maxAttempts, (int)$minutes);
 
+            // Use our adapter instead of anonymous class
+            $handler = new CallableHandlerAdapter($next);
+
             // Process the request
-            return $throttleMiddleware->process($request, new class ($next) implements \Psr\Http\Server\RequestHandlerInterface {
-                private $next;
-
-                public function __construct(callable $next) {
-                    $this->next = $next;
-                }
-
-                public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface {
-                    return call_user_func($this->next, $request);
-                }
-            });
+            return $throttleMiddleware->process($request, $handler);
         });
     }
 

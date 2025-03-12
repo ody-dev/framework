@@ -5,9 +5,8 @@ namespace Ody\Core\Foundation\Middleware\Resolvers;
 use Illuminate\Container\Container;
 use Psr\Log\LoggerInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Server\MiddlewareInterface;
-use Psr\Http\Server\RequestHandlerInterface;
+use Ody\Core\Foundation\Middleware\Adapters\CallableHandlerAdapter;
 
 /**
  * Generic resolver for class-based middleware
@@ -81,7 +80,8 @@ class ClassMiddlewareResolver implements MiddlewareResolverInterface
                 $middleware = new $middlewareClass(...array_values($options));
             }
 
-            $handler = $this->createNextHandler($next);
+            // Use our adapter instead of anonymous class
+            $handler = new CallableHandlerAdapter($next);
 
             // Check if it's a PSR-15 middleware
             if ($middleware instanceof MiddlewareInterface) {
@@ -90,27 +90,6 @@ class ClassMiddlewareResolver implements MiddlewareResolverInterface
 
             // Otherwise assume it's a callable middleware
             return $middleware($request, $next);
-        };
-    }
-
-    /**
-     * Create a next handler
-     *
-     * @param callable $next
-     * @return RequestHandlerInterface
-     */
-    protected function createNextHandler(callable $next): RequestHandlerInterface
-    {
-        return new class($next) implements RequestHandlerInterface {
-            private $next;
-
-            public function __construct(callable $next) {
-                $this->next = $next;
-            }
-
-            public function handle(ServerRequestInterface $request): ResponseInterface {
-                return call_user_func($this->next, $request);
-            }
         };
     }
 }
