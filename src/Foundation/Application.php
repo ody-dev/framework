@@ -1,56 +1,40 @@
 <?php
+// This is a partial update of the Application class to show how to use the ResponseEmitter
 
 namespace Ody\Core\Foundation;
 
 use Illuminate\Container\Container;
-use Illuminate\Contracts\Container\BindingResolutionException;
 use Ody\Core\Foundation\Http\Request;
 use Ody\Core\Foundation\Http\Response;
+use Ody\Core\Foundation\Http\ResponseEmitter;
+use Ody\Core\Foundation\Http\Swoole\SwooleResponseEmitter;
 use Ody\Core\Foundation\Middleware\Middleware;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerInterface;
 
-/**
- * Main application class (PSR-7 and PSR-15 compatible)
- */
 class Application
 {
     /**
-     * @var Router
+     * @var ResponseEmitter
      */
-    private Router $router;
+    private ResponseEmitter $responseEmitter;
 
     /**
-     * @var Middleware
-     */
-    private Middleware $middleware;
-
-    /**
-     * @var LoggerInterface
-     */
-    private LoggerInterface $logger;
-
-    /**
-     * @var Container
-     */
-    private Container $container;
-
-    /**
-     * Application constructor
+     * Application constructor with ResponseEmitter
      *
      * @param Router|null $router
      * @param Middleware|null $middleware
      * @param LoggerInterface|null $logger
      * @param Container|null $container
-     * @throws BindingResolutionException
+     * @param ResponseEmitter|null $responseEmitter
      */
     public function __construct(
         ?Router $router = null,
         ?Middleware $middleware = null,
         ?LoggerInterface $logger = null,
-        ?Container $container = null
+        ?Container $container = null,
+        ?ResponseEmitter $responseEmitter = null
     ) {
         // Initialize container
         $this->container = $container ?? new Container();
@@ -73,10 +57,56 @@ class Application
         $this->middleware = $middleware ?? $this->container->make(Middleware::class);
         $this->logger = $logger ?? $this->container->make(LoggerInterface::class);
 
+        // Create the appropriate ResponseEmitter based on environment
+        if (!$responseEmitter) {
+            // TODO: change extension_loaded to isRunningOnSwooleHttp
+            if (extension_loaded('swoole') && false) {
+                $responseEmitter = new SwooleResponseEmitter($this->logger);
+            } else {
+                $responseEmitter = new ResponseEmitter($this->logger);
+            }
+        }
+        $this->responseEmitter = $responseEmitter;
+
+        // Register the emitter in the container
+        $this->container->instance(ResponseEmitter::class, $this->responseEmitter);
+
         // Register self in container
         if (!$this->container->bound(Application::class)) {
             $this->container->instance(Application::class, $this);
         }
+    }
+
+    /**
+     * Run the application
+     *
+     * @return void
+     */
+    public function run(): void
+    {
+        $response = $this->handleRequest();
+        $this->emitResponse($response);
+    }
+
+    /**
+     * Emit the response
+     *
+     * @param ResponseInterface $response
+     * @return void
+     */
+    public function emitResponse(ResponseInterface $response): void
+    {
+        $this->responseEmitter->emit($response);
+    }
+
+    /**
+     * Get the response emitter
+     *
+     * @return ResponseEmitter
+     */
+    public function getResponseEmitter(): ResponseEmitter
+    {
+        return $this->responseEmitter;
     }
 
     /**
@@ -222,26 +252,6 @@ class Application
 
         // Ensure PSR-7 response is returned
         return $response;
-    }
-
-    /**
-     * Run the application
-     *
-     * @return void
-     */
-    public function run(): void
-    {
-        $response = $this->handleRequest();
-
-        // Send the response
-        if ($response instanceof Response) {
-            if (!$response->isSent()) {
-                $response->send();
-            }
-        } else {
-            // For non-Response PSR-7 responses, extract and send them
-            $this->sendPsr7Response($response);
-        }
     }
 
     /**
