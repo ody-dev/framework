@@ -19,14 +19,14 @@ use Psr\Log\LoggerInterface;
 /**
  * Service provider for core application services
  */
-class ApplicationServiceProvider extends AbstractServiceProviderInterface
+class ApplicationServiceProvider extends ServiceProvider
 {
     /**
      * Services that should be registered as singletons
      *
      * @var array
      */
-    protected $singletons = [
+    protected array $singletons = [
         Application::class => null,
         Router::class => null,
         Psr17Factory::class => null,
@@ -45,7 +45,7 @@ class ApplicationServiceProvider extends AbstractServiceProviderInterface
      *
      * @var array
      */
-    protected $tags = [
+    protected array $tags = [
         'psr7' => [
             Psr17Factory::class,
             ServerRequestFactoryInterface::class,
@@ -66,7 +66,7 @@ class ApplicationServiceProvider extends AbstractServiceProviderInterface
      *
      * @return void
      */
-    protected function registerServices(): void
+    public function register(): void
     {
         // Register router with container and middleware
         $this->registerSingleton(Router::class, function ($container) {
@@ -85,6 +85,11 @@ class ApplicationServiceProvider extends AbstractServiceProviderInterface
 
             return new Application($router, $middlewareRegistry, $logger, $container);
         });
+    }
+
+    public function boot(): void
+    {
+        // TODO: Implement boot() method.
     }
 
     /**

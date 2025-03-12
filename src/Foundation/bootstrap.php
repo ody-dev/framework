@@ -12,7 +12,7 @@
  * This file exists for backward compatibility
  */
 
-use Ody\Container\ContractsBootstrap;
+use Ody\Foundation\Bootstrap;
 
 // Return bootstrapped application
 return Bootstrap::init();

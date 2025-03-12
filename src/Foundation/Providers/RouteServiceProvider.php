@@ -12,14 +12,14 @@ use Psr\Log\LoggerInterface;
 /**
  * Service provider for routes
  */
-class RouteServiceProvider extends AbstractServiceProviderInterface
+class RouteServiceProvider extends ServiceProvider
 {
     /**
      * Services that should be registered as singletons
      *
      * @var array
      */
-    protected $singletons = [
+    protected array $singletons = [
         RouteLoader::class => null,
         MiddlewareResolverFactory::class => null
     ];
@@ -52,7 +52,7 @@ class RouteServiceProvider extends AbstractServiceProviderInterface
      *
      * @return void
      */
-    protected function registerServices(): void
+    public function register(): void
     {
         error_log('RouteServiceProvider::registerServices() called');
         // Register RouteLoader
@@ -79,16 +79,15 @@ class RouteServiceProvider extends AbstractServiceProviderInterface
     /**
      * Bootstrap routes
      *
-     * @param Container $container
      * @return void
      */
-    public function boot(Container $container): void
+    public function boot(): void
     {
         $routeLoader = $this->make(RouteLoader::class);
         $this->resolverFactory = $this->make(MiddlewareResolverFactory::class);
 
         // Register named middleware and load routes
-        $this->registerNamedMiddleware($container);
+        $this->registerNamedMiddleware($this->container);
         $this->loadRouteFiles($routeLoader);
     }
 

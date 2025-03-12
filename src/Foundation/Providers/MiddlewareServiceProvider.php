@@ -15,14 +15,14 @@ use Psr\Log\LoggerInterface;
 /**
  * Service provider for middleware
  */
-class MiddlewareServiceProvider extends AbstractServiceProviderInterface
+class MiddlewareServiceProvider extends ServiceProvider
 {
     /**
      * Services that should be registered as singletons
      *
      * @var array
      */
-    protected $singletons = [
+    protected array $singletons = [
         MiddlewareRegistry::class => null,
         AuthMiddleware::class => null,
         RoleMiddleware::class => null,
@@ -34,7 +34,7 @@ class MiddlewareServiceProvider extends AbstractServiceProviderInterface
      *
      * @var array
      */
-    protected $tags = [
+    protected array $tags = [
         'middleware' => [
             MiddlewareRegistry::class,
             AuthMiddleware::class,
@@ -48,7 +48,7 @@ class MiddlewareServiceProvider extends AbstractServiceProviderInterface
      *
      * @return void
      */
-    protected function registerServices(): void
+    public function register(): void
     {
         // Register MiddlewareRegistry
         $this->registerSingleton(MiddlewareRegistry::class, function ($container) {
@@ -74,19 +74,18 @@ class MiddlewareServiceProvider extends AbstractServiceProviderInterface
     /**
      * Bootstrap middleware
      *
-     * @param Container $container
      * @return void
      */
-    public function boot(Container $container): void
+    public function boot(): void
     {
         $registry = $this->make(MiddlewareRegistry::class);
         $config = $this->make(Config::class);
 
         // Register named middleware
-        $this->registerNamedMiddleware($registry, $container);
+        $this->registerNamedMiddleware($registry, $this->container);
 
         // Register global middleware from configuration
-        $this->registerGlobalMiddleware($registry, $container, $config);
+        $this->registerGlobalMiddleware($registry, $this->container, $config);
 
         // Register middleware groups
         $this->registerMiddlewareGroups($registry, $config);

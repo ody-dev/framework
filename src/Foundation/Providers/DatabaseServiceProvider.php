@@ -8,14 +8,14 @@ use PDO;
 /**
  * Service provider for database services
  */
-class DatabaseServiceProvider extends AbstractServiceProviderInterface
+class DatabaseServiceProvider extends ServiceProvider
 {
     /**
      * Services that should be registered as singletons
      *
      * @var array
      */
-    protected $singletons = [
+    protected array $singletons = [
         PDO::class => null
     ];
 
@@ -24,7 +24,7 @@ class DatabaseServiceProvider extends AbstractServiceProviderInterface
      *
      * @var array
      */
-    protected $aliases = [
+    protected array $aliases = [
         'db' => PDO::class
     ];
 
@@ -33,7 +33,7 @@ class DatabaseServiceProvider extends AbstractServiceProviderInterface
      *
      * @var array
      */
-    protected $tags = [
+    protected array $tags = [
         'database' => [
             PDO::class,
             'db'
@@ -45,7 +45,7 @@ class DatabaseServiceProvider extends AbstractServiceProviderInterface
      *
      * @return void
      */
-    protected function registerServices(): void
+    public function register(): void
     {
         // Register PDO connection
         $this->registerSingleton(PDO::class, function ($container) {
@@ -77,6 +77,17 @@ class DatabaseServiceProvider extends AbstractServiceProviderInterface
                 $options
             );
         });
+    }
+
+    /**
+     * Bootstrap database services
+     *
+     * @return void
+     */
+    public function boot(): void
+    {
+        $db = $this->make(PDO::class);
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
     /**
@@ -120,33 +131,6 @@ class DatabaseServiceProvider extends AbstractServiceProviderInterface
                     $connection['database'] ?? 'forge',
                     $connection['charset'] ?? 'utf8mb4'
                 );
-        }
-    }
-
-    /**
-     * Bootstrap database services
-     *
-     * @param Container $container
-     * @return void
-     */
-    public function boot(Container $container): void
-    {
-        // Setup database logging if in debug mode
-        if (env('APP_DEBUG', false) && $this->has('logger')) {
-            $logger = $this->make('logger');
-            try {
-                $db = $this->make(PDO::class);
-                $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-                // Log connection success
-                $logger->info('Database connection established successfully');
-            } catch (\PDOException $e) {
-                // Log connection error
-                $logger->error('Database connection failed', [
-                    'error' => $e->getMessage(),
-                    'code' => $e->getCode()
-                ]);
-            }
         }
     }
 }

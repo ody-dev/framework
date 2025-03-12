@@ -8,14 +8,14 @@ use Ody\Foundation\Support\Env;
 /**
  * Service provider for configuration
  */
-class ConfigServiceProvider extends AbstractServiceProviderInterface
+class ConfigServiceProvider extends ServiceProvider
 {
     /**
      * Services that should be registered as singletons
      *
      * @var array
      */
-    protected $singletons = [
+    protected array $singletons = [
         'config' => Config::class,
         Config::class => null
     ];
@@ -25,7 +25,7 @@ class ConfigServiceProvider extends AbstractServiceProviderInterface
      *
      * @return void
      */
-    protected function registerServices(): void
+    public function register(): void
     {
         $config = new Config();
 
@@ -42,8 +42,7 @@ class ConfigServiceProvider extends AbstractServiceProviderInterface
     /**
      * Bootstrap any application services
      *
-     * @param Container $container
      * @return void
      */
-    public function boot(Container $container): void {}
+    public function boot(): void {}
 }

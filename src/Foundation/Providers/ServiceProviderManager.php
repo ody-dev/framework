@@ -15,11 +15,6 @@ use Ody\Foundation\Support\Config;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * ServiceProviderManager
- *
- * Manages the registration, booting, and discovery of service providers.
- */
 class ServiceProviderManager
 {
     /**
@@ -91,98 +86,63 @@ class ServiceProviderManager
      */
     public function registerConfigProviders(string $configKey = 'app.providers'): void
     {
-        if (!$this->config) {
-            $this->logger->warning('Cannot register config providers - no Config instance available');
-            return;
-        }
-
         // Get providers from config
         $providers = $this->config->get($configKey, []);
 
         if (empty($providers)) {
-            $this->logger->debug("No providers found in config key '{$configKey}'");
             return;
         }
 
-        // Register each provider
-        foreach ($providers as $provider) {
-            try {
-                $this->register($provider);
-            } catch (\Throwable $e) {
-                $this->logger->error("Failed to register provider: {$provider}", [
-                    'error' => $e->getMessage(),
-                    'exception' => $e
-                ]);
-
-                // Re-throw if debug mode is enabled
-                if (env('APP_DEBUG', false)) {
-                    throw $e;
-                }
-            }
-        }
+        array_walk($providers, function (&$provider) {
+            $this->register($provider);
+        });
     }
 
     /**
      * Register a service provider with the application
      *
-     * @param string|ServiceProviderInterface $provider
+     * @param string|ServiceProvider $provider
      * @param bool $force Force register even if deferred
-     * @return ServiceProviderInterface|null The registered provider, or null on failure
+     * @return ServiceProvider|null The registered provider, or null on failure
      * @throws \Throwable
      */
-    public function register($provider, bool $force = false): ?ServiceProviderInterface
+    public function register($provider, bool $force = false) // ?ServiceProviderInterface
     {
-        try {
-            // If string is passed, resolve the provider instance
-            if (is_string($provider)) {
-                $providerClass = $provider;
-                $provider = $this->resolveProvider($provider);
-            } else {
-                $providerClass = get_class($provider);
-            }
-
-            // Don't register the same provider twice
-            if (isset($this->providers[$providerClass])) {
-                $this->logger->debug("Provider already registered: {$providerClass}");
-                return $this->providers[$providerClass];
-            }
-
-            // Check if the provider is deferred and not being forced
-            if (!$force && $this->isDeferredProvider($provider)) {
-                $this->registerDeferredProvider($provider);
-                return $provider;
-            }
-
-            // Register the provider
-            $provider->register($this->container);
-            // Store the provider instance
-            $this->providers[$providerClass] = $provider;
-
-            return $provider;
-        } catch (\Throwable $e) {
-            // Log error
-            $this->logger->error("Failed to register service provider: " . ($providerClass ?? (is_object($provider) ? get_class($provider) : 'unknown')), [
-                'error' => $e->getMessage(),
-                'exception' => $e
-            ]);
-
-            // Re-throw if debug mode is enabled
-            if (env('APP_DEBUG', false)) {
-                throw $e;
-            }
-
-            return null;
+        // If string is passed, resolve the provider instance
+        if (is_string($provider)) {
+            $providerClass = $provider;
+            $provider = $this->resolveProvider($provider);
+        } else {
+            $providerClass = get_class($provider);
         }
+
+        // Don't register the same provider twice
+        if (isset($this->providers[$providerClass])) {
+            return $this->providers[$providerClass];
+        }
+
+        // Check if the provider is deferred and not being forced
+        if (!$force && $this->isDeferredProvider($provider)) {
+            $this->registerDeferredProvider($provider);
+            return $provider;
+        }
+
+        // Register the provider
+        $provider->setup($this->container);
+        // Store the provider instance
+        $this->providers[$providerClass] = $provider;
+
+        return $provider;
     }
 
     /**
      * Resolve a provider instance from a class name
      *
      * @param string $provider
-     * @return ServiceProviderInterface
+     * @return ServiceProvider
      * @throws BindingResolutionException
      */
-    protected function resolveProvider(string $provider): ServiceProviderInterface
+    protected function resolveProvider(string $provider): ServiceProvider
     {
         if ($this->container->has($provider)) {
             return $this->container->make($provider);
@@ -194,10 +154,10 @@ class ServiceProviderManager
     /**
      * Check if a provider is deferred
      *
-     * @param ServiceProviderInterface $provider
+     * @param ServiceProvider $provider
      * @return bool
      */
-    protected function isDeferredProvider(ServiceProviderInterface $provider): bool
+    protected function isDeferredProvider(ServiceProvider $provider): bool
     {
         if (method_exists($provider, 'isDeferred')) {
             return $provider->isDeferred();
@@ -209,10 +169,10 @@ class ServiceProviderManager
     /**
      * Register a deferred provider
      *
-     * @param ServiceProviderInterface $provider
+     * @param ServiceProvider $provider
      * @return void
      */
-    protected function registerDeferredProvider(ServiceProviderInterface $provider): void
+    protected function registerDeferredProvider(ServiceProvider $provider): void
     {
         if (method_exists($provider, 'provides')) {
             $providerClass = get_class($provider);
@@ -239,11 +199,11 @@ class ServiceProviderManager
     /**
      * Boot a specific provider
      *
-     * @param ServiceProviderInterface $provider
+     * @param ServiceProvider $provider
      * @return void
      * @throws \Throwable
      */
-    public function bootProvider(ServiceProviderInterface $provider): void
+    public function bootProvider(ServiceProvider $provider): void
     {
         $providerClass = get_class($provider);
 
@@ -251,21 +211,7 @@ class ServiceProviderManager
             return;
         }
 
-        try {
-            // Boot the provider
-            $provider->boot($this->container);
-            // Mark as booted
-            $this->booted[$providerClass] = true;
-        } catch (\Throwable $e) {
-            $this->logger->error("Failed to boot service provider: {$providerClass}", [
-                'error' => $e->getMessage(),
-                'exception' => $e
-            ]);
-
-            if (env('APP_DEBUG', false)) {
-                throw $e;
-            }
-        }
+        $provider->boot();
     }
 
     /**

@@ -10,14 +10,14 @@ use Psr\Log\NullLogger;
 /**
  * Service provider for logging
  */
-class LoggingServiceProvider extends AbstractServiceProviderInterface
+class LoggingServiceProvider extends ServiceProvider
 {
     /**
      * Services that should be registered as singletons
      *
      * @var array
      */
-    protected $singletons = [
+    protected array $singletons = [
         LogManager::class => null
     ];
 
@@ -26,7 +26,7 @@ class LoggingServiceProvider extends AbstractServiceProviderInterface
      *
      * @var array
      */
-    protected $aliases = [
+    protected array $aliases = [
         'log' => LogManager::class,
         'logger' => LoggerInterface::class
     ];
@@ -36,7 +36,7 @@ class LoggingServiceProvider extends AbstractServiceProviderInterface
      *
      * @return void
      */
-    protected function registerServices(): void
+    public function register(): void
     {
         // Register a default NullLogger for LoggerInterface to prevent circular dependencies
         $this->instance(LoggerInterface::class, new NullLogger());
@@ -61,10 +61,9 @@ class LoggingServiceProvider extends AbstractServiceProviderInterface
     /**
      * Bootstrap any application services
      *
-     * @param Container $container
      * @return void
      */
-    public function boot(Container $container): void
+    public function boot(): void
     {
         // No bootstrapping needed
     }

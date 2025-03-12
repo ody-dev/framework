@@ -13,14 +13,14 @@ use Ody\Foundation\Facades\Facade;
 /**
  * Service provider for facades
  */
-class FacadeServiceProvider extends AbstractServiceProviderInterface
+class FacadeServiceProvider extends ServiceProvider
 {
     /**
      * Services that should be registered as aliases
      *
      * @var array
      */
-    protected $aliases = [
+    protected array $aliases = [
         'router' => Router::class,
         'config' => Config::class
     ];
@@ -30,7 +30,7 @@ class FacadeServiceProvider extends AbstractServiceProviderInterface
      *
      * @var array
      */
-    protected $singletons = [
+    protected array $singletons = [
         'request' => null,
         'response' => null
     ];
@@ -40,7 +40,7 @@ class FacadeServiceProvider extends AbstractServiceProviderInterface
      *
      * @return void
      */
-    protected function registerServices(): void
+    public function register(): void
     {
         // Set the container on the Facade class
         Facade::setFacadeContainer($this->container);
@@ -63,10 +63,9 @@ class FacadeServiceProvider extends AbstractServiceProviderInterface
     /**
      * Bootstrap any application services
      *
-     * @param Container $container
      * @return void
      */
-    public function boot(Container $container): void
+    public function boot(): void
     {
         // Get aliases from config
         $config = $this->make(Config::class);

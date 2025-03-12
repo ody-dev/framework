@@ -169,7 +169,6 @@ class Application
             // Process the request through middleware using the registry
             return $this->middlewareRegistry->process($request, $finalHandler);
         } catch (\Throwable $e) {
-            throw new \Exception($e);
             return $this->handleException($e);
         }
     }
@@ -200,7 +199,7 @@ class Application
         return function (ServerRequestInterface $request) use ($routeInfo) {
             $response = new Response();
 
-            match($routeInfo['status']) {
+            return match($routeInfo['status']) {
                 'found' => $this->handleFoundRoute($request, $response, $routeInfo),
                 'method_not_allowed' => $this->handleMethodNotAllowed($response, $request, $routeInfo),
                 default => $this->handleNotFound($response, $request) // not found

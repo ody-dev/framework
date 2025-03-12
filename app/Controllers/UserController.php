@@ -40,16 +40,15 @@ class UserController
      */
     public function index(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
-        dd('test');
         // In a real app, fetch from database
-        $stmt = $this->db->query('SELECT id, email FROM users');
-        $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+//        $stmt = $this->db->query('SELECT id, email FROM users');
+//        $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         // Mock data for example
-        // $users = [
-        //     ['id' => 1, 'name' => 'John Doe', 'email' => 'john@example.com'],
-        //     ['id' => 2, 'name' => 'Jane Smith', 'email' => 'jane@example.com']
-        // ];
+         $users = [
+             ['id' => 1, 'name' => 'John Doe', 'email' => 'john@example.com'],
+             ['id' => 2, 'name' => 'Jane Smith', 'email' => 'jane@example.com']
+         ];
 
         return $this->jsonResponse($response, $users);
     }
@@ -200,13 +199,32 @@ class UserController
      */
     private function jsonResponse(ResponseInterface $response, $data): ResponseInterface
     {
+        // Debug the response type
+        $this->logger->info('Response object in jsonResponse', [
+            'class' => get_class($response),
+            'interfaces' => implode(', ', class_implements($response))
+        ]);
+
+        // Always set JSON content type
         $response = $response->withHeader('Content-Type', 'application/json');
-
-
 
         // If using our custom Response class
         if ($response instanceof Response) {
-            return $response->withJson($data);
+            // Instead of using withJson directly, we'll manually encode and set the body
+            $jsonData = json_encode($data);
+            if ($jsonData === false) {
+                $this->logger->error('JSON encoding error', [
+                    'error' => json_last_error_msg()
+                ]);
+                $jsonData = json_encode(['error' => 'JSON encoding error']);
+            }
+
+            // Create a stream factory
+            $streamFactory = new \Nyholm\Psr7\Factory\Psr17Factory();
+            // Create a stream with the JSON data
+            $stream = $streamFactory->createStream($jsonData);
+            // Set the stream as the response body
+            return $response->withBody($stream);
         }
 
         // For other PSR-7 implementations

@@ -14,48 +14,39 @@ use Ody\Container\Container;
 use Ody\Foundation\Logging\NullLogger;
 use Psr\Log\LoggerInterface;
 
-/**
- * base service provider class with streamlined registration capabilities
- */
-abstract class AbstractServiceProviderInterface implements ServiceProviderInterface
+abstract class ServiceProvider // implements ServiceProviderInterface
 {
     /**
      * @var Container
      */
-    protected $container;
-
-    /**
-     * @var LoggerInterface|null
-     */
-    protected $logger;
-
+    protected Container $container;
     /**
      * Services that should be registered as singletons
      *
      * @var array
      */
-    protected $singletons = [];
+    protected array $singletons = [];
 
     /**
      * Services that should be registered as bindings
      *
      * @var array
      */
-    protected $bindings = [];
+    protected array $bindings = [];
 
     /**
      * Services that should be registered as aliases
      *
      * @var array
      */
-    protected $aliases = [];
+    protected array $aliases = [];
 
     /**
      * Tags for grouping services
      *
      * @var array
      */
-    protected $tags = [];
+    protected array $tags = [];
 
     /**
      * Whether to defer registration until service is needed
@@ -64,22 +55,9 @@ abstract class AbstractServiceProviderInterface implements ServiceProviderInterf
      */
     protected $defer = false;
 
-    /**
-     * Register services in the container
-     *
-     * @param Container $container
-     * @return void
-     */
-    public function register(Container $container): void
+    final public function setup(Container $container)
     {
         $this->container = $container;
-
-        // Get logger if available
-        if ($container->has(LoggerInterface::class)) {
-            $this->logger = $container->make(LoggerInterface::class);
-        } else {
-            $this->logger = new NullLogger();
-        }
 
         array_walk($this->bindings, function ($concrete, $abstract) {
             // Register bindings
@@ -99,8 +77,22 @@ abstract class AbstractServiceProviderInterface implements ServiceProviderInterf
         });
 
         // Call the provider's custom registration logic
-        $this->registerServices();
+        $this->register();
     }
+
+    /**
+     * Register application services
+     *
+     * @return void
+     */
+    abstract public function register(): void;
+
+    /**
+     * Bootstrap any application services
+     *
+     * @return void
+     */
+    abstract public function boot(): void;
 
     /**
      * Register a binding with the container
@@ -139,13 +131,6 @@ abstract class AbstractServiceProviderInterface implements ServiceProviderInterf
         $this->container->singleton($abstract, $concrete);
     }
 
-    /**
-     * Register a tag for a service
-     *
-     * @param string $abstract
-     * @param string|array $tags
-     * @return void
-     */
     /**
      * Register a tag for a service
      *
@@ -239,27 +224,6 @@ abstract class AbstractServiceProviderInterface implements ServiceProviderInterf
     }
 
     /**
-     * Register custom services
-     *
-     * @return void
-     */
-    protected function registerServices(): void
-    {
-        // Override in child classes
-    }
-
-    /**
-     * Bootstrap any application services
-     *
-     * @param Container $container
-     * @return void
-     */
-    public function boot(Container $container): void
-    {
-        // Override in child classes if needed
-    }
-
-    /**
      * Determine if the provider is deferred
      *
      * @return bool
@@ -280,5 +244,21 @@ abstract class AbstractServiceProviderInterface implements ServiceProviderInterf
             array_keys($this->singletons),
             array_keys($this->bindings)
         );
+    }
+
+    /**
+     * Load custom defined routes
+     * TODO: route cache
+     *
+     * @param string $path
+     * @return void
+     */
+    protected function loadRoutesFrom(string $path)
+    {
+        require $path;
+
+//        if (! ($this->app instanceof CachesRoutes && $this->app->routesAreCached())) {
+//            require $path;
+//        }
     }
 }
