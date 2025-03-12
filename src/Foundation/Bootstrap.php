@@ -5,24 +5,16 @@ namespace Ody\Foundation;
 
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Ody\Container\Container;
-use Ody\Container\Contracts\BindingResolutionException;
-use Ody\Foundation\Providers\ApplicationServiceProvider;
-use Ody\Foundation\Providers\ConfigServiceProvider;
-use Ody\Foundation\Providers\FacadeServiceProvider;
-use Ody\Foundation\Providers\LoggingServiceProvider;
 use Ody\Foundation\Providers\ServiceProviderManager;
 use Ody\Foundation\Support\Config;
 use Ody\Foundation\Support\Env;
-use Psr\Http\Message\ResponseFactoryInterface;
-use Psr\Http\Message\ServerRequestFactoryInterface;
-use Psr\Http\Message\StreamFactoryInterface;
-use Psr\Http\Message\UploadedFileFactoryInterface;
-use Psr\Http\Message\UriFactoryInterface;
-use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Psr\Log\LoggerInterface;
 
 /**
  * Application Bootstrap
+ *
+ * Simplified version with cleaner initialization flow
  */
 class Bootstrap
 {
@@ -30,130 +22,148 @@ class Bootstrap
      * Initialize the application
      *
      * @param Container|null $container
-     * @param string|null $configPath
+     * @param string|null $basePath
      * @param string|null $environment
      * @return Application
      */
-    public static function init(?Container $container = null, ?string $configPath = null, ?string $environment = null): Application
+    public static function init(?Container $container = null, ?string $basePath = null, ?string $environment = null): Application
     {
-        // Define base path if not already defined
-        if (!defined('APP_BASE_PATH')) {
-            define('APP_BASE_PATH', dirname(__DIR__, 2));
-        }
+        // 1. Initialize base path
+        $basePath = self::initBasePath($basePath);
 
-        // Create container if not provided
-        $container = $container ?? new Container();
-        Container::setInstance($container);
+        // 2. Setup container
+        $container = self::initContainer($container);
 
-        // Initialize environment
-        $env = self::initEnvironment($container, $environment);
+        // 3. Load environment and config in one step (since they're closely related)
+        $config = self::initEnvironmentAndConfig($container, $basePath, $environment);
 
-        // Initialize PSR-17 factories
-        self::initPsr17Factories($container);
-
-        // Register a temporary NullLogger to avoid circular dependencies
-        $container->singleton(LoggerInterface::class, function() {
-            return new NullLogger();
-        });
-
-        // Initialize configuration right away
-        $config = self::initConfiguration($container, $configPath);
-
-        // Initialize service providers
-        $application = self::initServiceProviders($container, $config);
+        // 4. Create and bootstrap the application (moving most logic to Application)
+        $application = self::createApplication($container, $config);
 
         return $application;
     }
 
     /**
-     * Initialize environment
+     * Initialize the base path
      *
-     * @param Container $container
-     * @param string|null $environment
-     * @return Env
+     * @param string|null $basePath
+     * @return string
      */
-    private static function initEnvironment(Container $container, ?string $environment = null): Env
+    private static function initBasePath(?string $basePath = null): string
     {
-        $env = new Env(APP_BASE_PATH);
-        $env->load($environment ?? env('APP_ENV', 'production'));
+        // Use provided path, or determine from current file location
+        $basePath = $basePath ?? dirname(__DIR__, 2);
 
-        $container->instance(Env::class, $env);
+        // Define constant for global access if not already defined
+        if (!defined('APP_BASE_PATH')) {
+            define('APP_BASE_PATH', $basePath);
+        }
 
-        return $env;
+        return $basePath;
     }
 
     /**
-     * Initialize configuration
+     * Initialize the container
+     *
+     * @param Container|null $container
+     * @return Container
+     */
+    private static function initContainer(?Container $container = null): Container
+    {
+        // Create container if not provided
+        $container = $container ?? new Container();
+
+        // Set as global instance
+        Container::setInstance($container);
+
+        return $container;
+    }
+
+    /**
+     * Initialize environment and configuration
+     * (Combined for efficiency since they're dependent)
      *
      * @param Container $container
-     * @param string|null $configPath
+     * @param string $basePath
+     * @param string|null $environment
      * @return Config
      */
-    private static function initConfiguration(Container $container, ?string $configPath = null): Config
+    private static function initEnvironmentAndConfig(Container $container, string $basePath, ?string $environment = null): Config
     {
-        $config = new Config();
-        $configPath = $configPath ?? env('CONFIG_PATH', APP_BASE_PATH . '/config');
+        // 1. Initialize environment
+        $env = new Env($basePath);
+        // Handle the case where getenv returns false
+        $envName = $environment ?? (getenv('APP_ENV') !== false ? getenv('APP_ENV') : 'production');
+        $env->load($envName);
+        $container->instance(Env::class, $env);
 
+        // 2. Initialize configuration
+        $config = new Config();
+        $configPath = env('CONFIG_PATH', $basePath . '/config');
         $config->loadFromDirectory($configPath);
 
+        // Register in container
         $container->instance('config', $config);
         $container->instance(Config::class, $config);
+
+        // 3. Register temporary logger (will be replaced by proper logger later)
+        $container->singleton(LoggerInterface::class, function() {
+            return new NullLogger();
+        });
 
         return $config;
     }
 
     /**
-     * Initialize PSR-17 factories
-     *
-     * @param Container $container
-     * @return void
-     */
-    private static function initPsr17Factories(Container $container): void
-    {
-        $psr17Factory = new Psr17Factory();
-        $container->instance(Psr17Factory::class, $psr17Factory);
-
-        $container->instance(ServerRequestFactoryInterface::class, $psr17Factory);
-        $container->instance(ResponseFactoryInterface::class, $psr17Factory);
-        $container->instance(StreamFactoryInterface::class, $psr17Factory);
-        $container->instance(UploadedFileFactoryInterface::class, $psr17Factory);
-        $container->instance(UriFactoryInterface::class, $psr17Factory);
-    }
-
-    /**
-     * Initialize service providers
+     * Create and bootstrap the application
      *
      * @param Container $container
      * @param Config $config
      * @return Application
-     * @throws BindingResolutionException
      */
-    private static function initServiceProviders(Container $container, Config $config): Application
+    private static function createApplication(Container $container, Config $config): Application
     {
-        // Create service provider manager
+        self::registerCoreServices($container);
+
         $providerManager = new ServiceProviderManager($container, $config);
         $container->instance(ServiceProviderManager::class, $providerManager);
 
-        $providers = [
-            ConfigServiceProvider::class,
-            LoggingServiceProvider::class,
-            ApplicationServiceProvider::class,
-            FacadeServiceProvider::class
+        $application = new Application($container, $providerManager);
+        $container->instance(Application::class, $application);
+        $application->bootstrap();
+
+        return $application;
+    }
+
+    /**
+     * Register minimal core services required by Application
+     * (Others will be registered by service providers)
+     *
+     * @param Container $container
+     * @return void
+     */
+    private static function registerCoreServices(Container $container): void
+    {
+        // Only register what's absolutely necessary for Application construction
+        // PSR-17 factories are registered here because they're fundamental to HTTP handling
+        // and used by multiple components
+
+        $psr17Factory = new Psr17Factory();
+        $container->instance(Psr17Factory::class, $psr17Factory);
+
+        // Use interface aliasing to PSR factory implementations
+        $interfaces = [
+            'Psr\Http\Message\ServerRequestFactoryInterface',
+            'Psr\Http\Message\ResponseFactoryInterface',
+            'Psr\Http\Message\StreamFactoryInterface',
+            'Psr\Http\Message\UploadedFileFactoryInterface',
+            'Psr\Http\Message\UriFactoryInterface'
         ];
 
-        array_walk($providers, function ($provider) use ($providerManager) {
-            $provider = new $provider();
-            $providerManager->register($provider);
-            $providerManager->bootProvider($provider);  // This is line 145 calling the protected method
-        });
-
-        // Register all providers defined in config
-        $providerManager->registerConfigProviders('app.providers');
-
-        // Boot all registered providers
-        $providerManager->boot();
-
-        // Return application instance from container
-        return $container->make(Application::class);
+        foreach ($interfaces as $interface) {
+            $container->singleton($interface, function() use ($psr17Factory) {
+                return $psr17Factory;
+            });
+        }
     }
 }

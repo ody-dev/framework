@@ -10,31 +10,32 @@
 namespace Ody\Foundation;
 
 use Ody\Container\Container;
-use Ody\Container\Contracts\BindingResolutionException;
 use Ody\Foundation\Http\Request;
 use Ody\Foundation\Http\Response;
 use Ody\Foundation\Http\ResponseEmitter;
-use Ody\Foundation\Logging\NullLogger;
+use Ody\Foundation\Logging\LogManager;
 use Ody\Foundation\Middleware\MiddlewareRegistry;
+use Ody\Foundation\Providers\ServiceProviderManager;
+use Ody\Foundation\Support\Config;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
-use function PHPUnit\Framework\throwException;
+use Psr\Log\NullLogger;
 
 /**
- * Main application class updated to use MiddlewareRegistry
+ * Main application class with integrated bootstrapping
  */
 class Application
 {
     /**
-     * @var Router
+     * @var Router|null
      */
-    private Router $router;
+    private ?Router $router = null;
 
     /**
-     * @var MiddlewareRegistry
+     * @var MiddlewareRegistry|null
      */
-    private MiddlewareRegistry $middlewareRegistry;
+    private ?MiddlewareRegistry $middlewareRegistry = null;
 
     /**
      * @var LoggerInterface
@@ -47,77 +48,156 @@ class Application
     private Container $container;
 
     /**
-     * @var ResponseEmitter
+     * @var ResponseEmitter|null
      */
-    private ResponseEmitter $responseEmitter;
+    private ?ResponseEmitter $responseEmitter = null;
 
     /**
-     * Application constructor
+     * @var ServiceProviderManager
+     */
+    private ServiceProviderManager $providerManager;
+
+    /**
+     * @var bool Whether the application has been bootstrapped
+     */
+    private bool $bootstrapped = false;
+
+    /**
+     * Core providers that must be registered in a specific order
      *
-     * @param Router|null $router
-     * @param MiddlewareRegistry|null $middlewareRegistry
-     * @param LoggerInterface|null $logger
-     * @param Container|null $container
-     * @param ResponseEmitter|null $responseEmitter
-     * @throws BindingResolutionException
+     * @var array|string[]
+     */
+    private array $providers = [
+        \Ody\Foundation\Providers\ConfigServiceProvider::class,
+        \Ody\Foundation\Providers\LoggingServiceProvider::class,
+        \Ody\Foundation\Providers\ApplicationServiceProvider::class,
+        \Ody\Foundation\Providers\FacadeServiceProvider::class,
+        \Ody\Foundation\Providers\MiddlewareServiceProvider::class,
+        \Ody\Foundation\Providers\RouteServiceProvider::class
+    ];
+
+    /**
+     * Application constructor with reduced dependencies
+     *
+     * @param Container $container
+     * @param ServiceProviderManager $providerManager
      */
     public function __construct(
-        ?Router $router = null,
-        ?MiddlewareRegistry $middlewareRegistry = null,
-        ?LoggerInterface $logger = null,
-        ?Container $container = null,
-        ?ResponseEmitter $responseEmitter = null
+        Container $container,
+        ServiceProviderManager $providerManager
     ) {
-        // Initialize container
-        $this->container = $container ?? new Container();
+        // Store essential components
+        $this->container = $container;
+        $this->providerManager = $providerManager;
 
-        // If LoggerInterface wasn't provided but we're expected to use it,
-        // create a default NullLogger instead of trying to resolve it
-        $this->logger = $logger ?? ($this->container->has(LoggerInterface::class)
-            ? $this->container->make(LoggerInterface::class)
-            : new NullLogger());
-
-        // Register core components in container if they don't exist
-        if (!$this->container->bound(Router::class) && $router === null) {
-            $this->container->singleton(Router::class, function ($container) {
-                return new Router($container);
-            });
-        }
-
-        if (!$this->container->bound(MiddlewareRegistry::class) && $middlewareRegistry === null) {
-            $this->container->singleton(MiddlewareRegistry::class, function ($container) {
-                return new MiddlewareRegistry($container, $container->make(LoggerInterface::class));
-            });
-        }
-
-        // Resolve core components
-        $this->router = $router ?? $this->container->make(Router::class);
-        $this->middlewareRegistry = $middlewareRegistry ?? $this->container->make(MiddlewareRegistry::class);
-        $this->responseEmitter = $responseEmitter ?? $this->container->make(ResponseEmitter::class);
+        // Use a NullLogger temporarily until a real logger is registered
+        $this->logger = $container->has(LoggerInterface::class)
+            ? $container->make(LoggerInterface::class)
+            : new NullLogger();
 
         // Register self in container
         if (!$this->container->bound(Application::class)) {
             $this->container->instance(Application::class, $this);
         }
+        if (!$this->container->bound('app')) {
+            $this->container->alias(Application::class, 'app');
+        }
     }
 
     /**
-     * Get router
+     * Bootstrap the application by loading providers
+     *
+     * @return self
+     */
+    public function bootstrap(): self
+    {
+        if ($this->bootstrapped) {
+            return $this;
+        }
+
+        // Load core service providers
+        $this->registerCoreProviders();
+
+        // Register providers from configuration
+        $this->providerManager->registerConfigProviders('app.providers');
+
+        // Boot all registered providers
+        $this->providerManager->boot();
+
+        // Initialize core components lazily (only created when first accessed)
+        $this->initializeCoreComponents();
+
+        $this->bootstrapped = true;
+        return $this;
+    }
+
+    /**
+     * Register core framework service providers
+     *
+     * @return void
+     */
+    protected function registerCoreProviders(): void
+    {
+        foreach ($this->providers as $provider) {
+            // Only register if class exists (allows for optional components)
+            if (class_exists($provider)) {
+                $this->providerManager->register($provider);
+            }
+        }
+    }
+
+    /**
+     * Initialize core components lazily using container callbacks
+     *
+     * @return void
+     */
+    protected function initializeCoreComponents(): void
+    {
+        // Update logger reference after provider registration
+        if ($this->container->has(LoggerInterface::class)) {
+            $this->logger = $this->container->make(LoggerInterface::class);
+        } else if ($this->container->has(LogManager::class)) {
+            $this->logger = $this->container->make(LogManager::class)->channel();
+            $this->container->instance(LoggerInterface::class, $this->logger);
+        }
+
+        // Register ResponseEmitter if not already registered
+        if (!$this->container->has(ResponseEmitter::class)) {
+            $this->container->singleton(ResponseEmitter::class, function ($container) {
+                return new ResponseEmitter(
+                    $container->make(LoggerInterface::class),
+                    true,
+                    8192
+                );
+            });
+        }
+    }
+
+    /**
+     * Get router (lazy-loaded)
      *
      * @return Router
      */
     public function getRouter(): Router
     {
+        if ($this->router === null) {
+            $this->router = $this->container->make(Router::class);
+        }
+
         return $this->router;
     }
 
     /**
-     * Get middleware registry
+     * Get middleware registry (lazy-loaded)
      *
      * @return MiddlewareRegistry
      */
     public function getMiddlewareRegistry(): MiddlewareRegistry
     {
+        if ($this->middlewareRegistry === null) {
+            $this->middlewareRegistry = $this->container->make(MiddlewareRegistry::class);
+        }
+
         return $this->middlewareRegistry;
     }
 
@@ -142,15 +222,33 @@ class Application
     }
 
     /**
+     * Get response emitter (lazy-loaded)
+     *
+     * @return ResponseEmitter
+     */
+    public function getResponseEmitter(): ResponseEmitter
+    {
+        if ($this->responseEmitter === null) {
+            $this->responseEmitter = $this->container->make(ResponseEmitter::class);
+        }
+
+        return $this->responseEmitter;
+    }
+
+    /**
      * Handle HTTP request
      *
      * @param ServerRequestInterface|null $request
      * @return ResponseInterface
-     * @throws \Exception
      */
     public function handleRequest(?ServerRequestInterface $request = null): ResponseInterface
     {
         try {
+            // Make sure application is bootstrapped
+            if (!$this->bootstrapped) {
+                $this->bootstrap();
+            }
+
             // Create request from globals if not provided
             $request = $request ?? Request::createFromGlobals();
 
@@ -158,7 +256,7 @@ class Application
             $this->logRequest($request);
 
             // Find matching route
-            $routeInfo = $this->router->match(
+            $routeInfo = $this->getRouter()->match(
                 $request->getMethod(),
                 $request->getUri()->getPath()
             );
@@ -167,7 +265,7 @@ class Application
             $finalHandler = $this->createRouteHandler($routeInfo);
 
             // Process the request through middleware using the registry
-            return $this->middlewareRegistry->process($request, $finalHandler);
+            return $this->getMiddlewareRegistry()->process($request, $finalHandler);
         } catch (\Throwable $e) {
             return $this->handleException($e);
         }
@@ -270,12 +368,12 @@ class Application
             'allowed_methods' => $allowedMethods
         ]);
 
-        return $response->status(405)
-            ->header('Allow', $allowedMethods)
-            ->json()
-            ->withJson([
+        return $response->withStatus(405)
+            ->withHeader('Allow', $allowedMethods)
+            ->withHeader('Content-Type', 'application/json')
+            ->withBody($this->createJsonBody([
                 'error' => 'Method Not Allowed'
-            ]);
+            ]));
     }
 
     /**
@@ -295,11 +393,11 @@ class Application
             'path' => $request->getUri()->getPath()
         ]);
 
-        return $response->status(404)
-            ->json()
-            ->withJson([
+        return $response->withStatus(404)
+            ->withHeader('Content-Type', 'application/json')
+            ->withBody($this->createJsonBody([
                 'error' => 'Not Found'
-            ]);
+            ]));
     }
 
     /**
@@ -353,11 +451,23 @@ class Application
         string $message
     ): ResponseInterface
     {
-        return $response->status($status)
-            ->json()
-            ->withJson([
+        return $response->withStatus($status)
+            ->withHeader('Content-Type', 'application/json')
+            ->withBody($this->createJsonBody([
                 'error' => $message
-            ]);
+            ]));
+    }
+
+    /**
+     * Create a JSON response body
+     *
+     * @param array $data
+     * @return \Psr\Http\Message\StreamInterface
+     */
+    private function createJsonBody(array $data): \Psr\Http\Message\StreamInterface
+    {
+        $factory = $this->container->make('Psr\Http\Message\StreamFactoryInterface');
+        return $factory->createStream(json_encode($data));
     }
 
     /**
@@ -367,7 +477,12 @@ class Application
      */
     public function run(): void
     {
+        // Ensure application is bootstrapped
+        if (!$this->bootstrapped) {
+            $this->bootstrap();
+        }
+
         $response = $this->handleRequest();
-        $this->responseEmitter->emit($response);
+        $this->getResponseEmitter()->emit($response);
     }
 }
