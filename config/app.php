@@ -19,10 +19,10 @@ return [
     ],
 
     'aliases' => [
-        'App' => Ody\Foundation\Container\ContractsApplication::class,
-        'Config' => Ody\Foundation\Container\ContractsSupport\Config::class,
-        'Env' => Ody\Foundation\Container\ContractsSupport\Env::class,
-        'Router' => Ody\Foundation\Container\ContractsRouter::class,
+        'App' => Ody\Foundation\Application::class,
+        'Config' => Ody\Foundation\Support\Config::class,
+        'Env' => Ody\Foundation\Support\Env::class,
+        'Router' => Ody\Foundation\Router::class,
         'Request' => Ody\Foundation\Http\Request::class,
         'Response' => Ody\Foundation\Http\Response::class,
     ],
