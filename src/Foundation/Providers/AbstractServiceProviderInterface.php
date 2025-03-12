@@ -7,15 +7,17 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Providers;
+namespace Ody\Foundation\Providers;
 
-use Illuminate\Container\Container;
+use Ody\Container\Contracts\BindingResolutionException;
+use Ody\Container\Container;
+use Ody\Foundation\Logging\NullLogger;
 use Psr\Log\LoggerInterface;
 
 /**
  * base service provider class with streamlined registration capabilities
  */
-abstract class AbstractServiceProvider implements ServiceProvider
+abstract class AbstractServiceProviderInterface implements ServiceProviderInterface
 {
     /**
      * @var Container
@@ -72,50 +74,32 @@ abstract class AbstractServiceProvider implements ServiceProvider
     {
         $this->container = $container;
 
-        try {
-            // Get logger if available
-            if ($container->has(LoggerInterface::class)) {
-                $this->logger = $container->make(LoggerInterface::class);
-            }
-
-            // Register bindings
-            foreach ($this->bindings as $abstract => $concrete) {
-                $this->registerBinding($abstract, $concrete);
-            }
-
-            // Register singletons
-            foreach ($this->singletons as $abstract => $concrete) {
-                $this->registerSingleton($abstract, $concrete);
-            }
-
-            // Register aliases
-            foreach ($this->aliases as $alias => $abstract) {
-                $container->alias($abstract, $alias);
-            }
-
-            // Register tags
-            foreach ($this->tags as $tag => $abstracts) {
-                foreach ((array) $abstracts as $abstract) {
-                    $this->tag($abstract, $tag);
-                }
-            }
-
-            // Call the provider's custom registration logic
-            $this->registerServices();
-        } catch (\Throwable $e) {
-            // Log exception if logger is available
-            if ($this->logger) {
-                $this->logger->error('Error registering services: ' . $e->getMessage(), [
-                    'provider' => static::class,
-                    'exception' => $e
-                ]);
-            }
-
-            // Re-throw if in debug mode
-            if (env('APP_DEBUG', false)) {
-                throw $e;
-            }
+        // Get logger if available
+        if ($container->has(LoggerInterface::class)) {
+            $this->logger = $container->make(LoggerInterface::class);
+        } else {
+            $this->logger = new NullLogger();
         }
+
+        array_walk($this->bindings, function ($concrete, $abstract) {
+            // Register bindings
+            $this->registerBinding($abstract, $concrete);
+            // Register singletons
+            $this->registerSingleton($abstract, $concrete);
+        });
+
+        array_walk($this->aliases, function ($abstract, $alias) use ($container) {
+            // Register aliases
+            $container->alias($abstract, $alias);
+        });
+
+        array_walk($this->tags, function ($abstracts, $tag) use ($container) {
+            // Register tags
+            array_walk($abstracts, fn ($abstract) => $this->tag($abstract, $tag));
+        });
+
+        // Call the provider's custom registration logic
+        $this->registerServices();
     }
 
     /**
@@ -135,11 +119,6 @@ abstract class AbstractServiceProvider implements ServiceProvider
 
         // Register the binding
         $this->container->bind($abstract, $concrete, $shared);
-
-        // Log registration if logger is available
-        if ($this->logger && env('APP_DEBUG', false)) {
-            $this->logger->debug("Registered binding for {$abstract}");
-        }
     }
 
     /**
@@ -167,21 +146,33 @@ abstract class AbstractServiceProvider implements ServiceProvider
      * @param string|array $tags
      * @return void
      */
+    /**
+     * Register a tag for a service
+     *
+     * @param string $abstract
+     * @param string|array $tags
+     * @return void
+     */
     protected function tag(string $abstract, $tags): void
     {
         // Convert single tag to array
         $tags = (array) $tags;
 
+        if (!isset($this->container['tag'])) {
+            $this->container->instance('tag', []);
+        }
+
+        // Get current tags
+        $allTags = $this->container['tag'];
+
         // Register each tag
         foreach ($tags as $tag) {
-            // If tag doesn't exist yet in the container, create it
-            if (!isset($this->container['tag'][$tag])) {
-                $this->container['tag'][$tag] = [];
-            }
-
-            // Add service to the tag
-            $this->container['tag'][$tag][] = $abstract;
+            // Add the service to the tag
+            $allTags[$tag][] = $abstract;
         }
+
+        // Update container with all modified tags
+        $this->container->instance('tag', $allTags);
     }
 
     /**
@@ -192,7 +183,11 @@ abstract class AbstractServiceProvider implements ServiceProvider
      */
     protected function tagged(string $tag): array
     {
-        return $this->container['tag'][$tag] ?? [];
+        if (!isset($this->container['tag']) || !isset($this->container['tag'][$tag])) {
+            return [];
+        }
+
+        return $this->container['tag'][$tag];
     }
 
     /**
@@ -224,6 +219,7 @@ abstract class AbstractServiceProvider implements ServiceProvider
      * @param string $abstract
      * @param array $parameters
      * @return mixed
+     * @throws BindingResolutionException
      */
     protected function make(string $abstract, array $parameters = [])
     {

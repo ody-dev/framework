@@ -7,12 +7,12 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Loaders;
+namespace Ody\Foundation\Loaders;
 
-use Illuminate\Container\Container;
-use Ody\Core\Foundation\Providers\ServiceProviderManager;
-use Ody\Core\Foundation\Support\Config;
-use Ody\Core\Foundation\Logger;
+use Ody\Container\Container;
+use Ody\Foundation\Providers\ServiceProviderManager;
+use Ody\Foundation\Support\Config;
+use Ody\Foundation\Logger;
 
 /**
  * Service Provider Loader
@@ -50,10 +50,10 @@ class ServiceProviderLoader
      * @param Logger|null $logger
      */
     public function __construct(
-        Container $container,
+        Container              $container,
         ServiceProviderManager $providerManager,
-        Config $config,
-        ?Logger $logger = null
+        Config                 $config,
+        ?Logger                $logger = null
     ) {
         $this->container = $container;
         $this->providerManager = $providerManager;

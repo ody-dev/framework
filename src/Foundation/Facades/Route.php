@@ -7,20 +7,20 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Facades;
+namespace Ody\Foundation\Facades;
 
 /**
  * Route Facade
  *
  * Allows route registration using static methods
  *
- * @method static \Ody\Core\Foundation\Route get(string $path, mixed $handler)
- * @method static \Ody\Core\Foundation\Route post(string $path, mixed $handler)
- * @method static \Ody\Core\Foundation\Route put(string $path, mixed $handler)
- * @method static \Ody\Core\Foundation\Route patch(string $path, mixed $handler)
- * @method static \Ody\Core\Foundation\Route delete(string $path, mixed $handler)
- * @method static \Ody\Core\Foundation\Route options(string $path, mixed $handler)
- * @method static \Ody\Core\Foundation\Router group(array $attributes, callable $callback)
+ * @method static \Ody\Container\ContractsRoute get(string $path, mixed $handler)
+ * @method static \Ody\Container\ContractsRoute post(string $path, mixed $handler)
+ * @method static \Ody\Container\ContractsRoute put(string $path, mixed $handler)
+ * @method static \Ody\Container\ContractsRoute patch(string $path, mixed $handler)
+ * @method static \Ody\Container\ContractsRoute delete(string $path, mixed $handler)
+ * @method static \Ody\Container\ContractsRoute options(string $path, mixed $handler)
+ * @method static \Ody\Foundation\Router group(array $attributes, callable $callback)
  */
 class Route extends Facade
 {

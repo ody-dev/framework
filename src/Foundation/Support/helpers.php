@@ -7,11 +7,11 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-use Illuminate\Container\Container;
-use Ody\Core\Foundation\Logger;
-use Ody\Core\Foundation\Logging\LogManager;
-use Ody\Core\Foundation\Support\Config;
-use Ody\Core\Foundation\Support\Env;
+use Ody\Container\Container;
+use Ody\Foundation\Logger;
+use Ody\Foundation\LoggingLogManager;
+use Ody\Foundation\Support\Config;
+use Ody\Foundation\Support\Env;
 use Psr\Log\LoggerInterface;
 
 if (!function_exists('app')) {
@@ -20,7 +20,7 @@ if (!function_exists('app')) {
      *
      * @param string|null $abstract Service to resolve
      * @param array $parameters Parameters to pass to the resolver
-     * @return mixed|\Illuminate\Container\Container
+     * @return mixed|\Ody\Container
      */
     function app($abstract = null, array $parameters = [])
     {
@@ -36,14 +36,13 @@ if (!function_exists('app')) {
 
 if (!function_exists('config')) {
     /**
-     * Get a configuration value using dot notation.
+     * Get configuration value
      *
-     * @param string|null $key Config key in dot notation (e.g., 'app.name')
-     * @param mixed $default Default value if key doesn't exist
+     * @param string|null $key
+     * @param mixed $default
      * @return mixed|Config
      */
-    function config($key = null, $default = null)
-    {
+    function config($key = null, $default = null) {
         $config = app(Config::class);
 
         if (is_null($key)) {

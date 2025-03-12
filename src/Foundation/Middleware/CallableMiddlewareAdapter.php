@@ -7,14 +7,14 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Middleware;
+namespace Ody\Foundation\Middleware;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Ody\Core\Foundation\Http\Request;
-use Ody\Core\Foundation\Http\Response;
+use Ody\Foundation\Http\Request;
+use Ody\Foundation\Http\Response;
 
 /**
  * Adapter to convert callable middleware to PSR-15 middleware

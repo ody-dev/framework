@@ -1,28 +1,29 @@
 <?php
-/*
- * This file is part of ODY framework.
- *
- * @link     https://ody.dev
- * @document https://ody.dev/docs
- * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
- */
+namespace Ody\Foundation\Providers;
 
-namespace Ody\Core\Foundation\Providers;
-
-use Illuminate\Container\Container;
-use Illuminate\Contracts\Container\BindingResolutionException;
-use Ody\Core\Foundation\Support\Config;
-use Ody\Core\Foundation\Loaders\RouteLoader;
-use Ody\Core\Foundation\Middleware\Middleware;
-use Ody\Core\Foundation\Middleware\Resolvers\MiddlewareResolverFactory;
-use Ody\Core\Foundation\Router;
+use Ody\Container\Container;
+use Ody\Foundation\Support\Config;
+use Ody\Foundation\Loaders\RouteLoader;
+use Ody\Foundation\Middleware\Middleware;
+use Ody\Foundation\Middleware\Resolvers\MiddlewareResolverFactory;
+use Ody\Foundation\Router;
 use Psr\Log\LoggerInterface;
 
 /**
  * Service provider for routes
  */
-class RouteServiceProvider extends AbstractServiceProvider
+class RouteServiceProvider extends AbstractServiceProviderInterface
 {
+    /**
+     * Services that should be registered as singletons
+     *
+     * @var array
+     */
+    protected $singletons = [
+        RouteLoader::class => null,
+        MiddlewareResolverFactory::class => null
+    ];
+
     /**
      * @var string Base path for route files
      */
@@ -34,15 +35,28 @@ class RouteServiceProvider extends AbstractServiceProvider
     protected $resolverFactory;
 
     /**
+     * Get the services provided by the provider
+     *
+     * @return array
+     */
+    public function provides(): array
+    {
+        return array_merge(parent::provides(), [
+            RouteLoader::class,
+            MiddlewareResolverFactory::class
+        ]);
+    }
+
+    /**
      * Register custom services
      *
      * @return void
-     * @throws BindingResolutionException
      */
     protected function registerServices(): void
     {
+        error_log('RouteServiceProvider::registerServices() called');
         // Register RouteLoader
-        $this->container->singleton(RouteLoader::class, function ($container) {
+        $this->registerSingleton(RouteLoader::class, function ($container) {
             $router = $container->make(Router::class);
             $middleware = $container->make(Middleware::class);
 
@@ -50,11 +64,11 @@ class RouteServiceProvider extends AbstractServiceProvider
         });
 
         // Set routes path based on config
-        $config = $this->container->make(Config::class);
+        $config = $this->make(Config::class);
         $this->routesPath = $config->get('app.routes.path', route_path());
 
         // Register resolver factory
-        $this->container->singleton(MiddlewareResolverFactory::class, function ($container) {
+        $this->registerSingleton(MiddlewareResolverFactory::class, function ($container) {
             $logger = $container->make(LoggerInterface::class);
             $config = $container->make(Config::class);
 
@@ -67,12 +81,11 @@ class RouteServiceProvider extends AbstractServiceProvider
      *
      * @param Container $container
      * @return void
-     * @throws BindingResolutionException
      */
     public function boot(Container $container): void
     {
-        $routeLoader = $container->make(RouteLoader::class);
-        $this->resolverFactory = $container->make(MiddlewareResolverFactory::class);
+        $routeLoader = $this->make(RouteLoader::class);
+        $this->resolverFactory = $this->make(MiddlewareResolverFactory::class);
 
         // Register named middleware and load routes
         $this->registerNamedMiddleware($container);
@@ -84,7 +97,6 @@ class RouteServiceProvider extends AbstractServiceProvider
      *
      * @param Container $container
      * @return void
-     * @throws BindingResolutionException
      */
     protected function registerNamedMiddleware(Container $container): void
     {

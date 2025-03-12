@@ -1,24 +1,36 @@
 <?php
-/*
- * This file is part of ODY framework.
- *
- * @link     https://ody.dev
- * @document https://ody.dev/docs
- * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
- */
+namespace Ody\Foundation\Providers;
 
-namespace Ody\Core\Foundation\Providers;
-
-use Illuminate\Container\Container;
-use Ody\Core\Foundation\Support\Config;
-use Ody\Core\Foundation\Logging\LogManager;
+use Ody\Container\Container;
+use Ody\Foundation\Support\Config;
+use Ody\Foundation\Logging\LogManager;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * Service provider for logging
  */
-class LoggingServiceProvider extends AbstractServiceProvider
+class LoggingServiceProvider extends AbstractServiceProviderInterface
 {
+    /**
+     * Services that should be registered as singletons
+     *
+     * @var array
+     */
+    protected $singletons = [
+        LogManager::class => null
+    ];
+
+    /**
+     * Services that should be registered as aliases
+     *
+     * @var array
+     */
+    protected $aliases = [
+        'log' => LogManager::class,
+        'logger' => LoggerInterface::class
+    ];
+
     /**
      * Register custom services
      *
@@ -26,8 +38,11 @@ class LoggingServiceProvider extends AbstractServiceProvider
      */
     protected function registerServices(): void
     {
+        // Register a default NullLogger for LoggerInterface to prevent circular dependencies
+        $this->instance(LoggerInterface::class, new NullLogger());
+
         // Register LogManager
-        $this->container->singleton(LogManager::class, function ($container) {
+        $this->registerSingleton(LogManager::class, function ($container) {
             /** @var Config $config */
             $config = $container->make(Config::class);
 
@@ -37,14 +52,10 @@ class LoggingServiceProvider extends AbstractServiceProvider
             return new LogManager($loggingConfig);
         });
 
-        // Register default logger as LoggerInterface
-        $this->container->singleton(LoggerInterface::class, function ($container) {
+        // Now update LoggerInterface binding to use the actual logger from LogManager
+        $this->registerSingleton(LoggerInterface::class, function ($container) {
             return $container->make(LogManager::class)->channel();
         });
-
-        // Alias for backward compatibility
-        $this->container->alias(LogManager::class, 'log');
-        $this->container->alias(LoggerInterface::class, 'logger');
     }
 
     /**

@@ -9,7 +9,7 @@ define('APP_BASE_PATH', realpath(__DIR__ . '/..'));
 // Autoload dependencies
 require APP_BASE_PATH . '/vendor/autoload.php';
 
-use Ody\Core\Foundation\Bootstrap;
+use Ody\Foundation\Bootstrap;
 
 // Initialize application
 $app = Bootstrap::init();

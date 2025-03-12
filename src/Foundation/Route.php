@@ -7,9 +7,9 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation;
+namespace Ody\Foundation;
 
-use Ody\Core\Foundation\Middleware\MiddlewareRegistry;
+use Ody\Foundation\Middleware\MiddlewareRegistry;
 
 /**
  * Route class for defining application routes

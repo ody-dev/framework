@@ -7,11 +7,11 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Middleware;
+namespace Ody\Foundation\Middleware;
 
 
-use Ody\Core\Foundation\Http\Request;
-use Ody\Core\Foundation\Http\Response;
+use Ody\Foundation\Http\Request;
+use Ody\Foundation\Http\Response;
 
 /**
  * Route Middleware Manager

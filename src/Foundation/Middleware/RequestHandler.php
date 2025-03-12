@@ -7,7 +7,7 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Middleware;
+namespace Ody\Foundation\Middleware;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -91,6 +91,7 @@ class RequestHandler implements RequestHandlerInterface
 
         // If there's no middleware, execute the final handler directly
         if (empty($this->stack)) {
+            var_dump(call_user_func($this->finalHandler, $request));
             return call_user_func($this->finalHandler, $request);
         }
 

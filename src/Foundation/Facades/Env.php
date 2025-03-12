@@ -7,7 +7,7 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Facades;
+namespace Ody\Foundation\Facades;
 
 /**
  * Env Facade
@@ -23,7 +23,7 @@ class Env extends Facade
      */
     protected static function getFacadeAccessor()
     {
-        return \Ody\Core\Foundation\Support\Env::class;
+        return \Ody\Foundation\Support\Env::class;
     }
 
     /**
@@ -38,7 +38,7 @@ class Env extends Facade
      */
     public static function get(string $key, $default = null)
     {
-        return \Ody\Core\Foundation\Support\Env::get($key, $default);
+        return \Ody\Foundation\Support\Env::get($key, $default);
     }
 
     /**
@@ -52,6 +52,6 @@ class Env extends Facade
      */
     public static function has(string $key): bool
     {
-        return \Ody\Core\Foundation\Support\Env::has($key);
+        return \Ody\Foundation\Support\Env::has($key);
     }
 }

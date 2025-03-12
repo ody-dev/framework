@@ -7,9 +7,9 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Facades;
+namespace Ody\Foundation\Facades;
 
-use Illuminate\Container\Container;
+use Ody\Container\Container;
 
 /**
  * Base facade class

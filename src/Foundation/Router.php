@@ -9,11 +9,11 @@
 
 declare(strict_types=1);
 
-namespace Ody\Core\Foundation;
+namespace Ody\Foundation;
 
 use FastRoute;
-use Illuminate\Container\Container;
-use Ody\Core\Foundation\Middleware\MiddlewareRegistry;
+use Ody\Container\Container;
+use Ody\Foundation\Middleware\MiddlewareRegistry;
 
 class Router
 {

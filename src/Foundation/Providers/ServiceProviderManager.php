@@ -7,10 +7,11 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Providers;
+namespace Ody\Foundation\Providers;
 
-use Illuminate\Container\Container;
-use Ody\Core\Foundation\Support\Config;
+use Ody\Container\Container;
+use Ody\Container\Contracts\BindingResolutionException;
+use Ody\Foundation\Support\Config;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -24,37 +25,37 @@ class ServiceProviderManager
     /**
      * @var Container
      */
-    protected $container;
+    protected Container $container;
 
     /**
      * @var array Registered service providers
      */
-    protected $providers = [];
+    protected array $providers = [];
 
     /**
      * @var array Booted service providers
      */
-    protected $booted = [];
+    protected array $booted = [];
 
     /**
      * @var array Deferred service providers mapped to their provided services
      */
-    protected $deferredServices = [];
+    protected array $deferredServices = [];
 
     /**
      * @var array Tagged services
      */
-    protected $tags = [];
+    protected array $tags = [];
 
     /**
      * @var LoggerInterface
      */
-    protected $logger;
+    protected mixed $logger;
 
     /**
      * @var Config|null
      */
-    protected $config;
+    protected ?Config $config;
 
     /**
      * ServiceProviderManager constructor
@@ -62,6 +63,7 @@ class ServiceProviderManager
      * @param Container $container
      * @param Config|null $config
      * @param LoggerInterface|null $logger
+     * @throws BindingResolutionException
      */
     public function __construct(
         Container $container,
@@ -75,7 +77,9 @@ class ServiceProviderManager
         $this->container['tag'] = [];
 
         // Get logger if available
-        $this->logger = $logger ?? new NullLogger();
+        $this->logger = $logger ?? ($container->has(LoggerInterface::class)
+            ? $container->make(LoggerInterface::class)
+            : new NullLogger());
     }
 
     /**
@@ -83,6 +87,7 @@ class ServiceProviderManager
      *
      * @param string $configKey The configuration key for providers list (default: app.providers)
      * @return void
+     * @throws \Throwable
      */
     public function registerConfigProviders(string $configKey = 'app.providers'): void
     {
@@ -99,14 +104,20 @@ class ServiceProviderManager
             return;
         }
 
-        $this->logger->debug(sprintf('Found %d providers in config', count($providers)));
-
         // Register each provider
         foreach ($providers as $provider) {
             try {
                 $this->register($provider);
             } catch (\Throwable $e) {
-                // Error is already logged in the register method
+                $this->logger->error("Failed to register provider: {$provider}", [
+                    'error' => $e->getMessage(),
+                    'exception' => $e
+                ]);
+
+                // Re-throw if debug mode is enabled
+                if (env('APP_DEBUG', false)) {
+                    throw $e;
+                }
             }
         }
     }
@@ -114,11 +125,12 @@ class ServiceProviderManager
     /**
      * Register a service provider with the application
      *
-     * @param string|ServiceProvider $provider
+     * @param string|ServiceProviderInterface $provider
      * @param bool $force Force register even if deferred
-     * @return ServiceProvider|null The registered provider, or null on failure
+     * @return ServiceProviderInterface|null The registered provider, or null on failure
+     * @throws \Throwable
      */
-    public function register($provider, bool $force = false): ?ServiceProvider
+    public function register($provider, bool $force = false): ?ServiceProviderInterface
     {
         try {
             // If string is passed, resolve the provider instance
@@ -143,12 +155,8 @@ class ServiceProviderManager
 
             // Register the provider
             $provider->register($this->container);
-
             // Store the provider instance
             $this->providers[$providerClass] = $provider;
-
-            // Log success if debug mode
-            $this->logger->debug("Registered service provider: {$providerClass}");
 
             return $provider;
         } catch (\Throwable $e) {
@@ -171,9 +179,10 @@ class ServiceProviderManager
      * Resolve a provider instance from a class name
      *
      * @param string $provider
-     * @return ServiceProvider
+     * @return ServiceProviderInterface
+     * @throws BindingResolutionException
      */
-    protected function resolveProvider(string $provider): ServiceProvider
+    protected function resolveProvider(string $provider): ServiceProviderInterface
     {
         if ($this->container->has($provider)) {
             return $this->container->make($provider);
@@ -185,40 +194,32 @@ class ServiceProviderManager
     /**
      * Check if a provider is deferred
      *
-     * @param ServiceProvider $provider
+     * @param ServiceProviderInterface $provider
      * @return bool
      */
-    protected function isDeferredProvider(ServiceProvider $provider): bool
+    protected function isDeferredProvider(ServiceProviderInterface $provider): bool
     {
-        // Check if provider implements isDeferred method (from our AbstractServiceProvider)
         if (method_exists($provider, 'isDeferred')) {
             return $provider->isDeferred();
         }
 
-        // Otherwise check if it has provides method with non-empty result
         return method_exists($provider, 'provides') && !empty($provider->provides());
     }
 
     /**
      * Register a deferred provider
      *
-     * @param ServiceProvider $provider
+     * @param ServiceProviderInterface $provider
      * @return void
      */
-    protected function registerDeferredProvider(ServiceProvider $provider): void
+    protected function registerDeferredProvider(ServiceProviderInterface $provider): void
     {
-        // Record the provider for each service it provides
         if (method_exists($provider, 'provides')) {
             $providerClass = get_class($provider);
 
             foreach ($provider->provides() as $service) {
                 $this->deferredServices[$service] = $providerClass;
             }
-
-            // Log deferred provider if in debug mode
-            $this->logger->debug("Registered deferred provider: {$providerClass}", [
-                'services' => $provider->provides()
-            ]);
         }
     }
 
@@ -226,6 +227,7 @@ class ServiceProviderManager
      * Boot all registered service providers
      *
      * @return void
+     * @throws \Throwable
      */
     public function boot(): void
     {
@@ -237,10 +239,11 @@ class ServiceProviderManager
     /**
      * Boot a specific provider
      *
-     * @param ServiceProvider $provider
+     * @param ServiceProviderInterface $provider
      * @return void
+     * @throws \Throwable
      */
-    public function bootProvider(ServiceProvider $provider): void
+    public function bootProvider(ServiceProviderInterface $provider): void
     {
         $providerClass = get_class($provider);
 
@@ -251,20 +254,14 @@ class ServiceProviderManager
         try {
             // Boot the provider
             $provider->boot($this->container);
-
             // Mark as booted
             $this->booted[$providerClass] = true;
-
-            // Log success if in debug mode
-            $this->logger->debug("Booted service provider: {$providerClass}");
         } catch (\Throwable $e) {
-            // Log error
             $this->logger->error("Failed to boot service provider: {$providerClass}", [
                 'error' => $e->getMessage(),
                 'exception' => $e
             ]);
 
-            // Re-throw if debug mode is enabled
             if (env('APP_DEBUG', false)) {
                 throw $e;
             }
@@ -276,6 +273,7 @@ class ServiceProviderManager
      *
      * @param string $service
      * @return bool True if the provider was loaded
+     * @throws \Throwable
      */
     public function loadDeferredProvider(string $service): bool
     {
@@ -305,6 +303,7 @@ class ServiceProviderManager
      *
      * @param array $providers
      * @return array Successfully registered providers
+     * @throws \Throwable
      */
     public function registerProviders(array $providers): array
     {
@@ -325,6 +324,7 @@ class ServiceProviderManager
      *
      * @param array $providers Provider class names or instances
      * @return void
+     * @throws \Throwable
      */
     public function bootProviders(array $providers): void
     {

@@ -7,10 +7,10 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Middleware;
+namespace Ody\Foundation\Middleware;
 
-use Illuminate\Container\Container;
-use Ody\Core\Foundation\Middleware\Adapters\CallableMiddlewareAdapter;
+use Ody\Container\Container;
+use Ody\Foundation\Middleware\Adapters\CallableMiddlewareAdapter;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;

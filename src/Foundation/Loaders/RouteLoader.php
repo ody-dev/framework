@@ -7,11 +7,11 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Loaders;
+namespace Ody\Foundation\Loaders;
 
-use Illuminate\Container\Container;
-use Ody\Core\Foundation\Middleware\Middleware;
-use Ody\Core\Foundation\Router;
+use Ody\Container\Container;
+use Ody\Foundation\Middleware\Middleware;
+use Ody\Foundation\Router;
 
 /**
  * Route loader for loading routes from separate files

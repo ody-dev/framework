@@ -1,24 +1,45 @@
 <?php
-/*
- * This file is part of ODY framework.
- *
- * @link     https://ody.dev
- * @document https://ody.dev/docs
- * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
- */
+namespace Ody\Foundation\Providers;
 
-namespace Ody\Core\Foundation\Providers;
-
-use Illuminate\Container\Container;
-use Illuminate\Contracts\Container\BindingResolutionException;
-use Ody\Core\Foundation\Support\Config;
+use Ody\Container\Container;
+use Ody\Foundation\Support\Config;
 use PDO;
 
 /**
  * Service provider for database services
  */
-class DatabaseServiceProvider extends AbstractServiceProvider
+class DatabaseServiceProvider extends AbstractServiceProviderInterface
 {
+    /**
+     * Services that should be registered as singletons
+     *
+     * @var array
+     */
+    protected $singletons = [
+        PDO::class => null
+    ];
+
+    /**
+     * Services that should be registered as aliases
+     *
+     * @var array
+     */
+    protected $aliases = [
+        'db' => PDO::class
+    ];
+
+    /**
+     * Tags for organizing services
+     *
+     * @var array
+     */
+    protected $tags = [
+        'database' => [
+            PDO::class,
+            'db'
+        ]
+    ];
+
     /**
      * Register custom services
      *
@@ -27,8 +48,7 @@ class DatabaseServiceProvider extends AbstractServiceProvider
     protected function registerServices(): void
     {
         // Register PDO connection
-        $this->container->singleton(PDO::class, function ($container) {
-            /** @var Config $config */
+        $this->registerSingleton(PDO::class, function ($container) {
             $config = $container->make(Config::class);
 
             // Get default connection name
@@ -36,6 +56,7 @@ class DatabaseServiceProvider extends AbstractServiceProvider
 
             // Get connection configuration
             $connection = $config->get("database.connections.{$default}");
+
 
             if (!$connection) {
                 throw new \RuntimeException("Database connection [{$default}] not configured");
@@ -56,9 +77,6 @@ class DatabaseServiceProvider extends AbstractServiceProvider
                 $options
             );
         });
-
-        // Register db shorthand alias
-        $this->container->alias(PDO::class, 'db');
     }
 
     /**
@@ -110,17 +128,14 @@ class DatabaseServiceProvider extends AbstractServiceProvider
      *
      * @param Container $container
      * @return void
-     * @throws BindingResolutionException
      */
     public function boot(Container $container): void
     {
-        // Could add database logging or connection pooling here if needed
-
         // Setup database logging if in debug mode
-        if (env('APP_DEBUG', false) && $container->has('logger')) {
-            $logger = $container->make('logger');
+        if (env('APP_DEBUG', false) && $this->has('logger')) {
+            $logger = $this->make('logger');
             try {
-                $db = $container->make(PDO::class);
+                $db = $this->make(PDO::class);
                 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
                 // Log connection success

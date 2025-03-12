@@ -7,7 +7,7 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Logging;
+namespace Ody\Foundation\Logging;
 
 use Psr\Log\LoggerInterface as PsrLoggerInterface;
 use Psr\Log\LogLevel;

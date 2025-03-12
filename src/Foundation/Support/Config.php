@@ -1,13 +1,5 @@
 <?php
-/*
- * This file is part of ODY framework.
- *
- * @link     https://ody.dev
- * @document https://ody.dev/docs
- * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
- */
-
-namespace Ody\Core\Foundation\Support;
+namespace Ody\Foundation\Support;
 
 /**
  * Configuration repository
@@ -62,23 +54,22 @@ class Config
             return $this->items;
         }
 
-        // Direct key access
         if (isset($this->items[$key])) {
             return $this->processValue($this->items[$key]);
         }
 
-        // Dot notation access (e.g. 'app.providers')
         $segments = explode('.', $key);
-        $current = $this->items;
+        $items = $this->items;
 
         foreach ($segments as $segment) {
-            if (!is_array($current) || !array_key_exists($segment, $current)) {
+            if (!is_array($items) || !array_key_exists($segment, $items)) {
                 return $this->processValue($default);
             }
-            $current = $current[$segment];
+
+            $items = $items[$segment];
         }
 
-        return $this->processValue($current);
+        return $this->processValue($items);
     }
 
     /**
@@ -204,7 +195,8 @@ class Config
                 $this->items[$name] = $config;
             }
         } catch (\Throwable $e) {
-            // Silently continue processing other files
+            // Log error but continue processing other files
+            error_log("Error loading config file {$path}: " . $e->getMessage());
         }
     }
 

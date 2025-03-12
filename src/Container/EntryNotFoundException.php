@@ -7,12 +7,12 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-/**
- * Application bootstrap file
- * This file exists for backward compatibility
- */
+namespace Ody\Container;
 
-use Ody\Container\ContractsBootstrap;
+use Exception;
+use Psr\Container\NotFoundExceptionInterface;
 
-// Return bootstrapped application
-return Bootstrap::init();
+class EntryNotFoundException extends Exception implements NotFoundExceptionInterface
+{
+    //
+}

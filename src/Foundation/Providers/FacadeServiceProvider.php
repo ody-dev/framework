@@ -1,29 +1,40 @@
 <?php
-/*
- * This file is part of ODY framework.
- *
- * @link     https://ody.dev
- * @document https://ody.dev/docs
- * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
- */
+namespace Ody\Foundation\Providers;
 
-namespace Ody\Core\Foundation\Providers;
-
-use Illuminate\Container\Container;
-use Ody\Core\Foundation\Facades\App;
-use Ody\Core\Foundation\Logger;
-use Ody\Core\Foundation\Support\AliasLoader;
-use Ody\Core\Foundation\Support\Config;
-use Ody\Core\Foundation\Http\Request;
-use Ody\Core\Foundation\Http\Response;
-use Ody\Core\Foundation\Router;
-use Ody\Core\Foundation\Facades\Facade;
+use Ody\Container\Container;
+use Ody\Foundation\Facades\App;
+use Ody\Foundation\Support\AliasLoader;
+use Ody\Foundation\Support\Config;
+use Ody\Foundation\Http\Request;
+use Ody\Foundation\Http\Response;
+use Ody\Foundation\Router;
+use Ody\Foundation\Facades\Facade;
 
 /**
  * Service provider for facades
  */
-class FacadeServiceProvider extends AbstractServiceProvider
+class FacadeServiceProvider extends AbstractServiceProviderInterface
 {
+    /**
+     * Services that should be registered as aliases
+     *
+     * @var array
+     */
+    protected $aliases = [
+        'router' => Router::class,
+        'config' => Config::class
+    ];
+
+    /**
+     * Services that should be registered as singletons
+     *
+     * @var array
+     */
+    protected $singletons = [
+        'request' => null,
+        'response' => null
+    ];
+
     /**
      * Register custom services
      *
@@ -34,20 +45,16 @@ class FacadeServiceProvider extends AbstractServiceProvider
         // Set the container on the Facade class
         Facade::setFacadeContainer($this->container);
 
-        // Register core services for facades
-        $this->container->alias(Router::class, 'router');
-        $this->container->alias(Config::class, 'config');
-
         // Register request singleton
-        if (!$this->container->bound('request')) {
-            $this->container->singleton('request', function () {
+        if (!$this->has('request')) {
+            $this->registerSingleton('request', function () {
                 return Request::createFromGlobals();
             });
         }
 
         // Register response singleton
-        if (!$this->container->bound('response')) {
-            $this->container->singleton('response', function () {
+        if (!$this->has('response')) {
+            $this->registerSingleton('response', function () {
                 return new Response();
             });
         }
@@ -62,7 +69,7 @@ class FacadeServiceProvider extends AbstractServiceProvider
     public function boot(Container $container): void
     {
         // Get aliases from config
-        $config = $container->make(Config::class);
+        $config = $this->make(Config::class);
         $aliases = $config->get('app.aliases', []);
 
         // Create alias loader with the configured aliases

@@ -7,7 +7,7 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Support;
+namespace Ody\Foundation\Support;
 
 use Dotenv\Dotenv;
 

@@ -32,7 +32,7 @@
     ],
     "psr-4": {
       "App\\": "app/",
-      "Ody\\Core\\": "src/"
+      "Ody\\": "src/"
     }
   }
 }

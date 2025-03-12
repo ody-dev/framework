@@ -1,32 +1,48 @@
 <?php
-/*
- * This file is part of ODY framework.
- *
- * @link     https://ody.dev
- * @document https://ody.dev/docs
- * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
- */
+namespace Ody\Foundation\Providers;
 
-namespace Ody\Core\Foundation\Providers;
-
-use Illuminate\Container\Container;
-use Ody\Core\Foundation\Http\Request;
-use Ody\Core\Foundation\Http\Response;
-use Ody\Core\Foundation\Middleware\MiddlewareRegistry;
-use Ody\Core\Foundation\Middleware\CorsMiddleware;
-use Ody\Core\Foundation\Middleware\JsonBodyParserMiddleware;
-use Ody\Core\Foundation\Middleware\LoggingMiddleware;
-use Ody\Core\Foundation\Middleware\AuthMiddleware;
-use Ody\Core\Foundation\Middleware\RoleMiddleware;
-use Ody\Core\Foundation\Middleware\ThrottleMiddleware;
-use Ody\Core\Foundation\Support\Config;
+use Ody\Container\Container;
+use Ody\Foundation\Middleware\MiddlewareRegistry;
+use Ody\Foundation\Middleware\CorsMiddleware;
+use Ody\Foundation\Middleware\JsonBodyParserMiddleware;
+use Ody\Foundation\Middleware\LoggingMiddleware;
+use Ody\Foundation\Middleware\AuthMiddleware;
+use Ody\Foundation\Middleware\RoleMiddleware;
+use Ody\Foundation\Middleware\ThrottleMiddleware;
+use Ody\Foundation\Support\Config;
 use Psr\Log\LoggerInterface;
 
 /**
  * Service provider for middleware
  */
-class MiddlewareServiceProvider extends AbstractServiceProvider
+class MiddlewareServiceProvider extends AbstractServiceProviderInterface
 {
+    /**
+     * Services that should be registered as singletons
+     *
+     * @var array
+     */
+    protected $singletons = [
+        MiddlewareRegistry::class => null,
+        AuthMiddleware::class => null,
+        RoleMiddleware::class => null,
+        ThrottleMiddleware::class => null
+    ];
+
+    /**
+     * Tags for organizing services
+     *
+     * @var array
+     */
+    protected $tags = [
+        'middleware' => [
+            MiddlewareRegistry::class,
+            AuthMiddleware::class,
+            RoleMiddleware::class,
+            ThrottleMiddleware::class
+        ]
+    ];
+
     /**
      * Register custom services
      *
@@ -35,49 +51,22 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
     protected function registerServices(): void
     {
         // Register MiddlewareRegistry
-        $this->container->singleton(MiddlewareRegistry::class, function ($container) {
+        $this->registerSingleton(MiddlewareRegistry::class, function ($container) {
             return new MiddlewareRegistry($container, $container->make(LoggerInterface::class));
         });
 
-        // Register PSR-15 middleware implementations
-        $this->registerMiddlewareClasses();
-    }
-
-    /**
-     * Register middleware classes
-     *
-     * @return void
-     */
-    protected function registerMiddlewareClasses(): void
-    {
-        $this->container->singleton(CorsMiddleware::class, function ($container) {
-            $config = $container->make(Config::class);
-            $corsConfig = $config->get('app.cors', []);
-
-            return new CorsMiddleware($corsConfig);
-        });
-
-        $this->container->singleton(JsonBodyParserMiddleware::class, function () {
-            return new JsonBodyParserMiddleware();
-        });
-
-        $this->container->singleton(LoggingMiddleware::class, function ($container) {
-            $logger = $container->make(LoggerInterface::class);
-            return new LoggingMiddleware($logger);
-        });
-
-        // Register other middleware classes
-        $this->container->singleton(AuthMiddleware::class, function ($container) {
+        // Register middleware classes
+        $this->registerSingleton(AuthMiddleware::class, function ($container) {
             $logger = $container->make(LoggerInterface::class);
             return new AuthMiddleware('web', $logger);
         });
 
-        $this->container->singleton(RoleMiddleware::class, function ($container) {
+        $this->registerSingleton(RoleMiddleware::class, function ($container) {
             $logger = $container->make(LoggerInterface::class);
             return new RoleMiddleware('user', $logger);
         });
 
-        $this->container->singleton(ThrottleMiddleware::class, function () {
+        $this->registerSingleton(ThrottleMiddleware::class, function () {
             return new ThrottleMiddleware(60, 1);
         });
     }
@@ -90,8 +79,8 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
      */
     public function boot(Container $container): void
     {
-        $registry = $container->make(MiddlewareRegistry::class);
-        $config = $container->make(Config::class);
+        $registry = $this->make(MiddlewareRegistry::class);
+        $config = $this->make(Config::class);
 
         // Register named middleware
         $this->registerNamedMiddleware($registry, $container);
@@ -105,6 +94,8 @@ class MiddlewareServiceProvider extends AbstractServiceProvider
 
     /**
      * Register named middleware for use in routes
+     *
+     * TODO: remove hadcoded
      *
      * @param MiddlewareRegistry $registry
      * @param Container $container

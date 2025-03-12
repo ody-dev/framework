@@ -7,14 +7,14 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Providers;
+namespace Ody\Foundation\Providers;
 
-use Illuminate\Container\Container;
+use Ody\Container\Container;
 
 /**
  * Interface for service providers
  */
-interface ServiceProvider
+interface ServiceProviderInterface
 {
     /**
      * Register services in the container

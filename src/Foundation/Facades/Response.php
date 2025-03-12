@@ -7,19 +7,19 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Facades;
+namespace Ody\Foundation\Facades;
 
 /**
  * Response Facade
  *
- * @method static \Ody\Core\Foundation\Http\Response status(int $statusCode)
- * @method static \Ody\Core\Foundation\Http\Response header(string $name, string $value)
- * @method static \Ody\Core\Foundation\Http\Response contentType(string $contentType)
- * @method static \Ody\Core\Foundation\Http\Response json()
- * @method static \Ody\Core\Foundation\Http\Response text()
- * @method static \Ody\Core\Foundation\Http\Response html()
- * @method static \Ody\Core\Foundation\Http\Response body(string $content)
- * @method static \Ody\Core\Foundation\Http\Response withJson(mixed $data, int $options = 0)
+ * @method static \Ody\Foundation\Http\Response status(int $statusCode)
+ * @method static \Ody\Foundation\Http\Response header(string $name, string $value)
+ * @method static \Ody\Foundation\Http\Response contentType(string $contentType)
+ * @method static \Ody\Foundation\Http\Response json()
+ * @method static \Ody\Foundation\Http\Response text()
+ * @method static \Ody\Foundation\Http\Response html()
+ * @method static \Ody\Foundation\Http\Response body(string $content)
+ * @method static \Ody\Foundation\Http\Response withJson(mixed $data, int $options = 0)
  */
 class Response extends Facade
 {

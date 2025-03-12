@@ -7,10 +7,10 @@
  * Variables $router, $middleware, and $container are available from the RouteLoader.
  */
 
-use Ody\Core\Foundation\Facades\Route;
+use Ody\Foundation\Facades\Route;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Ody\Core\Foundation\Http\Response;
+use Ody\Foundation\Http\Response;
 
 // Public routes
 Route::get('/health', function (ServerRequestInterface $request, ResponseInterface $response) {

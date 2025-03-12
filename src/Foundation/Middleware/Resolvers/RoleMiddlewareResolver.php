@@ -7,11 +7,11 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Middleware\Resolvers;
+namespace Ody\Foundation\Middleware\Resolvers;
 
-use Ody\Core\Foundation\Http\Request;
-use Ody\Core\Foundation\Middleware\RoleMiddleware;
-use Ody\Core\Foundation\Middleware\Adapters\CallableHandlerAdapter;
+use Ody\Foundation\Http\Request;
+use Ody\Foundation\Middleware\RoleMiddleware;
+use Ody\Foundation\Middleware\Adapters\CallableHandlerAdapter;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 

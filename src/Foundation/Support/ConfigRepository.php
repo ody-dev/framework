@@ -7,10 +7,9 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Support;
+namespace Ody\Foundation\Support;
 
 use ArrayAccess;
-use Ody\Core\Foundation\Contracts\ConfigRepository as ConfigRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 

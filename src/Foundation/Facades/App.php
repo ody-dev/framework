@@ -7,15 +7,14 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Facades;
+namespace Ody\Foundation\Facades;
 
 /**
  * App Facade
  *
- * @method static \Ody\Core\Foundation\Router getRouter()
- * @method static \Ody\Core\Foundation\Middleware\Middleware getMiddleware()
- * @method static \Ody\Core\Foundation\Logger getLogger()
- * @method static \Illuminate\Container\Container getContainer()
+ * @method static \Ody\Foundation\Router getRouter()
+ * @method static \Ody\Foundation\Middleware\Middleware getMiddleware()
+ * @method static \Ody\Container getContainer()
  * @method static \Psr\Http\Message\ResponseInterface handleRequest(\Psr\Http\Message\ServerRequestInterface $request = null)
  * @method static void run()
  */
@@ -28,6 +27,6 @@ class App extends Facade
      */
     protected static function getFacadeAccessor()
     {
-        return \Ody\Core\Foundation\Application::class;
+        return \Ody\Foundation\Application::class;
     }
 }

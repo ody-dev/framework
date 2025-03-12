@@ -7,10 +7,10 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Middleware\Resolvers;
+namespace Ody\Foundation\Middleware\Resolvers;
 
-use Illuminate\Container\Container;
-use Ody\Core\Foundation\Support\Config;
+use Ody\Container\Container;
+use Ody\Foundation\Support\Config;
 use Psr\Log\LoggerInterface;
 
 /**

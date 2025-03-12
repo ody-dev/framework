@@ -7,7 +7,7 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Contracts;
+namespace Ody\Container\ContractsContracts;
 
 /**
  * Configuration Repository Contract

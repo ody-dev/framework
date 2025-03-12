@@ -1,31 +1,24 @@
 <?php
-/*
- * This file is part of ODY framework.
- *
- * @link     https://ody.dev
- * @document https://ody.dev/docs
- * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
- */
-
 declare(strict_types=1);
 
-namespace Ody\Core\Foundation;
+namespace Ody\Foundation;
 
-use Illuminate\Container\Container;
 use Nyholm\Psr7\Factory\Psr17Factory;
-use Ody\Core\Foundation\Loaders\ServiceProviderLoader;
-use Ody\Core\Foundation\Providers\ConfigServiceProvider;
-use Ody\Core\Foundation\Providers\FacadeServiceProvider;
-use Ody\Core\Foundation\Providers\ServiceProviderManager;
-use Ody\Core\Foundation\Support\Config;
-use Ody\Core\Foundation\Support\Env;
-use Ody\Core\Foundation\Logging\LogManager;
-use Psr\Log\LoggerInterface;
+use Ody\Container\Container;
+use Ody\Container\Contracts\BindingResolutionException;
+use Ody\Foundation\Providers\ConfigServiceProvider;
+use Ody\Foundation\Providers\FacadeServiceProvider;
+use Ody\Foundation\Providers\LoggingServiceProvider;
+use Ody\Foundation\Providers\ServiceProviderManager;
+use Ody\Foundation\Support\Config;
+use Ody\Foundation\Support\Env;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\UploadedFileFactoryInterface;
 use Psr\Http\Message\UriFactoryInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * Application Bootstrap
@@ -54,14 +47,19 @@ class Bootstrap
         // Initialize environment
         $env = self::initEnvironment($container, $environment);
 
-        // Initialize configuration
-        $config = self::initConfiguration($container, $configPath);
-
         // Initialize PSR-17 factories
         self::initPsr17Factories($container);
 
+        // Register a temporary NullLogger to avoid circular dependencies
+        $container->singleton(LoggerInterface::class, function() {
+            return new NullLogger();
+        });
+
+        // Initialize configuration right away
+        $config = self::initConfiguration($container, $configPath);
+
         // Initialize service providers
-        $application = self::initServiceProviders($container);
+        $application = self::initServiceProviders($container, $config);
 
         return $application;
     }
@@ -127,33 +125,31 @@ class Bootstrap
      * @param Container $container
      * @param Config $config
      * @return Application
+     * @throws BindingResolutionException
      */
-    private static function initServiceProviders(Container $container): Application
+    private static function initServiceProviders(Container $container, Config $config): Application
     {
         // Create service provider manager
-        $providerManager = new ServiceProviderManager($container);
+        $providerManager = new ServiceProviderManager($container, $config);
         $container->instance(ServiceProviderManager::class, $providerManager);
 
-        // Register the ConfigServiceProvider first - it needs to be loaded before
-        // other providers as they may depend on configuration
-        $configProvider = new ConfigServiceProvider();
-        $providerManager->register($configProvider);
-        $providerManager->bootProvider($configProvider);
+        $providers = [
+            ConfigServiceProvider::class,
+            LoggingServiceProvider::class,
+            FacadeServiceProvider::class,
+        ];
 
-        // Register the FacadeServiceProvider early to allow facades to work
-        // throughout the application bootstrap process
-        $facadeProvider = new FacadeServiceProvider();
-        $providerManager->register($facadeProvider);
-        $providerManager->bootProvider($facadeProvider);
+        array_walk($providers, function ($provider) use ($providerManager) {
+            $provider = new $provider();
+            $providerManager->register($provider);
+            $providerManager->bootProvider($provider);
+        });
 
-        // Create and use the service provider loader
-        // TODO: ServiceProviderLoader deprecated
-        $serviceProviderLoader = new ServiceProviderLoader($container, $providerManager, app('config'));
-        $container->instance(ServiceProviderLoader::class, $serviceProviderLoader);
+        // Register all providers defined in config
+        $providerManager->registerConfigProviders('app.providers');
 
-        // Register and boot all providers defined in config
-        $serviceProviderLoader->register();
-        $serviceProviderLoader->boot();
+        // Boot all registered providers
+        $providerManager->boot();
 
         // Return application instance from container
         return $container->make(Application::class);

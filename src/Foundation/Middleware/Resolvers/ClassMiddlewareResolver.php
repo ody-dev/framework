@@ -7,13 +7,13 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Middleware\Resolvers;
+namespace Ody\Foundation\Middleware\Resolvers;
 
-use Illuminate\Container\Container;
+use Ody\Container\Container;
 use Psr\Log\LoggerInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
-use Ody\Core\Foundation\Middleware\Adapters\CallableHandlerAdapter;
+use Ody\Foundation\Middleware\Adapters\CallableHandlerAdapter;
 
 /**
  * Generic resolver for class-based middleware

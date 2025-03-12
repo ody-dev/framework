@@ -7,7 +7,7 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Facades;
+namespace Ody\Foundation\Facades;
 
 /**
  * Request Facade
@@ -38,10 +38,10 @@ class Request extends Facade
      *
      * This is a static method on the actual Request class
      *
-     * @return \Ody\Core\Foundation\Http\Request
+     * @return \Ody\Foundation\Http\Request
      */
     public static function createFromGlobals()
     {
-        return \Ody\Core\Foundation\Http\Request::createFromGlobals();
+        return \Ody\Foundation\Http\Request::createFromGlobals();
     }
 }

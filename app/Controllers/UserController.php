@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Ody\Core\Foundation\Http\Response;
+use Ody\Foundation\Http\Response;
 use Psr\Log\LoggerInterface;
 
 class UserController
@@ -200,6 +200,8 @@ class UserController
     private function jsonResponse(ResponseInterface $response, $data): ResponseInterface
     {
         $response = $response->withHeader('Content-Type', 'application/json');
+
+
 
         // If using our custom Response class
         if ($response instanceof Response) {

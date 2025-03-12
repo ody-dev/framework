@@ -7,9 +7,9 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Core\Foundation\Http\Swoole;
+namespace Ody\Foundation\Http\Swoole;
 
-use Ody\Core\Foundation\Http\ResponseEmitter;
+use Ody\Foundation\Http\ResponseEmitter;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Swoole\Http\Response as SwooleResponse;
