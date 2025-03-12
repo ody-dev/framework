@@ -11,8 +11,6 @@ use Ody\Core\Foundation\Facades\Route;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Ody\Core\Foundation\Http\Response;
-use Ody\Core\Foundation\Middleware\AuthMiddleware;
-use Ody\Core\Foundation\Middleware\RoleMiddleware;
 
 // Public routes
 Route::get('/health', function (ServerRequestInterface $request, ResponseInterface $response) {

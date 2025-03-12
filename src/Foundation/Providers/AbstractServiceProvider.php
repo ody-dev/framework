@@ -150,11 +150,6 @@ abstract class AbstractServiceProvider implements ServiceProvider
 
         // Register the singleton
         $this->container->singleton($abstract, $concrete);
-
-        // Log registration if logger is available
-        if ($this->logger && env('APP_DEBUG', false)) {
-            $this->logger->debug("Registered singleton for {$abstract}");
-        }
     }
 
     /**

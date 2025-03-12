@@ -44,7 +44,7 @@ class Bootstrap
         Container::setInstance($container);
 
         // Initialize environment
-//        $env = self::initEnvironment($container, $environment);
+        $env = self::initEnvironment($container, $environment);
 
         // Initialize configuration
 //        $config = self::initConfiguration($container, $configPath);

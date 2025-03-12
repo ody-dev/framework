@@ -3,7 +3,7 @@
 namespace Ody\Core\Foundation\Middleware;
 
 use Illuminate\Container\Container;
-use Ody\Core\Foundation\Middleware\Adapters\CallableHandlerAdapter;
+use Ody\Core\Foundation\Middleware\Adapters\CallableMiddlewareAdapter;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -80,7 +80,7 @@ class MiddlewareRegistry
     public function addGlobal($middleware): self
     {
         $this->globalMiddleware[] = $middleware;
-        $this->logger->debug('Added global middleware', ['middleware' => $this->getMiddlewareName($middleware)]);
+
         return $this;
     }
 
@@ -94,7 +94,7 @@ class MiddlewareRegistry
     public function add(string $name, $middleware): self
     {
         $this->namedMiddleware[$name] = $middleware;
-        $this->logger->debug("Registered named middleware: {$name}", ['middleware' => $this->getMiddlewareName($middleware)]);
+
         return $this;
     }
 
@@ -130,7 +130,7 @@ class MiddlewareRegistry
     public function addGroup(string $name, array $middleware): self
     {
         $this->middlewareGroups[$name] = $middleware;
-        $this->logger->debug("Registered middleware group: {$name}", ['middleware' => count($middleware)]);
+
         return $this;
     }
 
@@ -151,7 +151,6 @@ class MiddlewareRegistry
         }
 
         $this->routeMiddleware[$route][] = $middleware;
-        $this->logger->debug("Added middleware to route: {$route}", ['middleware' => $this->getMiddlewareName($middleware)]);
 
         return $this;
     }
@@ -169,8 +168,6 @@ class MiddlewareRegistry
             'pattern' => $pattern,
             'middleware' => $middleware
         ];
-
-        $this->logger->debug("Added middleware to pattern: {$pattern}", ['middleware' => $this->getMiddlewareName($middleware)]);
 
         return $this;
     }
@@ -231,8 +228,6 @@ class MiddlewareRegistry
                 $middleware[] = $item['middleware'];
             }
         }
-
-        $this->logger->debug("Resolved middleware for route: {$route}", ['count' => count($middleware)]);
 
         return $middleware;
     }
@@ -317,7 +312,7 @@ class MiddlewareRegistry
                                     return $resolved->process($req, $innerHandler);
                                 };
 
-                                $innerHandler = new CallableHandlerAdapter($process);
+                                $innerHandler = new CallableMiddlewareAdapter($process);
                             }
                         }
 

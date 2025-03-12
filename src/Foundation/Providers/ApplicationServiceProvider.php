@@ -4,6 +4,7 @@ namespace Ody\Core\Foundation\Providers;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Ody\Core\Foundation\Application;
+use Ody\Core\Foundation\Middleware\MiddlewareRegistry;
 use Ody\Core\Foundation\Support\Config;
 use Ody\Core\Foundation\Middleware\Middleware;
 use Ody\Core\Foundation\Middleware\CorsMiddleware;
@@ -52,20 +53,21 @@ class ApplicationServiceProvider extends AbstractServiceProvider
 
         // Register router with container and middleware
         $this->container->singleton(Router::class, function ($container) {
-            $middleware = $container->make(Middleware::class);
-            return new Router($container, $middleware);
+            $middlewareRegistry = $container->make(MiddlewareRegistry::class);
+            return new Router($container, $middlewareRegistry);
         });
 
         // Register PSR-15 middleware classes
         $this->registerPsr15Middleware();
 
         // Register application
+        // Register application
         $this->container->singleton(Application::class, function ($container) {
             $router = $container->make(Router::class);
-            $middleware = $container->make(Middleware::class);
+            $middlewareRegistry = $container->make(MiddlewareRegistry::class); // Use MiddlewareRegistry instead
             $logger = $container->make(LoggerInterface::class);
 
-            return new Application($router, $middleware, $logger, $container);
+            return new Application($router, $middlewareRegistry, $logger, $container);
         });
     }
 

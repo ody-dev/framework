@@ -4,59 +4,113 @@ namespace Ody\Core\Foundation\Middleware;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Ody\Core\Foundation\Http\Response;
 
 /**
- * PSR-15 Request Handler implementation
+ * RequestHandler
+ *
+ * Handles processing a request through a stack of middleware.
  */
 class RequestHandler implements RequestHandlerInterface
 {
     /**
-     * @var callable
+     * @var callable The final handler to process the request if no middleware handles it
      */
-    private $handler;
+    private $finalHandler;
 
     /**
-     * @var array
+     * @var array The middleware stack
      */
-    private array $middlewareStack = [];
+    private array $stack = [];
 
     /**
-     * @var int Current middleware position
+     * @var bool Whether the stack is locked (execution has started)
      */
-    private int $currentPosition = 0;
+    private bool $locked = false;
 
     /**
-     * RequestHandler constructor
+     * Constructor
      *
-     * @param callable $handler
-     * @param array $middleware
+     * @param callable $finalHandler The handler to invoke if no middleware handles the request
      */
-    public function __construct(callable $handler, array $middleware = [])
+    public function __construct(callable $finalHandler)
     {
-        $this->handler = $handler;
-        $this->middlewareStack = $middleware;
+        $this->finalHandler = $finalHandler;
     }
 
     /**
-     * Handle the request
+     * Add middleware to the stack
+     *
+     * @param MiddlewareInterface $middleware
+     * @return self
+     * @throws \RuntimeException if the stack is locked (execution has started)
+     */
+    public function add(MiddlewareInterface $middleware): self
+    {
+        if ($this->locked) {
+            throw new \RuntimeException('Cannot add middleware once the stack is executing');
+        }
+
+        $this->stack[] = $middleware;
+        return $this;
+    }
+
+    /**
+     * Add multiple middleware at once
+     *
+     * @param array $middlewareList
+     * @return self
+     */
+    public function addMultiple(array $middlewareList): self
+    {
+        foreach ($middlewareList as $middleware) {
+            $this->add($middleware);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Process the request through the middleware stack
      *
      * @param ServerRequestInterface $request
      * @return ResponseInterface
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        // If there are no more middleware, execute the handler
-        if ($this->currentPosition === count($this->middlewareStack)) {
-            return call_user_func($this->handler, $request);
+        // Mark the stack as locked so no more middleware can be added during execution
+        $this->locked = true;
+
+        // If there's no middleware, execute the final handler directly
+        if (empty($this->stack)) {
+            return call_user_func($this->finalHandler, $request);
         }
 
-        // Get the next middleware
-        $middleware = $this->middlewareStack[$this->currentPosition];
-        $this->currentPosition++;
+        // Get the next middleware from the stack
+        $middleware = array_shift($this->stack);
 
         // Process the request through the middleware
         return $middleware->process($request, $this);
+    }
+
+    /**
+     * Get the final handler
+     *
+     * @return callable
+     */
+    public function getFinalHandler(): callable
+    {
+        return $this->finalHandler;
+    }
+
+    /**
+     * Get the current middleware stack
+     *
+     * @return array
+     */
+    public function getStack(): array
+    {
+        return $this->stack;
     }
 }
