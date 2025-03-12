@@ -91,7 +91,6 @@ class RequestHandler implements RequestHandlerInterface
 
         // If there's no middleware, execute the final handler directly
         if (empty($this->stack)) {
-            var_dump(call_user_func($this->finalHandler, $request));
             return call_user_func($this->finalHandler, $request);
         }
 
