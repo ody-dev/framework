@@ -4,66 +4,69 @@ namespace Ody\Core\Foundation\Middleware\Adapters;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 /**
- * Adapter to wrap a callable as a PSR-15 compatible request handler
+ * CallableMiddlewareAdapter
  *
- * This adapter allows you to use a simple callable function as a PSR-15
- * RequestHandlerInterface, eliminating the need to create anonymous classes
- * or duplicate adapter code throughout the middleware system.
+ * Adapts a callable to implement the PSR-15 MiddlewareInterface.
  */
-class CallableHandlerAdapter implements RequestHandlerInterface
+class CallableMiddlewareAdapter implements MiddlewareInterface
 {
     /**
-     * The callable to be wrapped
-     *
-     * @var callable
+     * @var callable The middleware function to be wrapped
      */
-    private $callable;
+    private $middleware;
 
     /**
-     * Additional arguments to pass to the callable
-     *
-     * @var array
+     * @var array Additional parameters to use when invoking the middleware
      */
-    private $arguments;
+    private array $parameters;
 
     /**
-     * Create a new CallableHandlerAdapter
+     * Constructor
      *
-     * @param callable $callable The function to wrap as a handler
-     * @param array $arguments Additional arguments to pass to the callable after the request
+     * @param callable $middleware The middleware function with signature function(ServerRequestInterface $request, callable $next): ResponseInterface
+     * @param array $parameters Additional parameters to pass to the middleware
      */
-    public function __construct(callable $callable, array $arguments = [])
+    public function __construct(callable $middleware, array $parameters = [])
     {
-        $this->callable = $callable;
-        $this->arguments = $arguments;
+        $this->middleware = $middleware;
+        $this->parameters = $parameters;
     }
 
     /**
-     * Handle the request and produce a response
+     * Process an incoming server request
      *
      * @param ServerRequestInterface $request
+     * @param RequestHandlerInterface $handler
      * @return ResponseInterface
      */
-    public function handle(ServerRequestInterface $request): ResponseInterface
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        // Call the wrapped callable with the request and any additional arguments
-        return call_user_func($this->callable, $request, ...$this->arguments);
+        // Create a next handler function that passes the request to the handler
+        $next = function (ServerRequestInterface $request) use ($handler): ResponseInterface {
+            return $handler->handle($request);
+        };
+
+        // Call the middleware with the request, next handler, and any additional parameters
+        if (empty($this->parameters)) {
+            return call_user_func($this->middleware, $request, $next);
+        } else {
+            return call_user_func($this->middleware, $request, $next, $this->parameters);
+        }
     }
 
     /**
-     * Create a handler adapter from a callable
+     * Create a new instance from a callable
      *
-     * This static factory method provides a convenient way to create adapter instances.
-     *
-     * @param callable $callable The function to wrap as a handler
-     * @param array $arguments Additional arguments to pass to the callable
+     * @param callable $middleware
+     * @param array $parameters
      * @return self
      */
-    public static function create(callable $callable, array $arguments = []): self
+    public static function fromCallable(callable $middleware, array $parameters = []): self
     {
-        return new self($callable, $arguments);
+        return new self($middleware, $parameters);
     }
 }

@@ -44,16 +44,16 @@ class Bootstrap
         Container::setInstance($container);
 
         // Initialize environment
-        $env = self::initEnvironment($container, $environment);
+//        $env = self::initEnvironment($container, $environment);
 
         // Initialize configuration
-        $config = self::initConfiguration($container, $configPath);
+//        $config = self::initConfiguration($container, $configPath);
 
         // Initialize PSR-17 factories
         self::initPsr17Factories($container);
 
         // Initialize service providers
-        $application = self::initServiceProviders($container, $config);
+        $application = self::initServiceProviders($container);
 
         return $application;
     }
@@ -120,7 +120,7 @@ class Bootstrap
      * @param Config $config
      * @return Application
      */
-    private static function initServiceProviders(Container $container, Config $config): Application
+    private static function initServiceProviders(Container $container): Application
     {
         // Create service provider manager
         $providerManager = new ServiceProviderManager($container);
@@ -139,7 +139,8 @@ class Bootstrap
         $providerManager->bootProvider($facadeProvider);
 
         // Create and use the service provider loader
-        $serviceProviderLoader = new ServiceProviderLoader($container, $providerManager, $config);
+        // TODO: ServiceProviderLoader deprecated
+        $serviceProviderLoader = new ServiceProviderLoader($container, $providerManager, app('config'));
         $container->instance(ServiceProviderLoader::class, $serviceProviderLoader);
 
         // Register and boot all providers defined in config

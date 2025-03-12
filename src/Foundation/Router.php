@@ -5,47 +5,71 @@ namespace Ody\Core\Foundation;
 
 use FastRoute;
 use Illuminate\Container\Container;
-use Ody\Core\Foundation\Middleware\Middleware;
+use Ody\Core\Foundation\Middleware\MiddlewareRegistry;
 
 class Router
 {
+    /**
+     * @var FastRoute\Dispatcher|null
+     */
     private $dispatcher;
+
+    /**
+     * @var array
+     */
     private $routes = [];
+
+    /**
+     * @var Container
+     */
     private $container;
-    private $middleware;
+
+    /**
+     * @var MiddlewareRegistry
+     */
+    private $middlewareRegistry;
 
     /**
      * Router constructor
      *
      * @param Container|null $container
-     * @param Middleware|null $middleware
+     * @param MiddlewareRegistry|null $middlewareRegistry
      */
-    public function __construct($container = null, $middleware = null)
-    {
-        $this->container = $container;
-        $this->middleware = $middleware;
+    public function __construct(
+        ?Container $container = null,
+        ?MiddlewareRegistry $middlewareRegistry = null
+    ) {
+        $this->container = $container ?? new Container();
+
+        if ($middlewareRegistry) {
+            $this->middlewareRegistry = $middlewareRegistry;
+        } else if ($container && $container->has(MiddlewareRegistry::class)) {
+            $this->middlewareRegistry = $container->make(MiddlewareRegistry::class);
+        } else {
+            $this->middlewareRegistry = new MiddlewareRegistry($this->container);
+        }
     }
 
     /**
-     * Set middleware instance
+     * Set middleware registry
      *
-     * @param Middleware $middleware
+     * @param MiddlewareRegistry $middlewareRegistry
      * @return self
      */
-    public function setMiddleware(Middleware $middleware): self
+    public function setMiddlewareRegistry(MiddlewareRegistry $middlewareRegistry): self
     {
-        $this->middleware = $middleware;
+        $this->middlewareRegistry = $middlewareRegistry;
         return $this;
     }
 
     /**
-     * Get middleware instance
+     * Get middleware registry
      *
-     * @return Middleware|null
+     * @return MiddlewareRegistry
      */
-    public function getMiddleware(): ?Middleware
+    public function getMiddlewareRegistry(): MiddlewareRegistry
     {
-        return $this->middleware;
+        return $this->middlewareRegistry;
     }
 
     /**
@@ -57,8 +81,7 @@ class Router
      */
     public function get(string $path, $handler): Route
     {
-        // Pass middleware instead of $this (router) to the Route constructor
-        $route = new Route('GET', $path, $handler, $this->middleware);
+        $route = new Route('GET', $path, $handler, $this->middlewareRegistry);
         $this->routes[] = ['GET', $path, $handler];
         return $route;
     }
@@ -72,8 +95,7 @@ class Router
      */
     public function post(string $path, $handler): Route
     {
-        // Pass middleware instead of $this
-        $route = new Route('POST', $path, $handler, $this->middleware);
+        $route = new Route('POST', $path, $handler, $this->middlewareRegistry);
         $this->routes[] = ['POST', $path, $handler];
         return $route;
     }
@@ -87,8 +109,7 @@ class Router
      */
     public function put(string $path, $handler): Route
     {
-        // Pass middleware instead of $this
-        $route = new Route('PUT', $path, $handler, $this->middleware);
+        $route = new Route('PUT', $path, $handler, $this->middlewareRegistry);
         $this->routes[] = ['PUT', $path, $handler];
         return $route;
     }
@@ -102,8 +123,7 @@ class Router
      */
     public function delete(string $path, $handler): Route
     {
-        // Pass middleware instead of $this
-        $route = new Route('DELETE', $path, $handler, $this->middleware);
+        $route = new Route('DELETE', $path, $handler, $this->middlewareRegistry);
         $this->routes[] = ['DELETE', $path, $handler];
         return $route;
     }
@@ -117,8 +137,7 @@ class Router
      */
     public function patch(string $path, $handler): Route
     {
-        // Pass middleware instead of $this
-        $route = new Route('PATCH', $path, $handler, $this->middleware);
+        $route = new Route('PATCH', $path, $handler, $this->middlewareRegistry);
         $this->routes[] = ['PATCH', $path, $handler];
         return $route;
     }
@@ -132,8 +151,7 @@ class Router
      */
     public function options(string $path, $handler): Route
     {
-        // Pass middleware instead of $this
-        $route = new Route('OPTIONS', $path, $handler, $this->middleware);
+        $route = new Route('OPTIONS', $path, $handler, $this->middlewareRegistry);
         $this->routes[] = ['OPTIONS', $path, $handler];
         return $route;
     }
@@ -166,55 +184,81 @@ class Router
             public function get($path, $handler)
             {
                 $route = $this->router->get($this->prefix . $path, $handler);
+
+                // Apply middleware from the group to the route
                 foreach ($this->middlewareList as $middleware) {
                     $route->middleware($middleware);
                 }
+
                 return $route;
             }
 
             public function post($path, $handler)
             {
                 $route = $this->router->post($this->prefix . $path, $handler);
+
                 foreach ($this->middlewareList as $middleware) {
                     $route->middleware($middleware);
                 }
+
                 return $route;
             }
 
             public function put($path, $handler)
             {
                 $route = $this->router->put($this->prefix . $path, $handler);
+
                 foreach ($this->middlewareList as $middleware) {
                     $route->middleware($middleware);
                 }
+
                 return $route;
             }
 
             public function delete($path, $handler)
             {
                 $route = $this->router->delete($this->prefix . $path, $handler);
+
                 foreach ($this->middlewareList as $middleware) {
                     $route->middleware($middleware);
                 }
+
                 return $route;
             }
 
             public function patch($path, $handler)
             {
                 $route = $this->router->patch($this->prefix . $path, $handler);
+
                 foreach ($this->middlewareList as $middleware) {
                     $route->middleware($middleware);
                 }
+
                 return $route;
             }
 
             public function options($path, $handler)
             {
                 $route = $this->router->options($this->prefix . $path, $handler);
+
                 foreach ($this->middlewareList as $middleware) {
                     $route->middleware($middleware);
                 }
+
                 return $route;
+            }
+
+            // Add pattern middleware for all routes in the group
+            public function __destruct()
+            {
+                // If the group has a pattern-based prefix, add pattern middleware
+                if (strpos($this->prefix, '*') !== false) {
+                    $registry = $this->router->getMiddlewareRegistry();
+
+                    foreach ($this->middlewareList as $middleware) {
+                        $registry->addToPattern('*:' . $this->prefix . '*', $middleware);
+                    }
+                }
             }
         };
 
@@ -284,13 +328,16 @@ class Router
         switch ($routeInfo[0]) {
             case \FastRoute\Dispatcher::NOT_FOUND:
                 return ['status' => 'not_found'];
+
             case \FastRoute\Dispatcher::METHOD_NOT_ALLOWED:
                 return [
                     'status' => 'method_not_allowed',
                     'allowed_methods' => $routeInfo[1]
                 ];
+
             case \FastRoute\Dispatcher::FOUND:
                 $handler = $routeInfo[1];
+
                 // Try to convert string controller@method to callable
                 $callable = $this->resolveController($handler);
 
