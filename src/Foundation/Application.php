@@ -1,8 +1,16 @@
 <?php
+/*
+ * This file is part of ODY framework.
+ *
+ * @link     https://ody.dev
+ * @document https://ody.dev/docs
+ * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
+ */
 
 namespace Ody\Core\Foundation;
 
 use Illuminate\Container\Container;
+use Illuminate\Contracts\Container\BindingResolutionException;
 use Ody\Core\Foundation\Http\Request;
 use Ody\Core\Foundation\Http\Response;
 use Ody\Core\Foundation\Http\ResponseEmitter;
@@ -49,6 +57,7 @@ class Application
      * @param LoggerInterface|null $logger
      * @param Container|null $container
      * @param ResponseEmitter|null $responseEmitter
+     * @throws BindingResolutionException
      */
     public function __construct(
         ?Router $router = null,

@@ -1,4 +1,11 @@
 <?php
+/*
+ * This file is part of ODY framework.
+ *
+ * @link     https://ody.dev
+ * @document https://ody.dev/docs
+ * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
+ */
 
 namespace Ody\Core\Foundation\Logging;
 
@@ -107,7 +114,7 @@ abstract class AbstractLogger extends \Psr\Log\AbstractLogger implements LoggerI
      */
     public function log($level, $message, array $context = []): void
     {
-        error_log("Logging with level: " . $level);
+
         if (!$this->isLevelAllowed($level)) {
             return;
         }

@@ -1,12 +1,23 @@
 <?php
+/*
+ * This file is part of ODY framework.
+ *
+ * @link     https://ody.dev
+ * @document https://ody.dev/docs
+ * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
+ */
+
 namespace Ody\Core\Foundation\Providers;
 
 use Illuminate\Container\Container;
-use Ody\Core\Foundation\Support\Config;
+use Ody\Core\Foundation\Contracts\ConfigRepository;
+use Ody\Core\Foundation\Support\ConfigRepository as ConfigImpl;
 use Ody\Core\Foundation\Support\Env;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
- * Service provider for configuration
+ * Configuration System Service Provider
  */
 class ConfigServiceProvider extends AbstractServiceProvider
 {
@@ -17,19 +28,40 @@ class ConfigServiceProvider extends AbstractServiceProvider
      */
     protected function registerServices(): void
     {
-        // Ensure Config class is registered
-        if (!$this->container->bound(Config::class)) {
-            $config = new Config();
+        // Get base path
+        $basePath = defined('APP_BASE_PATH') ? APP_BASE_PATH : dirname(__DIR__, 3);
 
-            // Load config files from default location
-            $configPath = env('CONFIG_PATH', base_path('config'));
-            if (is_dir($configPath)) {
-                $config->loadFromDirectory($configPath);
-            }
+        // Get logger if available, or use null logger
+        $logger = $this->container->has(LoggerInterface::class)
+            ? $this->container->make(LoggerInterface::class)
+            : new NullLogger();
 
-            $this->container->instance('config', $config);
-            $this->container->instance(Config::class, $config);
+        // Create the configuration repository
+        $config = new ConfigImpl([], $logger);
+        $config->setBasePath($basePath);
+
+        // Load configuration from default directory
+        $configPath = env('CONFIG_PATH', $basePath . '/config');
+
+        if (is_dir($configPath)) {
+            $recursive = (bool) env('CONFIG_RECURSIVE', false);
+            $config->loadFromDirectory($configPath, $recursive);
         }
+
+        // Load environment-specific configuration if available
+        $environment = env('APP_ENV', 'production');
+        $envConfigPath = $configPath . '/' . $environment;
+
+        if (is_dir($envConfigPath)) {
+            $config->loadFromDirectory($envConfigPath, $recursive);
+        }
+
+        // Register in container under both class and interface
+        $this->container->instance(ConfigImpl::class, $config);
+        $this->container->instance(ConfigRepository::class, $config);
+
+        // Register as 'config' alias for backward compatibility
+        $this->container->instance('config', $config);
     }
 
     /**
@@ -60,10 +92,10 @@ class ConfigServiceProvider extends AbstractServiceProvider
              *
              * @param string|null $key
              * @param mixed $default
-             * @return mixed|Config
+             * @return mixed|ConfigRepository
              */
             function config($key = null, $default = null) {
-                $config = app(Config::class);
+                $config = app(ConfigRepository::class);
 
                 if (is_null($key)) {
                     return $config;
