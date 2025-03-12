@@ -254,9 +254,50 @@ class MiddlewareRegistry
         // Get middleware for this route
         $middlewareList = $this->getMiddlewareForRoute($method, $path);
 
-        // Create the final handler
+        // Create the final handler with additional validation
         $coreHandler = function (ServerRequestInterface $request) use ($finalHandler): ResponseInterface {
-            return call_user_func($finalHandler, $request);
+            try {
+                $response = call_user_func($finalHandler, $request);
+
+                // Validate response
+                if (!$response instanceof ResponseInterface) {
+                    $this->logger->error('Route handler returned an invalid response', [
+                        'handler' => is_string($finalHandler) ? $finalHandler : 'Callable',
+                        'response_type' => is_object($response) ? get_class($response) : gettype($response)
+                    ]);
+
+                    // Create a fallback response
+                    $factory = new \Nyholm\Psr7\Factory\Psr17Factory();
+                    $response = $factory->createResponse(500)
+                        ->withHeader('Content-Type', 'application/json');
+                    $response->getBody()->write(json_encode([
+                        'error' => 'Internal Server Error',
+                        'message' => 'Route handler returned an invalid response type'
+                    ]));
+
+                    return $response;
+                }
+
+                return $response;
+            } catch (\Throwable $e) {
+                $this->logger->error('Exception in route handler', [
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+
+                // Create an error response
+                $factory = new \Nyholm\Psr7\Factory\Psr17Factory();
+                $response = $factory->createResponse(500)
+                    ->withHeader('Content-Type', 'application/json');
+                $response->getBody()->write(json_encode([
+                    'error' => 'Internal Server Error',
+                    'message' => $e->getMessage()
+                ]));
+
+                return $response;
+            }
         };
 
         $handler = new RequestHandler($coreHandler);
@@ -269,7 +310,27 @@ class MiddlewareRegistry
             }
         }
 
-        return $handler->handle($request);
+        try {
+            return $handler->handle($request);
+        } catch (\Throwable $e) {
+            $this->logger->error('Exception in middleware chain', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            // Create an error response
+            $factory = new \Nyholm\Psr7\Factory\Psr17Factory();
+            $response = $factory->createResponse(500)
+                ->withHeader('Content-Type', 'application/json');
+            $response->getBody()->write(json_encode([
+                'error' => 'Internal Server Error',
+                'message' => $e->getMessage()
+            ]));
+
+            return $response;
+        }
     }
 
     /**

@@ -32,18 +32,22 @@ Route::get('/health', function (ServerRequestInterface $request, ResponseInterfa
 });
 
 Route::get('/version', function (ServerRequestInterface $request, ResponseInterface $response) {
-    $response = $response->withHeader('Content-Type', 'application/json');
-
+    // Make sure we're returning a ResponseInterface
     $data = [
         'version' => '1.0.0',
         'api' => 'REST API Core with PSR-7/15 Support',
         'server' => 'HTTP Server'
     ];
 
-    if ($response instanceof Response) {
-        return $response->withJson($data);
+    // Method 1: Use withJson() for a Response instance
+    if ($response instanceof \Ody\Foundation\Http\Response) {
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withJson($data);
     }
 
+    // Method 2: Fallback for any PSR-7 implementation
+    $response = $response->withHeader('Content-Type', 'application/json');
     $response->getBody()->write(json_encode($data));
     return $response;
 });

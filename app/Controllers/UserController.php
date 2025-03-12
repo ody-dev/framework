@@ -40,6 +40,7 @@ class UserController
      */
     public function index(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
+        dd('test');
         // In a real app, fetch from database
         $stmt = $this->db->query('SELECT id, email FROM users');
         $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
