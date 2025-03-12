@@ -14,12 +14,12 @@ namespace Ody\Foundation\Facades;
  *
  * Allows route registration using static methods
  *
- * @method static \Ody\Container\ContractsRoute get(string $path, mixed $handler)
- * @method static \Ody\Container\ContractsRoute post(string $path, mixed $handler)
- * @method static \Ody\Container\ContractsRoute put(string $path, mixed $handler)
- * @method static \Ody\Container\ContractsRoute patch(string $path, mixed $handler)
- * @method static \Ody\Container\ContractsRoute delete(string $path, mixed $handler)
- * @method static \Ody\Container\ContractsRoute options(string $path, mixed $handler)
+ * @method static \Ody\Foundation\Route get(string $path, mixed $handler)
+ * @method static \Ody\Foundation\Route post(string $path, mixed $handler)
+ * @method static \Ody\Foundation\Route put(string $path, mixed $handler)
+ * @method static \Ody\Foundation\Route patch(string $path, mixed $handler)
+ * @method static \Ody\Foundation\Route delete(string $path, mixed $handler)
+ * @method static \Ody\Foundation\Route options(string $path, mixed $handler)
  * @method static \Ody\Foundation\Router group(array $attributes, callable $callback)
  */
 class Route extends Facade

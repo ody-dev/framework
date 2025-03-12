@@ -42,7 +42,7 @@ class LoggingServiceProvider extends ServiceProvider
         $this->instance(LoggerInterface::class, new NullLogger());
 
         // Register LogManager
-        $this->registerSingleton(LogManager::class, function ($container) {
+        $this->singleton(LogManager::class, function ($container) {
             /** @var Config $config */
             $config = $container->make(Config::class);
 
@@ -53,7 +53,7 @@ class LoggingServiceProvider extends ServiceProvider
         });
 
         // Now update LoggerInterface binding to use the actual logger from LogManager
-        $this->registerSingleton(LoggerInterface::class, function ($container) {
+        $this->singleton(LoggerInterface::class, function ($container) {
             return $container->make(LogManager::class)->channel();
         });
     }

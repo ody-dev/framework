@@ -45,16 +45,21 @@ class FacadeServiceProvider extends ServiceProvider
         // Set the container on the Facade class
         Facade::setFacadeContainer($this->container);
 
+        // Ensure router is aliased properly
+        if ($this->has(Router::class) && !$this->has('router')) {
+            $this->alias(Router::class, 'router');
+        }
+
         // Register request singleton
         if (!$this->has('request')) {
-            $this->registerSingleton('request', function () {
+            $this->singleton('request', function () {
                 return Request::createFromGlobals();
             });
         }
 
         // Register response singleton
         if (!$this->has('response')) {
-            $this->registerSingleton('response', function () {
+            $this->singleton('response', function () {
                 return new Response();
             });
         }

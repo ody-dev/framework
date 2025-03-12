@@ -69,7 +69,7 @@ class ApplicationServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Register router with container and middleware
-        $this->registerSingleton(Router::class, function ($container) {
+        $this->singleton(Router::class, function ($container) {
             $middlewareRegistry = $container->make(MiddlewareRegistry::class);
             return new Router($container, $middlewareRegistry);
         });
@@ -78,7 +78,7 @@ class ApplicationServiceProvider extends ServiceProvider
         $this->registerPsr15Middleware();
 
         // Register application
-        $this->registerSingleton(Application::class, function ($container) {
+        $this->singleton(Application::class, function ($container) {
             $router = $container->make(Router::class);
             $middlewareRegistry = $container->make(MiddlewareRegistry::class);
             $logger = $container->make(LoggerInterface::class);
@@ -87,9 +87,14 @@ class ApplicationServiceProvider extends ServiceProvider
         });
     }
 
+    /**
+     * Bootstrap the service provider.
+     *
+     * @return void
+     */
     public function boot(): void
     {
-        // TODO: Implement boot() method.
+        // Application bootstrapping logic
     }
 
     /**
@@ -100,7 +105,7 @@ class ApplicationServiceProvider extends ServiceProvider
     private function registerPsr15Middleware(): void
     {
         // Register CORS middleware
-        $this->registerSingleton(CorsMiddleware::class, function ($container) {
+        $this->singleton(CorsMiddleware::class, function ($container) {
             $config = $container->make(Config::class);
             $corsConfig = $config->get('cors', [
                 'origin' => '*',
@@ -113,12 +118,12 @@ class ApplicationServiceProvider extends ServiceProvider
         });
 
         // Register JSON body parser middleware
-        $this->registerSingleton(JsonBodyParserMiddleware::class, function () {
+        $this->singleton(JsonBodyParserMiddleware::class, function () {
             return new JsonBodyParserMiddleware();
         });
 
         // Register logging middleware
-        $this->registerSingleton(LoggingMiddleware::class, function ($container) {
+        $this->singleton(LoggingMiddleware::class, function ($container) {
             $logger = $container->make(LoggerInterface::class);
             return new LoggingMiddleware($logger);
         });

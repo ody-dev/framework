@@ -48,7 +48,7 @@ class DatabaseServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Register PDO connection
-        $this->registerSingleton(PDO::class, function ($container) {
+        $this->singleton(PDO::class, function ($container) {
             $config = $container->make(Config::class);
 
             // Get default connection name
@@ -56,7 +56,6 @@ class DatabaseServiceProvider extends ServiceProvider
 
             // Get connection configuration
             $connection = $config->get("database.connections.{$default}");
-
 
             if (!$connection) {
                 throw new \RuntimeException("Database connection [{$default}] not configured");

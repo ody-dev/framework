@@ -6,6 +6,7 @@ namespace Ody\Foundation;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Ody\Container\Container;
 use Ody\Container\Contracts\BindingResolutionException;
+use Ody\Foundation\Providers\ApplicationServiceProvider;
 use Ody\Foundation\Providers\ConfigServiceProvider;
 use Ody\Foundation\Providers\FacadeServiceProvider;
 use Ody\Foundation\Providers\LoggingServiceProvider;
@@ -136,13 +137,14 @@ class Bootstrap
         $providers = [
             ConfigServiceProvider::class,
             LoggingServiceProvider::class,
-            FacadeServiceProvider::class,
+            ApplicationServiceProvider::class,
+            FacadeServiceProvider::class
         ];
 
         array_walk($providers, function ($provider) use ($providerManager) {
             $provider = new $provider();
             $providerManager->register($provider);
-            $providerManager->bootProvider($provider);
+            $providerManager->bootProvider($provider);  // This is line 145 calling the protected method
         });
 
         // Register all providers defined in config

@@ -10,9 +10,9 @@ return [
     'providers' => [
         // Core Service Providers
         Ody\Foundation\Providers\ApplicationServiceProvider::class,
+        Ody\Foundation\Providers\RouteServiceProvider::class,
         Ody\Foundation\Providers\DatabaseServiceProvider::class,
         Ody\Foundation\Providers\MiddlewareServiceProvider::class,
-        Ody\Foundation\Providers\RouteServiceProvider::class,
 
         // Add your application service providers here
         // App\Providers\CustomServiceProvider::class,

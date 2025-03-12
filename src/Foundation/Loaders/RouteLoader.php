@@ -1,105 +1,138 @@
 <?php
-/*
- * This file is part of ODY framework.
- *
- * @link     https://ody.dev
- * @document https://ody.dev/docs
- * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
- */
 
 namespace Ody\Foundation\Loaders;
 
 use Ody\Container\Container;
-use Ody\Foundation\Middleware\Middleware;
+use Ody\Foundation\Middleware\MiddlewareRegistry;
 use Ody\Foundation\Router;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
- * Route loader for loading routes from separate files
+ * Route Loader
+ *
+ * Handles loading and registering routes from files.
+ * Supports module-specific routes with proper grouping and namespacing.
  */
 class RouteLoader
 {
     /**
+     * The router instance.
+     *
      * @var Router
      */
-    private $router;
+    protected Router $router;
 
     /**
-     * @var Middleware
+     * The middleware registry instance.
+     *
+     * @var MiddlewareRegistry
      */
-    private $middleware;
+    protected MiddlewareRegistry $middlewareRegistry;
 
     /**
+     * The container instance.
+     *
      * @var Container
      */
-    private $container;
+    protected Container $container;
 
     /**
+     * The logger instance.
+     *
+     * @var LoggerInterface
+     */
+    protected LoggerInterface $logger;
+
+    /**
+     * The loaded route files.
+     *
      * @var array
      */
-    private $loadedFiles = [];
+    protected array $loadedFiles = [];
 
     /**
-     * RouteLoader constructor
+     * Create a new route loader instance.
      *
      * @param Router $router
-     * @param Middleware $middleware
+     * @param MiddlewareRegistry $middlewareRegistry
      * @param Container $container
+     * @param LoggerInterface|null $logger
      */
-    public function __construct(Router $router, Middleware $middleware, Container $container)
-    {
+    public function __construct(
+        Router $router,
+        MiddlewareRegistry $middlewareRegistry,
+        Container $container,
+        ?LoggerInterface $logger = null
+    ) {
         $this->router = $router;
-        $this->middleware = $middleware;
+        $this->middlewareRegistry = $middlewareRegistry;
         $this->container = $container;
+        $this->logger = $logger ?? new NullLogger();
     }
 
     /**
-     * Load routes from a file
+     * Load routes from a file.
      *
-     * @param string $filePath Path to route file
+     * @param string $path Path to the route file
+     * @param array $attributes Optional route group attributes
      * @return bool True if file was loaded, false if already loaded or not found
      */
-    public function load(string $filePath): bool
+    public function load(string $path, array $attributes = []): bool
     {
         // Normalize file path
-        $filePath = realpath($filePath);
+        $path = $this->normalizePath($path);
 
-        if (!$filePath || !file_exists($filePath)) {
+        if (!file_exists($path)) {
+            $this->logger->warning("Route file not found: {$path}");
             return false;
         }
 
         // Don't load the same file twice
-        if (in_array($filePath, $this->loadedFiles)) {
+        if (in_array($path, $this->loadedFiles)) {
             return false;
         }
 
         // Add to loaded files list
-        $this->loadedFiles[] = $filePath;
+        $this->loadedFiles[] = $path;
 
-        // Load the file with router and middleware in scope
+        // Load the routes with the router, middleware registry, and container in scope
         $router = $this->router;
-        $middleware = $this->middleware;
+        $middlewareRegistry = $this->middlewareRegistry;
         $container = $this->container;
 
-        require $filePath;
+        // Apply attributes if provided (for route groups)
+        if (!empty($attributes)) {
+            $router->group($attributes, function () use ($path, $router, $middlewareRegistry, $container) {
+                require $path;
+            });
+        } else {
+            require $path;
+        }
 
         return true;
     }
 
     /**
-     * Load all route files from a directory
+     * Load all route files from a directory.
      *
      * @param string $directory Directory containing route files
+     * @param array $attributes Optional route group attributes
      * @param string $extension File extension to look for (default: .php)
      * @return int Number of files loaded
      */
-    public function loadDirectory(string $directory, string $extension = '.php'): int
+    public function loadDirectory(string $directory, array $attributes = [], string $extension = '.php'): int
     {
+        $directory = $this->normalizePath($directory);
+
         if (!is_dir($directory)) {
+            $this->logger->warning("Routes directory not found: {$directory}");
             return 0;
         }
 
         $count = 0;
         $files = scandir($directory);
+        $extension = ltrim($extension, '.');
 
         foreach ($files as $file) {
             if ($file === '.' || $file === '..') {
@@ -108,23 +141,76 @@ class RouteLoader
 
             $filePath = $directory . '/' . $file;
 
-            if (is_file($filePath) && pathinfo($filePath, PATHINFO_EXTENSION) === ltrim($extension, '.')) {
-                if ($this->load($filePath)) {
+            if (is_file($filePath) && pathinfo($filePath, PATHINFO_EXTENSION) === $extension) {
+                if ($this->load($filePath, $attributes)) {
                     $count++;
                 }
             }
         }
 
+        $this->logger->info("Loaded {$count} route files from {$directory}");
         return $count;
     }
 
     /**
-     * Get list of loaded files
+     * Normalize a file path.
+     *
+     * @param string $path
+     * @return string
+     */
+    protected function normalizePath(string $path): string
+    {
+        // Handle relative paths
+        if ($path[0] !== '/' && function_exists('base_path')) {
+            $path = base_path($path);
+        }
+
+        return $path;
+    }
+
+    /**
+     * Get a list of loaded files.
      *
      * @return array
      */
     public function getLoadedFiles(): array
     {
         return $this->loadedFiles;
+    }
+
+    /**
+     * Set the router instance.
+     *
+     * @param Router $router
+     * @return self
+     */
+    public function setRouter(Router $router): self
+    {
+        $this->router = $router;
+        return $this;
+    }
+
+    /**
+     * Set the middleware registry instance.
+     *
+     * @param MiddlewareRegistry $middlewareRegistry
+     * @return self
+     */
+    public function setMiddlewareRegistry(MiddlewareRegistry $middlewareRegistry): self
+    {
+        $this->middlewareRegistry = $middlewareRegistry;
+        return $this;
+    }
+
+    /**
+     * Set the container instance.
+     *
+     * @param Container $container
+     * @return self
+     */
+    public function setContainer(Container $container): self
+    {
+        $this->container = $container;
+        return $this;
     }
 }

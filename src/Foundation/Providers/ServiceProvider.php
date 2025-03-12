@@ -1,218 +1,174 @@
 <?php
-/*
- * This file is part of ODY framework.
- *
- * @link     https://ody.dev
- * @document https://ody.dev/docs
- * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
- */
 
 namespace Ody\Foundation\Providers;
 
-use Ody\Container\Contracts\BindingResolutionException;
 use Ody\Container\Container;
-use Ody\Foundation\Logging\NullLogger;
-use Psr\Log\LoggerInterface;
 
-abstract class ServiceProvider // implements ServiceProviderInterface
+/**
+ * Base Service Provider
+ *
+ * A simplified abstract class that acts as a boilerplate for users creating service providers.
+ * This class focuses on being a clear interface with minimal complexity.
+ */
+abstract class ServiceProvider
 {
     /**
+     * The application container instance.
+     *
      * @var Container
      */
-    protected Container $container;
-    /**
-     * Services that should be registered as singletons
-     *
-     * @var array
-     */
-    protected array $singletons = [];
+    public Container $container;
 
     /**
-     * Services that should be registered as bindings
-     *
-     * @var array
-     */
-    protected array $bindings = [];
-
-    /**
-     * Services that should be registered as aliases
-     *
-     * @var array
-     */
-    protected array $aliases = [];
-
-    /**
-     * Tags for grouping services
-     *
-     * @var array
-     */
-    protected array $tags = [];
-
-    /**
-     * Whether to defer registration until service is needed
+     * Indicates if loading of the provider is deferred.
      *
      * @var bool
      */
-    protected $defer = false;
+    protected bool $defer = false;
 
-    final public function setup(Container $container)
+    /**
+     * Initialize the provider.
+     *
+     * @param Container|null $container Optional container instance
+     * @return void
+     */
+    public function __construct(?Container $container = null)
     {
-        $this->container = $container;
-
-        array_walk($this->bindings, function ($concrete, $abstract) {
-            // Register bindings
-            $this->registerBinding($abstract, $concrete);
-            // Register singletons
-            $this->registerSingleton($abstract, $concrete);
-        });
-
-        array_walk($this->aliases, function ($abstract, $alias) use ($container) {
-            // Register aliases
-            $container->alias($abstract, $alias);
-        });
-
-        array_walk($this->tags, function ($abstracts, $tag) use ($container) {
-            // Register tags
-            array_walk($abstracts, fn ($abstract) => $this->tag($abstract, $tag));
-        });
-
-        // Call the provider's custom registration logic
-        $this->register();
+        $this->container = $container ?? Container::getInstance();
     }
 
     /**
-     * Register application services
+     * Register any application services.
      *
      * @return void
      */
     abstract public function register(): void;
 
     /**
-     * Bootstrap any application services
+     * Bootstrap any application services.
      *
      * @return void
      */
     abstract public function boot(): void;
 
     /**
-     * Register a binding with the container
+     * Get the services provided by the provider.
+     *
+     * @return array
+     */
+    public function provides(): array
+    {
+        return [];
+    }
+
+    /**
+     * Determine if the provider is deferred.
+     *
+     * @return bool
+     */
+    public function isDeferred(): bool
+    {
+        return $this->defer;
+    }
+
+    /**
+     * Load routes from the specified path.
+     *
+     * @param string $path Path to a route file or directory
+     * @param array $attributes Optional route group attributes
+     * @return void
+     */
+    protected function loadRoutesFrom(string $path, array $attributes = []): void
+    {
+        if (!file_exists($path)) {
+            return;
+        }
+
+        $router = $this->container->make('router');
+        $routeLoader = $this->container->make('route.loader');
+
+        if (!empty($attributes)) {
+            $router->group($attributes, function () use ($routeLoader, $path) {
+                $routeLoader->load($path);
+            });
+        } else {
+            $routeLoader->load($path);
+        }
+    }
+
+    /**
+     * Load routes from a specific path or directory.
+     *
+     * @param string $path Path to a route file or directory
+     * @param array $attributes Optional route group attributes
+     * @return void
+     */
+    protected function loadRoutes(string $path, array $attributes = []): void
+    {
+        // Check if the RouteServiceProvider is registered
+        if ($this->container->has('Ody\Foundation\Providers\RouteServiceProvider')) {
+            // Use the provider's method if available
+            $routeServiceProvider = $this->container->make('Ody\Foundation\Providers\RouteServiceProvider');
+            if (method_exists($routeServiceProvider, 'loadRoutes')) {
+                $routeServiceProvider->loadRoutes($path, $attributes);
+                return;
+            }
+        }
+
+        // Fallback to the RouteLoader if available
+        if ($this->container->has('route.loader')) {
+            $routeLoader = $this->container->make('route.loader');
+
+            if (is_dir($path)) {
+                $routeLoader->loadDirectory($path, $attributes);
+            } else {
+                $routeLoader->load($path, $attributes);
+            }
+        } else {
+            // Fallback to loadRoutesFrom for backward compatibility
+            $this->loadRoutesFrom($path, $attributes);
+        }
+    }
+    /**
+     * Set up the provider with a container.
+     * This method is for compatibility with older code.
+     *
+     * @param Container $container
+     * @return void
+     */
+    public function setup(Container $container): void
+    {
+        $this->container = $container;
+    }
+
+
+    /**
+     * Register a binding with the container.
      *
      * @param string $abstract
      * @param mixed $concrete
      * @param bool $shared
      * @return void
      */
-    protected function registerBinding(string $abstract, $concrete, bool $shared = false): void
+    protected function bind(string $abstract, $concrete = null, bool $shared = false): void
     {
-        // If the concrete value is null, use the abstract as the concrete
-        if ($concrete === null) {
-            $concrete = $abstract;
-        }
-
-        // Register the binding
         $this->container->bind($abstract, $concrete, $shared);
     }
 
     /**
-     * Register a singleton with the container
+     * Register a shared binding in the container.
      *
      * @param string $abstract
      * @param mixed $concrete
      * @return void
      */
-    protected function registerSingleton(string $abstract, $concrete = null): void
+    protected function singleton(string $abstract, $concrete = null): void
     {
-        // If the concrete value is null, use the abstract as the concrete
-        if ($concrete === null) {
-            $concrete = $abstract;
-        }
-
-        // Register the singleton
         $this->container->singleton($abstract, $concrete);
     }
 
     /**
-     * Register a tag for a service
-     *
-     * @param string $abstract
-     * @param string|array $tags
-     * @return void
-     */
-    protected function tag(string $abstract, $tags): void
-    {
-        // Convert single tag to array
-        $tags = (array) $tags;
-
-        if (!isset($this->container['tag'])) {
-            $this->container->instance('tag', []);
-        }
-
-        // Get current tags
-        $allTags = $this->container['tag'];
-
-        // Register each tag
-        foreach ($tags as $tag) {
-            // Add the service to the tag
-            $allTags[$tag][] = $abstract;
-        }
-
-        // Update container with all modified tags
-        $this->container->instance('tag', $allTags);
-    }
-
-    /**
-     * Get all services registered with a given tag
-     *
-     * @param string $tag
-     * @return array
-     */
-    protected function tagged(string $tag): array
-    {
-        if (!isset($this->container['tag']) || !isset($this->container['tag'][$tag])) {
-            return [];
-        }
-
-        return $this->container['tag'][$tag];
-    }
-
-    /**
-     * Register a factory with the container
-     *
-     * @param string $abstract
-     * @param callable $factory
-     * @return void
-     */
-    protected function factory(string $abstract, callable $factory): void
-    {
-        $this->container->bind($abstract, $factory);
-    }
-
-    /**
-     * Check if a service is registered in the container
-     *
-     * @param string $abstract
-     * @return bool
-     */
-    protected function has(string $abstract): bool
-    {
-        return $this->container->has($abstract) || $this->container->bound($abstract);
-    }
-
-    /**
-     * Get a service from the container
-     *
-     * @param string $abstract
-     * @param array $parameters
-     * @return mixed
-     * @throws BindingResolutionException
-     */
-    protected function make(string $abstract, array $parameters = [])
-    {
-        return $this->container->make($abstract, $parameters);
-    }
-
-    /**
-     * Register a service instance with the container
+     * Register an existing instance as shared in the container.
      *
      * @param string $abstract
      * @param mixed $instance
@@ -224,41 +180,37 @@ abstract class ServiceProvider // implements ServiceProviderInterface
     }
 
     /**
-     * Determine if the provider is deferred
+     * Alias a type to a shorter name.
      *
-     * @return bool
-     */
-    public function isDeferred(): bool
-    {
-        return $this->defer;
-    }
-
-    /**
-     * Get the services provided by the provider
-     *
-     * @return array
-     */
-    public function provides(): array
-    {
-        return array_merge(
-            array_keys($this->singletons),
-            array_keys($this->bindings)
-        );
-    }
-
-    /**
-     * Load custom defined routes
-     * TODO: route cache
-     *
-     * @param string $path
+     * @param string $abstract
+     * @param string $alias
      * @return void
      */
-    protected function loadRoutesFrom(string $path)
+    protected function alias(string $abstract, string $alias): void
     {
-        require $path;
+        $this->container->alias($abstract, $alias);
+    }
 
-//        if (! ($this->app instanceof CachesRoutes && $this->app->routesAreCached())) {
-//            require $path;
-//        }
+    /**
+     * Get a service from the container.
+     *
+     * @param string $abstract
+     * @param array $parameters
+     * @return mixed
+     */
+    protected function make(string $abstract, array $parameters = [])
+    {
+        return $this->container->make($abstract, $parameters);
+    }
+
+    /**
+     * Check if a binding exists in the container.
+     *
+     * @param string $abstract
+     * @return bool
+     */
+    protected function has(string $abstract): bool
+    {
+        return $this->container->bound($abstract) || $this->container->has($abstract);
     }
 }

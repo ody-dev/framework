@@ -51,22 +51,22 @@ class MiddlewareServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Register MiddlewareRegistry
-        $this->registerSingleton(MiddlewareRegistry::class, function ($container) {
+        $this->singleton(MiddlewareRegistry::class, function ($container) {
             return new MiddlewareRegistry($container, $container->make(LoggerInterface::class));
         });
 
         // Register middleware classes
-        $this->registerSingleton(AuthMiddleware::class, function ($container) {
+        $this->singleton(AuthMiddleware::class, function ($container) {
             $logger = $container->make(LoggerInterface::class);
             return new AuthMiddleware('web', $logger);
         });
 
-        $this->registerSingleton(RoleMiddleware::class, function ($container) {
+        $this->singleton(RoleMiddleware::class, function ($container) {
             $logger = $container->make(LoggerInterface::class);
             return new RoleMiddleware('user', $logger);
         });
 
-        $this->registerSingleton(ThrottleMiddleware::class, function () {
+        $this->singleton(ThrottleMiddleware::class, function () {
             return new ThrottleMiddleware(60, 1);
         });
     }
@@ -93,8 +93,6 @@ class MiddlewareServiceProvider extends ServiceProvider
 
     /**
      * Register named middleware for use in routes
-     *
-     * TODO: remove hadcoded
      *
      * @param MiddlewareRegistry $registry
      * @param Container $container
