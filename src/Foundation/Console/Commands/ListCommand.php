@@ -72,6 +72,7 @@ class ListCommand extends Command
      */
     protected function handle(): int
     {
+        dd('test');
         // If raw output requested, delegate to the descriptor
         if ($this->input->getOption('raw')) {
             $this->displayRawList();

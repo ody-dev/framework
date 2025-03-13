@@ -374,4 +374,14 @@ class ServiceProviderManager
         $this->logger = $logger;
         return $this;
     }
+
+    /**
+     * Get the container instance.
+     *
+     * @return Container
+     */
+    public function getContainer(): Container
+    {
+        return $this->container;
+    }
 }

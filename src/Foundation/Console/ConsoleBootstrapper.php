@@ -38,6 +38,16 @@ class ConsoleBootstrapper
         // Register essential services
         self::registerEssentialServices($container);
 
+        // Get or create service provider manager
+        $providerManager = $container->has(ServiceProviderManager::class)
+            ? $container->make(ServiceProviderManager::class)
+            : new ServiceProviderManager($container);
+
+        $container->instance(ServiceProviderManager::class, $providerManager);
+
+        // Register core providers
+        self::registerCoreProviders($providerManager);
+
         return $container;
     }
 
@@ -63,28 +73,46 @@ class ConsoleBootstrapper
                 );
             });
         }
+    }
 
-        // Register ServiceProviderManager if needed
-        if (!$container->has(ServiceProviderManager::class)) {
-            $container->singleton(ServiceProviderManager::class, function($container) {
-                $config = $container->has(Config::class) ? $container->make(Config::class) : null;
-                return new ServiceProviderManager(
-                    $container,
-                    $config,
-                    $container->make(LoggerInterface::class)
-                );
-            });
+    /**
+     * Register core service providers
+     *
+     * @param ServiceProviderManager $providerManager
+     * @return void
+     */
+    protected static function registerCoreProviders(ServiceProviderManager $providerManager): void
+    {
+        // Core providers that must be registered in console environment
+        $coreProviders = [
+            \Ody\Foundation\Providers\ConfigServiceProvider::class,
+            \Ody\Foundation\Providers\LoggingServiceProvider::class,
+            \Ody\Foundation\Providers\ConsoleServiceProvider::class,
+        ];
+
+        // Register each core provider
+        foreach ($coreProviders as $provider) {
+            if (class_exists($provider) && !$providerManager->isRegistered($provider)) {
+                $providerManager->register($provider);
+            }
         }
 
-        // Register Application if needed
-        if (!$container->has(Application::class)) {
-            $container->singleton(Application::class, function($container) {
-                return new Application(
-                    $container,
-                    $container->make(ServiceProviderManager::class)
-                );
-            });
+        // Try to load additional providers from config if available
+        if ($providerManager->getContainer()->has(Config::class)) {
+            $config = $providerManager->getContainer()->make(Config::class);
+            if ($config) {
+                $configProviders = $config->get('app.providers', []);
+
+                foreach ($configProviders as $provider) {
+                    if (class_exists($provider) && !$providerManager->isRegistered($provider)) {
+                        $providerManager->register($provider);
+                    }
+                }
+            }
         }
+
+        // Boot all registered providers
+        $providerManager->boot();
     }
 
     /**

@@ -68,6 +68,7 @@ class ApplicationServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        dd('test');
         // Register router with container and middleware
         $this->singleton(Router::class, function ($container) {
             $middlewareRegistry = $container->make(MiddlewareRegistry::class);

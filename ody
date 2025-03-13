@@ -1,7 +1,9 @@
 #!/usr/bin/env php
 <?php
 /**
- * ODY Framework Console Application
+ * ODY Framework Console Application - Patched Version
+ *
+ * This version explicitly calls bootstrap() on the application to ensure providers get registered
  */
 
 // Define base path
@@ -20,12 +22,26 @@ set_error_handler(function($severity, $message, $file, $line) {
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
 
-// Include autoloader
-$autoloader = require "vendor/autoload.php";
+try {
+    // Include autoloader
+    require_once "vendor/autoload.php";
 
-// Use the bootstrapper to create a properly initialized kernel
-$kernel = Ody\Foundation\Console\ConsoleBootstrapper::kernel();
+    // Use the bootstrapper to create a kernel
+    $kernel = Ody\Foundation\Console\ConsoleBootstrapper::kernel();
 
-// Run the console application
-$status = $kernel->handle();
-exit($status);
+    // Get the application instance and explicitly bootstrap it
+    $app = $kernel->getApplication();
+
+    // Explicitly bootstrap the application to ensure providers are registered
+    $app->bootstrap();
+
+    // Run the console application
+    $status = $kernel->handle();
+    exit($status);
+
+} catch (\Throwable $e) {
+    echo "\nCritical error: " . $e->getMessage() . "\n";
+    echo "Stack trace:\n";
+    echo $e->getTraceAsString() . "\n";
+    exit(1);
+}

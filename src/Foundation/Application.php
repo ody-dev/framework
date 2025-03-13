@@ -81,7 +81,6 @@ class Application
     private array $providers = [
         \Ody\Foundation\Providers\ConfigServiceProvider::class,
         \Ody\Foundation\Providers\LoggingServiceProvider::class,
-        \Ody\Foundation\Providers\ConsoleServiceProvider::class,
         \Ody\Foundation\Providers\ApplicationServiceProvider::class,
         \Ody\Foundation\Providers\FacadeServiceProvider::class,
         \Ody\Foundation\Providers\MiddlewareServiceProvider::class,
