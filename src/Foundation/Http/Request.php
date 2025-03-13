@@ -9,6 +9,7 @@
 
 namespace Ody\Foundation\Http;
 
+use Psr\Http\Message\MessageInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Psr\Http\Message\StreamInterface;
@@ -173,151 +174,151 @@ class Request implements ServerRequestInterface
 
     /* PSR-7 ServerRequestInterface methods */
 
-    public function getProtocolVersion()
+    public function getProtocolVersion(): string
     {
         return $this->psrRequest->getProtocolVersion();
     }
 
-    public function withProtocolVersion($version)
+    public function withProtocolVersion($version): MessageInterface
     {
         $new = clone $this;
         $new->psrRequest = $this->psrRequest->withProtocolVersion($version);
         return $new;
     }
 
-    public function getHeaders()
+    public function getHeaders(): array
     {
         return $this->psrRequest->getHeaders();
     }
 
-    public function hasHeader($name)
+    public function hasHeader($name): bool
     {
         return $this->psrRequest->hasHeader($name);
     }
 
-    public function getHeader($name)
+    public function getHeader($name): array
     {
         return $this->psrRequest->getHeader($name);
     }
 
-    public function getHeaderLine($name)
+    public function getHeaderLine($name): string
     {
         return $this->psrRequest->getHeaderLine($name);
     }
 
-    public function withHeader($name, $value)
+    public function withHeader($name, $value): MessageInterface
     {
         $new = clone $this;
         $new->psrRequest = $this->psrRequest->withHeader($name, $value);
         return $new;
     }
 
-    public function withAddedHeader($name, $value)
+    public function withAddedHeader($name, $value): MessageInterface
     {
         $new = clone $this;
         $new->psrRequest = $this->psrRequest->withAddedHeader($name, $value);
         return $new;
     }
 
-    public function withoutHeader($name)
+    public function withoutHeader($name): MessageInterface
     {
         $new = clone $this;
         $new->psrRequest = $this->psrRequest->withoutHeader($name);
         return $new;
     }
 
-    public function getBody()
+    public function getBody(): StreamInterface
     {
         return $this->psrRequest->getBody();
     }
 
-    public function withBody(StreamInterface $body)
+    public function withBody(StreamInterface $body): MessageInterface
     {
         $new = clone $this;
         $new->psrRequest = $this->psrRequest->withBody($body);
         return $new;
     }
 
-    public function getRequestTarget()
+    public function getRequestTarget(): string
     {
         return $this->psrRequest->getRequestTarget();
     }
 
-    public function withRequestTarget($requestTarget)
+    public function withRequestTarget($requestTarget): \Psr\Http\Message\RequestInterface
     {
         $new = clone $this;
         $new->psrRequest = $this->psrRequest->withRequestTarget($requestTarget);
         return $new;
     }
 
-    public function withMethod($method)
+    public function withMethod($method): \Psr\Http\Message\RequestInterface
     {
         $new = clone $this;
         $new->psrRequest = $this->psrRequest->withMethod($method);
         return $new;
     }
 
-    public function withUri(UriInterface $uri, $preserveHost = false)
+    public function withUri(UriInterface $uri, $preserveHost = false): \Psr\Http\Message\RequestInterface
     {
         $new = clone $this;
         $new->psrRequest = $this->psrRequest->withUri($uri, $preserveHost);
         return $new;
     }
 
-    public function getServerParams()
+    public function getServerParams(): array
     {
         return $this->psrRequest->getServerParams();
     }
 
-    public function getCookieParams()
+    public function getCookieParams(): array
     {
         return $this->psrRequest->getCookieParams();
     }
 
-    public function withCookieParams(array $cookies)
+    public function withCookieParams(array $cookies): Request|static
     {
         $new = clone $this;
         $new->psrRequest = $this->psrRequest->withCookieParams($cookies);
         return $new;
     }
 
-    public function getQueryParams()
+    public function getQueryParams(): array
     {
         return $this->psrRequest->getQueryParams();
     }
 
-    public function withQueryParams(array $query)
+    public function withQueryParams(array $query): Request|static
     {
         $new = clone $this;
         $new->psrRequest = $this->psrRequest->withQueryParams($query);
         return $new;
     }
 
-    public function getUploadedFiles()
+    public function getUploadedFiles(): array
     {
         return $this->psrRequest->getUploadedFiles();
     }
 
-    public function withUploadedFiles(array $uploadedFiles)
+    public function withUploadedFiles(array $uploadedFiles): Request|static
     {
         $new = clone $this;
         $new->psrRequest = $this->psrRequest->withUploadedFiles($uploadedFiles);
         return $new;
     }
 
-    public function getParsedBody()
+    public function getParsedBody(): object|array|null
     {
         return $this->psrRequest->getParsedBody();
     }
 
-    public function withParsedBody($data)
+    public function withParsedBody($data): ServerRequestInterface
     {
         $new = clone $this;
         $new->psrRequest = $this->psrRequest->withParsedBody($data);
         return $new;
     }
 
-    public function getAttributes()
+    public function getAttributes(): array
     {
         return $this->psrRequest->getAttributes();
     }
@@ -327,14 +328,14 @@ class Request implements ServerRequestInterface
         return $this->psrRequest->getAttribute($name, $default);
     }
 
-    public function withAttribute($name, $value)
+    public function withAttribute($name, $value): ServerRequestInterface
     {
         $new = clone $this;
         $new->psrRequest = $this->psrRequest->withAttribute($name, $value);
         return $new;
     }
 
-    public function withoutAttribute($name)
+    public function withoutAttribute($name): ServerRequestInterface
     {
         $new = clone $this;
         $new->psrRequest = $this->psrRequest->withoutAttribute($name);

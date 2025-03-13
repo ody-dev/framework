@@ -213,79 +213,79 @@ class Response implements ResponseInterface
 
     /* PSR-7 ResponseInterface methods */
 
-    public function getProtocolVersion()
+    public function getProtocolVersion(): string
     {
         return $this->psrResponse->getProtocolVersion();
     }
 
-    public function withProtocolVersion($version)
+    public function withProtocolVersion($version): \Psr\Http\Message\MessageInterface
     {
         $new = clone $this;
         $new->psrResponse = $this->psrResponse->withProtocolVersion($version);
         return $new;
     }
 
-    public function getHeaders()
+    public function getHeaders(): array
     {
         return $this->psrResponse->getHeaders();
     }
 
-    public function hasHeader($name)
+    public function hasHeader($name): bool
     {
         return $this->psrResponse->hasHeader($name);
     }
 
-    public function getHeader($name)
+    public function getHeader($name): array
     {
         return $this->psrResponse->getHeader($name);
     }
 
-    public function getHeaderLine($name)
+    public function getHeaderLine($name): string
     {
         return $this->psrResponse->getHeaderLine($name);
     }
 
-    public function withHeader($name, $value)
+    public function withHeader($name, $value): \Psr\Http\Message\MessageInterface
     {
         $new = clone $this;
         $new->psrResponse = $this->psrResponse->withHeader($name, $value);
         return $new;
     }
 
-    public function withAddedHeader($name, $value)
+    public function withAddedHeader($name, $value): \Psr\Http\Message\MessageInterface
     {
         $new = clone $this;
         $new->psrResponse = $this->psrResponse->withAddedHeader($name, $value);
         return $new;
     }
 
-    public function withoutHeader($name)
+    public function withoutHeader($name): \Psr\Http\Message\MessageInterface
     {
         $new = clone $this;
         $new->psrResponse = $this->psrResponse->withoutHeader($name);
         return $new;
     }
 
-    public function getBody()
+    public function getBody(): StreamInterface
     {
         return $this->psrResponse->getBody();
     }
 
-    public function withBody(StreamInterface $body)
+    public function withBody(StreamInterface $body): \Psr\Http\Message\MessageInterface
     {
         $new = clone $this;
         $new->psrResponse = $this->psrResponse->withBody($body);
         return $new;
     }
 
-    public function withStatus($code, $reasonPhrase = '')
+    public function withStatus($code, $reasonPhrase = ''): ResponseInterface
     {
         $new = clone $this;
         $new->psrResponse = $this->psrResponse->withStatus($code, $reasonPhrase);
         return $new;
     }
 
-    public function getReasonPhrase()
+    public function getReasonPhrase(): string
     {
         return $this->psrResponse->getReasonPhrase();
     }
