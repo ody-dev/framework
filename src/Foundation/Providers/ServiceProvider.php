@@ -27,6 +27,34 @@ abstract class ServiceProvider
     protected bool $defer = false;
 
     /**
+     * Services that should be registered as singletons
+     *
+     * @var array<string, mixed>
+     */
+    protected array $singletons = [];
+
+    /**
+     * Services that should be registered as bindings
+     *
+     * @var array<string, mixed>
+     */
+    protected array $bindings = [];
+
+    /**
+     * Services that should be registered as aliases
+     *
+     * @var array<string, string>
+     */
+    protected array $aliases = [];
+
+    /**
+     * Tags for organizing services
+     *
+     * @var array<string, array<string>>
+     */
+    protected array $tags = [];
+
+    /**
      * Initialize the provider.
      *
      * @param Container|null $container Optional container instance
@@ -139,6 +167,42 @@ abstract class ServiceProvider
     public function setup(Container $container): void
     {
         $this->container = $container;
+    }
+
+    /**
+     * Run common registration logic when a provider is registered
+     *
+     * @return void
+     */
+    public function registerCommon(): void
+    {
+        // Register singletons
+        foreach ($this->singletons as $abstract => $concrete) {
+            if (!$this->container->bound($abstract)) {
+                $this->singleton($abstract, $concrete);
+            }
+        }
+
+        // Register bindings
+        foreach ($this->bindings as $abstract => $concrete) {
+            if (!$this->container->bound($abstract)) {
+                $this->bind($abstract, $concrete);
+            }
+        }
+
+        // Register aliases
+        foreach ($this->aliases as $alias => $abstract) {
+            if (!$this->container->bound($alias)) {
+                $this->alias($abstract, $alias);
+            }
+        }
+
+        // Register tags
+        foreach ($this->tags as $tag => $abstracts) {
+            foreach ($abstracts as $abstract) {
+                $this->container->tag($abstract, $tag);
+            }
+        }
     }
 
 

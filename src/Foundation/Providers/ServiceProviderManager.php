@@ -100,11 +100,6 @@ class ServiceProviderManager
             try {
                 $provider = $this->resolveProvider($providerClass);
             } catch (\Throwable $e) {
-                $this->logger->error("Failed to resolve provider: {$providerClass}", [
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                ]);
-
                 throw $e;
             }
         } else {
@@ -127,17 +122,9 @@ class ServiceProviderManager
             return $provider;
         }
 
-        // Register provider services
-        try {
-            $provider->register();
-        } catch (\Throwable $e) {
-            $this->logger->error("Error registering provider: {$providerClass}", [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
+        $provider->registerCommon();
 
-            throw $e;
-        }
+        $provider->register();
 
         // Store the provider
         $this->providers[$providerClass] = $provider;
@@ -238,32 +225,16 @@ class ServiceProviderManager
      * @param string $configKey Path to providers config (e.g., 'app.providers')
      * @return int Number of providers registered
      */
-    public function registerConfigProviders(string $configKey): int
+    public function registerConfigProviders(string $configKey): void
     {
-        if (!$this->config) {
-            return 0;
-        }
-
-        $providers = $this->config->get($configKey, []);
+        $config = $this->container->make(Config::class);
+        $providers = $config->get($configKey, []);
         $count = 0;
 
+
         foreach ($providers as $provider) {
-            try {
-                $this->register($provider);
-                $count++;
-            } catch (\Throwable $e) {
-                $this->logger->error("Failed to register provider from config: {$provider}", [
-                    'error' => $e->getMessage(),
-                ]);
-
-                // Rethrow in debug mode
-                if (env('APP_DEBUG', false)) {
-                    throw $e;
-                }
-            }
+            $this->register($provider);
         }
-
-        return $count;
     }
 
     /**

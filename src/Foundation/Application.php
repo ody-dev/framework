@@ -79,6 +79,7 @@ class Application
      * @var array|string[]
      */
     private array $providers = [
+        \Ody\Foundation\Providers\EnvServiceProvider::class,
         \Ody\Foundation\Providers\ConfigServiceProvider::class,
         \Ody\Foundation\Providers\LoggingServiceProvider::class,
         \Ody\Foundation\Providers\ApplicationServiceProvider::class,
@@ -254,7 +255,6 @@ class Application
      */
     public function handleRequest(?ServerRequestInterface $request = null): ResponseInterface
     {
-        try {
             // Make sure application is bootstrapped
             if (!$this->bootstrapped) {
                 $this->bootstrap();
@@ -277,9 +277,6 @@ class Application
 
             // Process the request through middleware using the registry
             return $this->getMiddlewareRegistry()->process($request, $finalHandler);
-        } catch (\Throwable $e) {
-            return $this->handleException($e);
-        }
     }
 
     /**
