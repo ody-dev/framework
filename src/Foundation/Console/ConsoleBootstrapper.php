@@ -10,11 +10,9 @@
 namespace Ody\Foundation\Console;
 
 use Ody\Container\Container;
-use Ody\Foundation\Application;
 use Ody\Foundation\Providers\ServiceProviderManager;
 use Ody\Foundation\Support\Config;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
+use Symfony\Component\Console\Application as ConsoleApplication;
 
 /**
  * Console Bootstrapper
@@ -35,9 +33,6 @@ class ConsoleBootstrapper
         $container = $container ?: new Container();
         Container::setInstance($container);
 
-        // Register essential services
-        self::registerEssentialServices($container);
-
         // Get or create service provider manager
         $providerManager = $container->has(ServiceProviderManager::class)
             ? $container->make(ServiceProviderManager::class)
@@ -46,33 +41,9 @@ class ConsoleBootstrapper
         $container->instance(ServiceProviderManager::class, $providerManager);
 
         // Register core providers
-        self::registerCoreProviders($providerManager);
+        self::registerServiceProviders($providerManager);
 
         return $container;
-    }
-
-    /**
-     * Register essential services in the container
-     *
-     * @param Container $container
-     * @return void
-     */
-    protected static function registerEssentialServices(Container $container): void
-    {
-        // Register logger if not already registered
-        if (!$container->has(LoggerInterface::class)) {
-            $container->instance(LoggerInterface::class, new NullLogger());
-        }
-
-        // Register command registry
-        if (!$container->has(CommandRegistry::class)) {
-            $container->singleton(CommandRegistry::class, function($container) {
-                return new CommandRegistry(
-                    $container,
-                    $container->make(LoggerInterface::class)
-                );
-            });
-        }
     }
 
     /**
@@ -81,10 +52,11 @@ class ConsoleBootstrapper
      * @param ServiceProviderManager $providerManager
      * @return void
      */
-    protected static function registerCoreProviders(ServiceProviderManager $providerManager): void
+    protected static function registerServiceProviders(ServiceProviderManager $providerManager): void
     {
         // Core providers that must be registered in console environment
         $coreProviders = [
+            \Ody\Foundation\Providers\EnvServiceProvider::class,
             \Ody\Foundation\Providers\ConfigServiceProvider::class,
             \Ody\Foundation\Providers\LoggingServiceProvider::class,
             \Ody\Foundation\Providers\ConsoleServiceProvider::class,
@@ -97,16 +69,13 @@ class ConsoleBootstrapper
             }
         }
 
-        // Try to load additional providers from config if available
-        if ($providerManager->getContainer()->has(Config::class)) {
-            $config = $providerManager->getContainer()->make(Config::class);
-            if ($config) {
-                $configProviders = $config->get('app.providers', []);
+        $config = $providerManager->getContainer()->make(Config::class);
+        if ($config) {
+            $configProviders = $config->get('app.providers', []);
 
-                foreach ($configProviders as $provider) {
-                    if (class_exists($provider) && !$providerManager->isRegistered($provider)) {
-                        $providerManager->register($provider);
-                    }
+            foreach ($configProviders as $provider) {
+                if (class_exists($provider) && !$providerManager->isRegistered($provider)) {
+                    $providerManager->register($provider);
                 }
             }
         }
@@ -124,6 +93,21 @@ class ConsoleBootstrapper
     public static function kernel(?Container $container = null): ConsoleKernel
     {
         $container = self::bootstrap($container);
+
+        // Get the kernel from the container if possible
+        if ($container->has(ConsoleKernel::class)) {
+            return $container->make(ConsoleKernel::class);
+        }
+
+        // If not, we need to manually create the kernel with its dependencies
+        if ($container->has(ConsoleApplication::class) && $container->has(CommandRegistry::class)) {
+            $console = $container->make(ConsoleApplication::class);
+            $registry = $container->make(CommandRegistry::class);
+
+            return new ConsoleKernel($container, $console, $registry);
+        }
+
+        // Fallback to simple creation, kernel will resolve its dependencies
         return new ConsoleKernel($container);
     }
 }

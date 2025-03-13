@@ -33,6 +33,7 @@ class ConsoleServiceProvider extends ServiceProvider
         \Ody\Foundation\Console\Commands\EnvironmentCommand::class,
         \Ody\Foundation\Console\Commands\TestCommand::class,
         \Ody\Foundation\Console\Commands\MakeCommandCommand::class,
+//        \Ody\Foundation\Console\Commands\ListCommand::class,
     ];
 
     /**
@@ -42,6 +43,12 @@ class ConsoleServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Register Symfony Console application
+        $this->singleton(ConsoleApplication::class, function (Container $container) {
+            $version = $this->getFrameworkVersion($container);
+            return new ConsoleApplication('ODY Console', $version);
+        });
+
         // Register CommandRegistry as a singleton
         $this->singleton(CommandRegistry::class, function (Container $container) {
             return new CommandRegistry(
@@ -50,14 +57,14 @@ class ConsoleServiceProvider extends ServiceProvider
             );
         });
 
-        // Register ConsoleKernel
+        // Register ConsoleKernel - should be registered last
+        // as it depends on the other services
         $this->singleton(ConsoleKernel::class, function (Container $container) {
-            return new ConsoleKernel($container);
-        });
-
-        // Register Symfony Console application
-        $this->singleton(ConsoleApplication::class, function (Container $container) {
-            return $container->make(ConsoleKernel::class)->getConsole();
+            return new ConsoleKernel(
+                $container,
+                $container->make(ConsoleApplication::class),
+                $container->make(CommandRegistry::class)
+            );
         });
     }
 
@@ -76,12 +83,8 @@ class ConsoleServiceProvider extends ServiceProvider
             }
         }
 
-        // Get or create a command registry
-        if (!$this->container->has(CommandRegistry::class)) {
-            $this->register(); // Ensure services are registered
-        }
-
         $registry = $this->make(CommandRegistry::class);
+        $console = $this->make(ConsoleApplication::class);
 
         // Register built-in framework commands
         $this->registerFrameworkCommands($registry);
@@ -90,8 +93,10 @@ class ConsoleServiceProvider extends ServiceProvider
         $this->registerApplicationCommands($registry);
 
         // Discover commands from specified directories
-        // TODO: not implemented
         $this->discoverCommands($registry);
+
+        // Register all commands with the Symfony console application
+        $this->registerCommandsWithConsole($registry, $console);
     }
 
     /**
@@ -140,6 +145,46 @@ class ConsoleServiceProvider extends ServiceProvider
         foreach ($directories as $directory) {
             $registry->addFromDirectory($directory);
         }
+    }
+
+    /**
+     * Register commands with Symfony Console
+     *
+     * @param CommandRegistry $registry
+     * @param ConsoleApplication $console
+     * @return void
+     */
+    protected function registerCommandsWithConsole(CommandRegistry $registry, ConsoleApplication $console): void
+    {
+        $logger = $this->container->make(LoggerInterface::class);
+
+        foreach ($registry->getCommands() as $command) {
+            if (!$console->has($command->getName())) {
+                $console->add($command);
+                $logger->debug("Registered command with console: " . $command->getName());
+            }
+        }
+    }
+
+    /**
+     * Get the framework version
+     *
+     * @param Container $container
+     * @return string
+     */
+    protected function getFrameworkVersion(Container $container): string
+    {
+        if ($container->has(Config::class)) {
+            $config = $container->make(Config::class);
+            $version = $config->get('app.version');
+
+            if ($version) {
+                return $version;
+            }
+        }
+
+        // Fallback version
+        return '1.0.0';
     }
 
     /**
