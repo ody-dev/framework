@@ -3,11 +3,17 @@ declare(strict_types=1);
 
 namespace Ody\Foundation;
 
-use Nyholm\Psr7\Factory\Psr17Factory;
 use Ody\Container\Container;
+use Ody\Foundation\Providers\ApplicationServiceProvider;
+use Ody\Foundation\Providers\ConfigServiceProvider;
+use Ody\Foundation\Providers\EnvServiceProvider;
+use Ody\Foundation\Providers\FacadeServiceProvider;
+use Ody\Foundation\Providers\LoggingServiceProvider;
+use Ody\Foundation\Providers\MiddlewareServiceProvider;
+use Ody\Foundation\Providers\RouteServiceProvider;
 use Ody\Foundation\Providers\ServiceProviderManager;
-use Psr\Log\NullLogger;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * Application Bootstrap
@@ -17,49 +23,28 @@ use Psr\Log\LoggerInterface;
 class Bootstrap
 {
     /**
-     * Core providers that must be registered in proper order
-     *
-     * @var array|string[]
-     */
-    private static array $coreProviders = [
-        \Ody\Foundation\Providers\EnvServiceProvider::class,
-        \Ody\Foundation\Providers\ConfigServiceProvider::class,
-        \Ody\Foundation\Providers\LoggingServiceProvider::class,
-        \Ody\Foundation\Providers\ApplicationServiceProvider::class,
-        \Ody\Foundation\Providers\FacadeServiceProvider::class,
-        \Ody\Foundation\Providers\MiddlewareServiceProvider::class,
-        \Ody\Foundation\Providers\RouteServiceProvider::class,
-    ];
-
-    /**
      * Initialize the application
      *
      * @param Container|null $container
      * @param string|null $basePath
-     * @param string|null $environment
      * @return Application
      */
-    public static function init(?Container $container = null, ?string $basePath = null, ?string $environment = null): Application
+    public static function init(
+        ?Container $container = null,
+        ?string    $basePath = null,
+    ): Application
     {
-        // 1. Initialize base path
-        $basePath = self::initBasePath($basePath);
+        self::initBasePath($basePath);
 
-        // 2. Setup container
         $container = self::initContainer($container);
 
-        // 3. Register a minimal logger for bootstrap phase
-        $container->singleton(LoggerInterface::class, function() {
+        $container->singleton(LoggerInterface::class, function () {
             return new NullLogger();
         });
 
-        // 4. Create provider manager
         $providerManager = new ServiceProviderManager($container);
         $container->instance(ServiceProviderManager::class, $providerManager);
 
-        // 5. Register core providers
-        self::registerCoreProviders($providerManager);
-
-        // 6. Create and bootstrap the application
         $application = self::createApplication($container, $providerManager);
 
         return $application;
@@ -69,9 +54,9 @@ class Bootstrap
      * Initialize the base path
      *
      * @param string|null $basePath
-     * @return string
+     * @return void
      */
-    private static function initBasePath(?string $basePath = null): string
+    private static function initBasePath(?string $basePath = null): void
     {
         // Use provided path, or determine from current file location
         $basePath = $basePath ?? dirname(__DIR__, 2);
@@ -81,7 +66,6 @@ class Bootstrap
             define('APP_BASE_PATH', $basePath);
         }
 
-        return $basePath;
     }
 
     /**
@@ -102,24 +86,6 @@ class Bootstrap
     }
 
     /**
-     * Register core providers
-     *
-     * @param ServiceProviderManager $providerManager
-     * @return void
-     */
-    private static function registerCoreProviders(ServiceProviderManager $providerManager): void
-    {
-        foreach (self::$coreProviders as $provider) {
-            if (class_exists($provider) && !$providerManager->isRegistered($provider)) {
-                $providerManager->register($provider);
-            }
-        }
-
-        // Boot all registered providers
-        $providerManager->boot();
-    }
-
-    /**
      * Create and bootstrap the application
      *
      * @param Container $container
@@ -134,17 +100,6 @@ class Bootstrap
             : new Application($container, $providerManager);
 
         $container->instance(Application::class, $application);
-
-        // Set environment from configuration
-        if ($container->has('config')) {
-            $config = $container->make('config');
-            $environment = $config->get('app.env', 'production');
-
-            // Set environment in application
-            if (method_exists($application, 'setEnvironment')) {
-                $application->setEnvironment($environment);
-            }
-        }
 
         return $application;
     }

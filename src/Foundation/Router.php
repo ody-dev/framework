@@ -12,13 +12,16 @@ declare(strict_types=1);
 namespace Ody\Foundation;
 
 use FastRoute;
+use FastRoute\Dispatcher;
+use FastRoute\RouteCollector;
 use Ody\Container\Container;
 use Ody\Foundation\Middleware\MiddlewareRegistry;
+use function FastRoute\simpleDispatcher;
 
 class Router
 {
     /**
-     * @var FastRoute\Dispatcher|null
+     * @var Dispatcher|null
      */
     private $dispatcher;
 
@@ -44,9 +47,10 @@ class Router
      * @param MiddlewareRegistry|null $middlewareRegistry
      */
     public function __construct(
-        ?Container $container = null,
+        ?Container          $container = null,
         ?MiddlewareRegistry $middlewareRegistry = null
-    ) {
+    )
+    {
         $this->container = $container ?? new Container();
 
         if ($middlewareRegistry) {
@@ -56,112 +60,6 @@ class Router
         } else {
             $this->middlewareRegistry = new MiddlewareRegistry($this->container);
         }
-    }
-
-    /**
-     * Set middleware registry
-     *
-     * @param MiddlewareRegistry $middlewareRegistry
-     * @return self
-     */
-    public function setMiddlewareRegistry(MiddlewareRegistry $middlewareRegistry): self
-    {
-        $this->middlewareRegistry = $middlewareRegistry;
-        return $this;
-    }
-
-    /**
-     * Get middleware registry
-     *
-     * @return MiddlewareRegistry
-     */
-    public function getMiddlewareRegistry(): MiddlewareRegistry
-    {
-        return $this->middlewareRegistry;
-    }
-
-    /**
-     * Register a GET route
-     *
-     * @param string $path
-     * @param mixed $handler
-     * @return Route Route instance for method chaining
-     */
-    public function get(string $path, $handler): Route
-    {
-        $route = new Route('GET', $path, $handler, $this->middlewareRegistry);
-        $this->routes[] = ['GET', $path, $handler];
-        return $route;
-    }
-
-    /**
-     * Register a POST route
-     *
-     * @param string $path
-     * @param mixed $handler
-     * @return Route
-     */
-    public function post(string $path, $handler): Route
-    {
-        $route = new Route('POST', $path, $handler, $this->middlewareRegistry);
-        $this->routes[] = ['POST', $path, $handler];
-        return $route;
-    }
-
-    /**
-     * Register a PUT route
-     *
-     * @param string $path
-     * @param mixed $handler
-     * @return Route
-     */
-    public function put(string $path, $handler): Route
-    {
-        $route = new Route('PUT', $path, $handler, $this->middlewareRegistry);
-        $this->routes[] = ['PUT', $path, $handler];
-        return $route;
-    }
-
-    /**
-     * Register a DELETE route
-     *
-     * @param string $path
-     * @param mixed $handler
-     * @return Route
-     */
-    public function delete(string $path, $handler): Route
-    {
-        $route = new Route('DELETE', $path, $handler, $this->middlewareRegistry);
-        $this->routes[] = ['DELETE', $path, $handler];
-        return $route;
-    }
-
-    /**
-     * Register a PATCH route
-     *
-     * @param string $path
-     * @param mixed $handler
-     * @return Route
-     */
-    public function patch(string $path, $handler): Route
-    {
-        $route = new Route('PATCH', $path, $handler, $this->middlewareRegistry);
-        $this->routes[] = ['PATCH', $path, $handler];
-        return $route;
-    }
-
-    /**
-     * Register an OPTIONS route
-     *
-     * @param string $path
-     * @param mixed $handler
-     * @return Route
-     */
-    public function options(string $path, $handler): Route
-    {
-        $route = new Route('OPTIONS', $path, $handler, $this->middlewareRegistry);
-        $this->routes[] = ['OPTIONS', $path, $handler];
-        return $route;
     }
 
     /**
@@ -277,14 +175,159 @@ class Router
     }
 
     /**
+     * Register a GET route
+     *
+     * @param string $path
+     * @param mixed $handler
+     * @return Route Route instance for method chaining
+     */
+    public function get(string $path, $handler): Route
+    {
+        $route = new Route('GET', $path, $handler, $this->middlewareRegistry);
+        $this->routes[] = ['GET', $path, $handler];
+        return $route;
+    }
+
+    /**
+     * Register a POST route
+     *
+     * @param string $path
+     * @param mixed $handler
+     * @return Route
+     */
+    public function post(string $path, $handler): Route
+    {
+        $route = new Route('POST', $path, $handler, $this->middlewareRegistry);
+        $this->routes[] = ['POST', $path, $handler];
+        return $route;
+    }
+
+    /**
+     * Register a PUT route
+     *
+     * @param string $path
+     * @param mixed $handler
+     * @return Route
+     */
+    public function put(string $path, $handler): Route
+    {
+        $route = new Route('PUT', $path, $handler, $this->middlewareRegistry);
+        $this->routes[] = ['PUT', $path, $handler];
+        return $route;
+    }
+
+    /**
+     * Register a DELETE route
+     *
+     * @param string $path
+     * @param mixed $handler
+     * @return Route
+     */
+    public function delete(string $path, $handler): Route
+    {
+        $route = new Route('DELETE', $path, $handler, $this->middlewareRegistry);
+        $this->routes[] = ['DELETE', $path, $handler];
+        return $route;
+    }
+
+    /**
+     * Register a PATCH route
+     *
+     * @param string $path
+     * @param mixed $handler
+     * @return Route
+     */
+    public function patch(string $path, $handler): Route
+    {
+        $route = new Route('PATCH', $path, $handler, $this->middlewareRegistry);
+        $this->routes[] = ['PATCH', $path, $handler];
+        return $route;
+    }
+
+    /**
+     * Register an OPTIONS route
+     *
+     * @param string $path
+     * @param mixed $handler
+     * @return Route
+     */
+    public function options(string $path, $handler): Route
+    {
+        $route = new Route('OPTIONS', $path, $handler, $this->middlewareRegistry);
+        $this->routes[] = ['OPTIONS', $path, $handler];
+        return $route;
+    }
+
+    /**
+     * Get middleware registry
+     *
+     * @return MiddlewareRegistry
+     */
+    public function getMiddlewareRegistry(): MiddlewareRegistry
+    {
+        return $this->middlewareRegistry;
+    }
+
+    /**
+     * Set middleware registry
+     *
+     * @param MiddlewareRegistry $middlewareRegistry
+     * @return self
+     */
+    public function setMiddlewareRegistry(MiddlewareRegistry $middlewareRegistry): self
+    {
+        $this->middlewareRegistry = $middlewareRegistry;
+        return $this;
+    }
+
+    /**
+     * Match a request to a route
+     *
+     * @param string $method
+     * @param string $path
+     * @return array
+     */
+    public function match(string $method, string $path): array
+    {
+        $dispatcher = $this->createDispatcher();
+        $routeInfo = $dispatcher->dispatch($method, $path);
+
+        switch ($routeInfo[0]) {
+            case Dispatcher::NOT_FOUND:
+                return ['status' => 'not_found'];
+
+            case Dispatcher::METHOD_NOT_ALLOWED:
+                return [
+                    'status' => 'method_not_allowed',
+                    'allowed_methods' => $routeInfo[1]
+                ];
+
+            case Dispatcher::FOUND:
+                $handler = $routeInfo[1];
+
+                // Try to convert string controller@method to callable
+                $callable = $this->resolveController($handler);
+
+                return [
+                    'status' => 'found',
+                    'handler' => $callable,
+                    'originalHandler' => $handler, // Store original for reference
+                    'vars' => $routeInfo[2]
+                ];
+        }
+
+        return ['status' => 'error'];
+    }
+
+    /**
      * Create FastRoute dispatcher
      *
-     * @return FastRoute\Dispatcher
+     * @return Dispatcher
      */
     private function createDispatcher()
     {
         if ($this->dispatcher === null) {
-            $this->dispatcher = \FastRoute\simpleDispatcher(function(\FastRoute\RouteCollector $r) {
+            $this->dispatcher = simpleDispatcher(function (RouteCollector $r) {
                 foreach ($this->routes as $route) {
                     $r->addRoute($route[0], $route[1], $route[2]);
                 }
@@ -319,44 +362,5 @@ class Router
 
         // If it's already a callable or not in Controller@method format, return as is
         return $handler;
-    }
-
-    /**
-     * Match a request to a route
-     *
-     * @param string $method
-     * @param string $path
-     * @return array
-     */
-    public function match(string $method, string $path): array
-    {
-        $dispatcher = $this->createDispatcher();
-        $routeInfo = $dispatcher->dispatch($method, $path);
-
-        switch ($routeInfo[0]) {
-            case \FastRoute\Dispatcher::NOT_FOUND:
-                return ['status' => 'not_found'];
-
-            case \FastRoute\Dispatcher::METHOD_NOT_ALLOWED:
-                return [
-                    'status' => 'method_not_allowed',
-                    'allowed_methods' => $routeInfo[1]
-                ];
-
-            case \FastRoute\Dispatcher::FOUND:
-                $handler = $routeInfo[1];
-
-                // Try to convert string controller@method to callable
-                $callable = $this->resolveController($handler);
-
-                return [
-                    'status' => 'found',
-                    'handler' => $callable,
-                    'originalHandler' => $handler, // Store original for reference
-                    'vars' => $routeInfo[2]
-                ];
-        }
-
-        return ['status' => 'error'];
     }
 }

@@ -45,27 +45,16 @@ class Route
      * @param MiddlewareRegistry $middlewareRegistry
      */
     public function __construct(
-        string $method,
-        string $path,
-               $handler,
+        string             $method,
+        string             $path,
+                           $handler,
         MiddlewareRegistry $middlewareRegistry
-    ) {
+    )
+    {
         $this->method = $method;
         $this->path = $path;
         $this->handler = $handler;
         $this->middlewareRegistry = $middlewareRegistry;
-    }
-
-    /**
-     * Add middleware to the route
-     *
-     * @param string|callable|object $middleware
-     * @return self
-     */
-    public function middleware($middleware): self
-    {
-        $this->middlewareRegistry->addToRoute($this->method, $this->path, $middleware);
-        return $this;
     }
 
     /**
@@ -79,6 +68,18 @@ class Route
         foreach ($middleware as $m) {
             $this->middleware($m);
         }
+        return $this;
+    }
+
+    /**
+     * Add middleware to the route
+     *
+     * @param string|callable|object $middleware
+     * @return self
+     */
+    public function middleware($middleware): self
+    {
+        $this->middlewareRegistry->addToRoute($this->method, $this->path, $middleware);
         return $this;
     }
 

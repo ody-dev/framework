@@ -32,11 +32,6 @@ class ConsoleKernel
     protected Container $container;
 
     /**
-     * @var Application|null
-     */
-    protected ?Application $app = null;
-
-    /**
      * @var ConsoleApplication
      */
     protected ConsoleApplication $console;
@@ -111,18 +106,16 @@ class ConsoleKernel
      */
     public function getApplication(): Application
     {
-        if ($this->app === null) {
-            // Create application
-            $providerManager = $this->container->make(ServiceProviderManager::class);
-            $this->app = new Application($this->container, $providerManager);
-            $this->container->instance(Application::class, $this->app);
+        $app = new Application(
+            $this->container,
+            $this->container->make(ServiceProviderManager::class)
+        );
+        $this->container->instance(Application::class, $app);
 
-            // Bootstrap the application
-            if (method_exists($this->app, 'bootstrap')) {
-                $this->app->bootstrap();
-            }
+        if (method_exists($app, 'bootstrap')) {
+            $app->bootstrap();
         }
 
-        return $this->app;
+        return $app;
     }
 }

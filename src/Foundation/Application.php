@@ -15,12 +15,20 @@ use Ody\Foundation\Http\Response;
 use Ody\Foundation\Http\ResponseEmitter;
 use Ody\Foundation\Logging\LogManager;
 use Ody\Foundation\Middleware\MiddlewareRegistry;
+use Ody\Foundation\Providers\ApplicationServiceProvider;
+use Ody\Foundation\Providers\ConfigServiceProvider;
+use Ody\Foundation\Providers\EnvServiceProvider;
+use Ody\Foundation\Providers\FacadeServiceProvider;
+use Ody\Foundation\Providers\LoggingServiceProvider;
+use Ody\Foundation\Providers\MiddlewareServiceProvider;
+use Ody\Foundation\Providers\RouteServiceProvider;
 use Ody\Foundation\Providers\ServiceProviderManager;
-use Ody\Foundation\Support\Config;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Throwable;
 
 /**
  * Main application class with integrated bootstrapping
@@ -43,19 +51,9 @@ class Application
     private LoggerInterface $logger;
 
     /**
-     * @var Container
-     */
-    private Container $container;
-
-    /**
      * @var ResponseEmitter|null
      */
     private ?ResponseEmitter $responseEmitter = null;
-
-    /**
-     * @var ServiceProviderManager
-     */
-    private ServiceProviderManager $providerManager;
 
     // Add these properties to the class
     /**
@@ -79,13 +77,13 @@ class Application
      * @var array|string[]
      */
     private array $providers = [
-        \Ody\Foundation\Providers\EnvServiceProvider::class,
-        \Ody\Foundation\Providers\ConfigServiceProvider::class,
-        \Ody\Foundation\Providers\LoggingServiceProvider::class,
-        \Ody\Foundation\Providers\ApplicationServiceProvider::class,
-        \Ody\Foundation\Providers\FacadeServiceProvider::class,
-        \Ody\Foundation\Providers\MiddlewareServiceProvider::class,
-        \Ody\Foundation\Providers\RouteServiceProvider::class,
+        EnvServiceProvider::class,
+        ConfigServiceProvider::class,
+        LoggingServiceProvider::class,
+        ApplicationServiceProvider::class,
+        FacadeServiceProvider::class,
+        MiddlewareServiceProvider::class,
+        RouteServiceProvider::class,
     ];
 
     /**
@@ -95,25 +93,52 @@ class Application
      * @param ServiceProviderManager $providerManager
      */
     public function __construct(
-        Container $container,
-        ServiceProviderManager $providerManager
-    ) {
-        // Store essential components
-        $this->container = $container;
-        $this->providerManager = $providerManager;
-
+        private readonly Container              $container,
+        private readonly ServiceProviderManager $providerManager
+    )
+    {
         // Use a NullLogger temporarily until a real logger is registered
-        $this->logger = $container->has(LoggerInterface::class)
-            ? $container->make(LoggerInterface::class)
-            : new NullLogger();
+        $this->logger = new NullLogger();
 
         // Register self in container
-        if (!$this->container->bound(Application::class)) {
-            $this->container->instance(Application::class, $this);
+        $this->container->instance(Application::class, $this);
+        $this->container->alias(Application::class, 'app');
+    }
+
+    /**
+     * Get logger
+     *
+     * @return LoggerInterface
+     */
+    public function getLogger(): LoggerInterface
+    {
+        return $this->logger;
+    }
+
+    /**
+     * Get container
+     *
+     * @return Container
+     */
+    public function getContainer(): Container
+    {
+        return $this->container;
+    }
+
+    /**
+     * Run the application
+     *
+     * @return void
+     */
+    public function run(): void
+    {
+        // Ensure application is bootstrapped
+        if (!$this->bootstrapped) {
+            $this->bootstrap();
         }
-        if (!$this->container->bound('app')) {
-            $this->container->alias(Application::class, 'app');
-        }
+
+        $response = $this->handleRequest();
+        $this->getResponseEmitter()->emit($response);
     }
 
     /**
@@ -147,6 +172,7 @@ class Application
      * Register core framework service providers
      *
      * @return void
+     * @throws Throwable
      */
     protected function registerCoreProviders(): void
     {
@@ -166,85 +192,8 @@ class Application
     protected function initializeCoreComponents(): void
     {
         // Update logger reference after provider registration
-        if ($this->container->has(LoggerInterface::class)) {
-            $this->logger = $this->container->make(LoggerInterface::class);
-        } else if ($this->container->has(LogManager::class)) {
-            $this->logger = $this->container->make(LogManager::class)->channel();
-            $this->container->instance(LoggerInterface::class, $this->logger);
-        }
-
-        // Register ResponseEmitter if not already registered
-        if (!$this->container->has(ResponseEmitter::class)) {
-            $this->container->singleton(ResponseEmitter::class, function ($container) {
-                return new ResponseEmitter(
-                    $container->make(LoggerInterface::class),
-                    true,
-                    8192
-                );
-            });
-        }
-    }
-
-    /**
-     * Get router (lazy-loaded)
-     *
-     * @return Router
-     */
-    public function getRouter(): Router
-    {
-        if ($this->router === null) {
-            $this->router = $this->container->make(Router::class);
-        }
-
-        return $this->router;
-    }
-
-    /**
-     * Get middleware registry (lazy-loaded)
-     *
-     * @return MiddlewareRegistry
-     */
-    public function getMiddlewareRegistry(): MiddlewareRegistry
-    {
-        if ($this->middlewareRegistry === null) {
-            $this->middlewareRegistry = $this->container->make(MiddlewareRegistry::class);
-        }
-
-        return $this->middlewareRegistry;
-    }
-
-    /**
-     * Get logger
-     *
-     * @return LoggerInterface
-     */
-    public function getLogger(): LoggerInterface
-    {
-        return $this->logger;
-    }
-
-    /**
-     * Get container
-     *
-     * @return Container
-     */
-    public function getContainer(): Container
-    {
-        return $this->container;
-    }
-
-    /**
-     * Get response emitter (lazy-loaded)
-     *
-     * @return ResponseEmitter
-     */
-    public function getResponseEmitter(): ResponseEmitter
-    {
-        if ($this->responseEmitter === null) {
-            $this->responseEmitter = $this->container->make(ResponseEmitter::class);
-        }
-
-        return $this->responseEmitter;
+        $this->logger = $this->container->make(LogManager::class)->channel();
+        $this->container->instance(LoggerInterface::class, $this->logger);
     }
 
     /**
@@ -255,28 +204,28 @@ class Application
      */
     public function handleRequest(?ServerRequestInterface $request = null): ResponseInterface
     {
-            // Make sure application is bootstrapped
-            if (!$this->bootstrapped) {
-                $this->bootstrap();
-            }
+        // Make sure application is bootstrapped
+        if (!$this->bootstrapped) {
+            $this->bootstrap();
+        }
 
-            // Create request from globals if not provided
-            $request = $request ?? Request::createFromGlobals();
+        // Create request from globals if not provided
+        $request = $request ?? Request::createFromGlobals();
 
-            // Log incoming request
-            $this->logRequest($request);
+        // Log incoming request
+        $this->logRequest($request);
 
-            // Find matching route
-            $routeInfo = $this->getRouter()->match(
-                $request->getMethod(),
-                $request->getUri()->getPath()
-            );
+        // Find matching route
+        $routeInfo = $this->getRouter()->match(
+            $request->getMethod(),
+            $request->getUri()->getPath()
+        );
 
-            // Create the final handler based on route info
-            $finalHandler = $this->createRouteHandler($routeInfo);
+        // Create the final handler based on route info
+        $finalHandler = $this->createRouteHandler($routeInfo);
 
-            // Process the request through middleware using the registry
-            return $this->getMiddlewareRegistry()->process($request, $finalHandler);
+        // Process the request through middleware using the registry
+        return $this->getMiddlewareRegistry()->process($request, $finalHandler);
     }
 
     /**
@@ -295,6 +244,16 @@ class Application
     }
 
     /**
+     * Get router (lazy-loaded)
+     *
+     * @return Router
+     */
+    public function getRouter(): Router
+    {
+        return $this->container->make(Router::class);
+    }
+
+    /**
      * Create a handler function for the matched route
      *
      * @param array $routeInfo
@@ -305,7 +264,7 @@ class Application
         return function (ServerRequestInterface $request) use ($routeInfo) {
             $response = new Response();
 
-            return match($routeInfo['status']) {
+            return match ($routeInfo['status']) {
                 'found' => $this->handleFoundRoute($request, $response, $routeInfo),
                 'method_not_allowed' => $this->handleMethodNotAllowed($response, $request, $routeInfo),
                 default => $this->handleNotFound($response, $request) // not found
@@ -323,8 +282,8 @@ class Application
      */
     private function handleFoundRoute(
         ServerRequestInterface $request,
-        ResponseInterface $response,
-        array $routeInfo
+        ResponseInterface      $response,
+        array                  $routeInfo
     ): ResponseInterface
     {
         try {
@@ -348,7 +307,7 @@ class Application
 
             // If nothing was returned, return the response
             return $response;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->logException($e, 'Error handling request');
             return $this->createErrorResponse($response, 500, 'Internal Server Error');
         }
@@ -363,9 +322,9 @@ class Application
      * @return ResponseInterface
      */
     private function handleMethodNotAllowed(
-        ResponseInterface $response,
+        ResponseInterface      $response,
         ServerRequestInterface $request,
-        array $routeInfo
+        array                  $routeInfo
     ): ResponseInterface
     {
         $allowedMethods = implode(', ', $routeInfo['allowed_methods']);
@@ -392,15 +351,10 @@ class Application
      * @return ResponseInterface
      */
     private function handleNotFound(
-        ResponseInterface $response,
+        ResponseInterface      $response,
         ServerRequestInterface $request
     ): ResponseInterface
     {
-        $this->logger->warning('Route not found', [
-            'method' => $request->getMethod(),
-            'path' => $request->getUri()->getPath()
-        ]);
-
         return $response->withStatus(404)
             ->withHeader('Content-Type', 'application/json')
             ->withBody($this->createJsonBody([
@@ -409,89 +363,27 @@ class Application
     }
 
     /**
-     * Handle unhandled exceptions
+     * Get middleware registry (lazy-loaded)
      *
-     * @param \Throwable $e
-     * @return ResponseInterface
+     * @return MiddlewareRegistry
      */
-    private function handleException(\Throwable $e): ResponseInterface
+    public function getMiddlewareRegistry(): MiddlewareRegistry
     {
-        $this->logException($e, 'Unhandled exception', true);
-
-        $response = new Response();
-        return $this->createErrorResponse($response, 500, 'Internal Server Error');
+        return $this->container->make(MiddlewareRegistry::class);
     }
 
     /**
-     * Log exception details
+     * Get response emitter (lazy-loaded)
      *
-     * @param \Throwable $e
-     * @param string $message
-     * @param bool $includeTrace
-     * @return void
+     * @return ResponseEmitter
      */
-    private function logException(\Throwable $e, string $message, bool $includeTrace = false): void
+    public function getResponseEmitter(): ResponseEmitter
     {
-        $logData = [
-            'message' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine()
-        ];
-
-        if ($includeTrace) {
-            $logData['trace'] = $e->getTraceAsString();
-        }
-
-        $this->logger->error($message, $logData);
-    }
-
-    /**
-     * Create a JSON error response
-     *
-     * @param ResponseInterface $response
-     * @param int $status
-     * @param string $message
-     * @return ResponseInterface
-     */
-    private function createErrorResponse(
-        ResponseInterface $response,
-        int $status,
-        string $message
-    ): ResponseInterface
-    {
-        return $response->withStatus($status)
-            ->withHeader('Content-Type', 'application/json')
-            ->withBody($this->createJsonBody([
-                'error' => $message
-            ]));
-    }
-
-    /**
-     * Create a JSON response body
-     *
-     * @param array $data
-     * @return \Psr\Http\Message\StreamInterface
-     */
-    private function createJsonBody(array $data): \Psr\Http\Message\StreamInterface
-    {
-        $factory = $this->container->make('Psr\Http\Message\StreamFactoryInterface');
-        return $factory->createStream(json_encode($data));
-    }
-
-    /**
-     * Run the application
-     *
-     * @return void
-     */
-    public function run(): void
-    {
-        // Ensure application is bootstrapped
-        if (!$this->bootstrapped) {
-            $this->bootstrap();
-        }
-
-        $response = $this->handleRequest();
-        $this->getResponseEmitter()->emit($response);
+        return new ResponseEmitter(
+            $this->container->make(LoggerInterface::class),
+            true,
+            8192
+        );
     }
 
     /**
@@ -519,22 +411,12 @@ class Application
         }
 
         // Check for specific environment variables for CLI tools
-        $this->runningInConsole = (bool) (getenv('CONSOLE_MODE') ||
+        $this->runningInConsole = (bool)(getenv('CONSOLE_MODE') ||
             getenv('APP_RUNNING_IN_CONSOLE') ||
             (isset($_ENV['APP_RUNNING_IN_CONSOLE']) && $_ENV['APP_RUNNING_IN_CONSOLE']));
         $this->consoleDetected = true;
 
         return $this->runningInConsole;
-    }
-
-    /**
-     * Alias for runningInConsole() - shorter method name for convenience
-     *
-     * @return bool
-     */
-    public function isConsole(): bool
-    {
-        return $this->runningInConsole();
     }
 
     /**
@@ -554,12 +436,72 @@ class Application
     }
 
     /**
-     * Get the ServiceProviderManager instance
+     * Handle unhandled exceptions
      *
-     * @return ServiceProviderManager
+     * @param Throwable $e
+     * @return ResponseInterface
      */
-    public function getProviderManager(): ServiceProviderManager
+    private function handleException(Throwable $e): ResponseInterface
     {
-        return $this->providerManager;
+        $this->logException($e, 'Unhandled exception', true);
+
+        $response = new Response();
+        return $this->createErrorResponse($response, 500, 'Internal Server Error');
+    }
+
+    /**
+     * Log exception details
+     *
+     * @param Throwable $e
+     * @param string $message
+     * @param bool $includeTrace
+     * @return void
+     */
+    private function logException(Throwable $e, string $message, bool $includeTrace = false): void
+    {
+        $logData = [
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ];
+
+        if ($includeTrace) {
+            $logData['trace'] = $e->getTraceAsString();
+        }
+
+        $this->logger->error($message, $logData);
+    }
+
+    /**
+     * Create a JSON error response
+     *
+     * @param ResponseInterface $response
+     * @param int $status
+     * @param string $message
+     * @return ResponseInterface
+     */
+    private function createErrorResponse(
+        ResponseInterface $response,
+        int               $status,
+        string            $message
+    ): ResponseInterface
+    {
+        return $response->withStatus($status)
+            ->withHeader('Content-Type', 'application/json')
+            ->withBody($this->createJsonBody([
+                'error' => $message
+            ]));
+    }
+
+    /**
+     * Create a JSON response body
+     *
+     * @param array $data
+     * @return StreamInterface
+     */
+    private function createJsonBody(array $data): StreamInterface
+    {
+        $factory = $this->container->make('Psr\Http\Message\StreamFactoryInterface');
+        return $factory->createStream(json_encode($data));
     }
 }
