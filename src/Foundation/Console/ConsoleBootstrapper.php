@@ -10,9 +10,13 @@
 namespace Ody\Foundation\Console;
 
 use Ody\Container\Container;
+use Ody\Container\Contracts\BindingResolutionException;
+use Ody\Foundation\Providers\ConfigServiceProvider;
+use Ody\Foundation\Providers\ConsoleServiceProvider;
+use Ody\Foundation\Providers\EnvServiceProvider;
+use Ody\Foundation\Providers\LoggingServiceProvider;
 use Ody\Foundation\Providers\ServiceProviderManager;
 use Ody\Foundation\Support\Config;
-use Symfony\Component\Console\Application as ConsoleApplication;
 
 /**
  * Console Bootstrapper
@@ -21,6 +25,20 @@ use Symfony\Component\Console\Application as ConsoleApplication;
  */
 class ConsoleBootstrapper
 {
+    /**
+     * Initialize a configured console kernel
+     *
+     * @param Container|null $container
+     * @return ConsoleKernel
+     * @throws BindingResolutionException
+     */
+    public static function kernel(?Container $container = null): ConsoleKernel
+    {
+        $container = self::bootstrap($container);
+
+        return $container->make(ConsoleKernel::class);
+    }
+
     /**
      * Bootstrap the console environment
      *
@@ -56,58 +74,23 @@ class ConsoleBootstrapper
     {
         // Core providers that must be registered in console environment
         $coreProviders = [
-            \Ody\Foundation\Providers\EnvServiceProvider::class,
-            \Ody\Foundation\Providers\ConfigServiceProvider::class,
-            \Ody\Foundation\Providers\LoggingServiceProvider::class,
-            \Ody\Foundation\Providers\ConsoleServiceProvider::class,
+            EnvServiceProvider::class,
+            ConfigServiceProvider::class,
+            LoggingServiceProvider::class,
+            ConsoleServiceProvider::class,
         ];
 
-        // Register each core provider
-        foreach ($coreProviders as $provider) {
-            if (class_exists($provider) && !$providerManager->isRegistered($provider)) {
-                $providerManager->register($provider);
-            }
-        }
+        array_walk($coreProviders, function ($provider) use ($providerManager) {
+            $providerManager->register($provider);
+        });
 
         $config = $providerManager->getContainer()->make(Config::class);
-        if ($config) {
-            $configProviders = $config->get('app.providers', []);
-
-            foreach ($configProviders as $provider) {
-                if (class_exists($provider) && !$providerManager->isRegistered($provider)) {
-                    $providerManager->register($provider);
-                }
-            }
-        }
+        $providers = $config->get('app.providers', []);
+        array_walk($providers, function ($provider) use ($providerManager) {
+            $providerManager->register($provider);
+        });
 
         // Boot all registered providers
         $providerManager->boot();
-    }
-
-    /**
-     * Initialize a configured console kernel
-     *
-     * @param Container|null $container
-     * @return ConsoleKernel
-     */
-    public static function kernel(?Container $container = null): ConsoleKernel
-    {
-        $container = self::bootstrap($container);
-
-        // Get the kernel from the container if possible
-        if ($container->has(ConsoleKernel::class)) {
-            return $container->make(ConsoleKernel::class);
-        }
-
-        // If not, we need to manually create the kernel with its dependencies
-        if ($container->has(ConsoleApplication::class) && $container->has(CommandRegistry::class)) {
-            $console = $container->make(ConsoleApplication::class);
-            $registry = $container->make(CommandRegistry::class);
-
-            return new ConsoleKernel($container, $console, $registry);
-        }
-
-        // Fallback to simple creation, kernel will resolve its dependencies
-        return new ConsoleKernel($container);
     }
 }

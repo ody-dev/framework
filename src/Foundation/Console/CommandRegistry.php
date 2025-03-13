@@ -87,60 +87,6 @@ class CommandRegistry
     }
 
     /**
-     * Add multiple commands to the registry
-     *
-     * @param string[] $commandClasses
-     * @return self
-     */
-    public function addMultiple(array $commandClasses): self
-    {
-        foreach ($commandClasses as $commandClass) {
-            $this->add($commandClass);
-        }
-
-        return $this;
-    }
-
-    /**
-     * Add commands from a directory
-     *
-     * @param string $directory
-     * @return self
-     */
-    public function addFromDirectory(string $directory): self
-    {
-        try {
-            // Normalize path
-            $directory = $this->normalizePath($directory);
-
-            if (!is_dir($directory)) {
-                return $this;
-            }
-
-            // Get all PHP files from the directory
-            foreach (glob($directory . '/*.php') as $file) {
-                $className = $this->getClassNameFromFile($file);
-
-                if ($className && class_exists($className)) {
-                    $this->add($className);
-                }
-            }
-
-            // Look in subdirectories
-            foreach (glob($directory . '/*', GLOB_ONLYDIR) as $subDir) {
-                $this->addFromDirectory($subDir);
-            }
-        } catch (\Throwable $e) {
-            $this->logger->error("Error adding commands from directory: " . $e->getMessage(), [
-                'directory' => $directory,
-                'error' => $e->getMessage()
-            ]);
-        }
-
-        return $this;
-    }
-
-    /**
      * Get all registered commands
      *
      * @return Command[]

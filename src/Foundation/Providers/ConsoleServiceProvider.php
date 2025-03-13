@@ -62,8 +62,7 @@ class ConsoleServiceProvider extends ServiceProvider
         $this->singleton(ConsoleKernel::class, function (Container $container) {
             return new ConsoleKernel(
                 $container,
-                $container->make(ConsoleApplication::class),
-                $container->make(CommandRegistry::class)
+                $container->make(ConsoleApplication::class)
             );
         });
     }
@@ -91,9 +90,6 @@ class ConsoleServiceProvider extends ServiceProvider
 
         // Register application commands from config
         $this->registerApplicationCommands($registry);
-
-        // Discover commands from specified directories
-        $this->discoverCommands($registry);
 
         // Register all commands with the Symfony console application
         $this->registerCommandsWithConsole($registry, $console);
@@ -128,22 +124,6 @@ class ConsoleServiceProvider extends ServiceProvider
             if (class_exists($command)) {
                 $registry->add($command);
             }
-        }
-    }
-
-    /**
-     * Discover commands from specific directories
-     *
-     * @param CommandRegistry $registry
-     * @return void
-     */
-    protected function discoverCommands(CommandRegistry $registry): void
-    {
-        $config = $this->container->make(Config::class);
-        $directories = $config->get('app.command_directories', [base_path('app/Console/Commands')]);
-
-        foreach ($directories as $directory) {
-            $registry->addFromDirectory($directory);
         }
     }
 

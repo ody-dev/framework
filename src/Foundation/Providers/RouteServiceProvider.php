@@ -77,11 +77,6 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function loadRoutes(?string $path = null, array $attributes = []): void
     {
-        // Initialize route loader if not already done
-        if (!$this->routeLoader) {
-            $this->routeLoader = $this->make(RouteLoader::class);
-        }
-
         // If no path provided, load from default routes location
         if ($path === null) {
             $this->loadDefaultRoutes();

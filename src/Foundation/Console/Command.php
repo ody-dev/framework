@@ -336,19 +336,4 @@ abstract class Command extends SymfonyCommand
     {
         return is_array($value) ? $value : [$value];
     }
-
-    /**
-     * Get a service from the container.
-     *
-     * @param string $abstract
-     * @return mixed
-     */
-    protected function resolve(string $abstract)
-    {
-        if (!$this->container) {
-            $this->initializeContainer();
-        }
-
-        return $this->container->make($abstract);
-    }
 }

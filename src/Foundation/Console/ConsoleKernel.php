@@ -51,12 +51,10 @@ class ConsoleKernel
      *
      * @param Container $container
      * @param ConsoleApplication|null $console
-     * @param CommandRegistry|null $commandRegistry
      */
     public function __construct(
         Container $container,
-        ?ConsoleApplication $console = null,
-        ?CommandRegistry $commandRegistry = null
+        ?ConsoleApplication $console = null
     ) {
         // Initialize the container
         $this->container = $container;
