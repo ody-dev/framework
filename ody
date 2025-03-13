@@ -1,0 +1,31 @@
+#!/usr/bin/env php
+<?php
+/**
+ * ODY Framework Console Application
+ */
+
+// Define base path
+define('APP_BASE_PATH', dirname(__DIR__));
+
+// Set environment variable to indicate running in console
+putenv('APP_RUNNING_IN_CONSOLE=1');
+$_ENV['APP_RUNNING_IN_CONSOLE'] = 1;
+
+// Error handling
+set_error_handler(function($severity, $message, $file, $line) {
+    if (!(error_reporting() & $severity)) {
+        // This error code is not included in error_reporting
+        return;
+    }
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+
+// Include autoloader
+$autoloader = require "vendor/autoload.php";
+
+// Use the bootstrapper to create a properly initialized kernel
+$kernel = Ody\Foundation\Console\ConsoleBootstrapper::kernel();
+
+// Run the console application
+$status = $kernel->handle();
+exit($status);
