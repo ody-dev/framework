@@ -72,103 +72,99 @@ class Router
     public function group(array $attributes, callable $callback): self
     {
         $prefix = $attributes['prefix'] ?? '';
-        $middlewareList = $attributes['middleware'] ?? [];
+        $middleware = $attributes['middleware'] ?? [];
 
-        // Create a router proxy to capture routes in the group
-        $groupRouter = new class($this, $prefix, $middlewareList) {
+        // Normalize prefix - ensure it starts with a slash if not empty
+        if (!empty($prefix) && $prefix[0] !== '/') {
+            $prefix = '/' . $prefix;
+        }
+
+        // Create a proxy router that will add the prefix to all routes
+        $groupRouter = new class($this, $prefix, $middleware) {
             private $router;
             private $prefix;
-            private $middlewareList;
+            private $middleware;
 
-            public function __construct($router, $prefix, $middlewareList)
+            public function __construct($router, $prefix, $middleware)
             {
                 $this->router = $router;
                 $this->prefix = $prefix;
-                $this->middlewareList = $middlewareList;
+                $this->middleware = $middleware;
             }
 
-            public function get($path, $handler)
+            public function __call($method, $args)
             {
-                $route = $this->router->get($this->prefix . $path, $handler);
+                // Only handle HTTP methods
+                $httpMethods = ['get', 'post', 'put', 'patch', 'delete', 'options'];
+                if (!in_array(strtolower($method), $httpMethods) || count($args) < 2) {
+                    throw new \InvalidArgumentException("Unsupported method: {$method}");
+                }
 
-                // Apply middleware from the group to the route
-                foreach ($this->middlewareList as $middleware) {
-                    $route->middleware($middleware);
+                // Extract path and handler
+                $path = $args[0];
+                $handler = $args[1];
+
+                // Normalize the path - ensure it starts with a slash if not empty
+                if (!empty($path) && $path[0] !== '/') {
+                    $path = '/' . $path;
+                }
+
+                // Important: Remove double slashes that might occur when joining prefix and path
+                $fullPath = rtrim($this->prefix, '/') . $path;
+
+                // Register the route
+                $route = $this->router->{$method}($fullPath, $handler);
+
+                // Apply group middleware to the route
+                foreach ($this->middleware as $m) {
+                    $route->middleware($m);
                 }
 
                 return $route;
             }
 
-            public function post($path, $handler)
-            {
-                $route = $this->router->post($this->prefix . $path, $handler);
+            // Define explicit methods for IDE auto-completion
+            public function get($path, $handler) { return $this->__call('get', [$path, $handler]); }
+            public function post($path, $handler) { return $this->__call('post', [$path, $handler]); }
+            public function put($path, $handler) { return $this->__call('put', [$path, $handler]); }
+            public function patch($path, $handler) { return $this->__call('patch', [$path, $handler]); }
+            public function delete($path, $handler) { return $this->__call('delete', [$path, $handler]); }
+            public function options($path, $handler) { return $this->__call('options', [$path, $handler]); }
 
-                foreach ($this->middlewareList as $middleware) {
-                    $route->middleware($middleware);
+            // Support nested groups
+            public function group(array $attributes, callable $callback)
+            {
+                // Merge the prefixes
+                $newPrefix = $this->prefix;
+                if (isset($attributes['prefix'])) {
+                    $prefixToAdd = $attributes['prefix'];
+                    if (!empty($prefixToAdd) && $prefixToAdd[0] !== '/') {
+                        $prefixToAdd = '/' . $prefixToAdd;
+                    }
+                    $newPrefix = rtrim($newPrefix, '/') . $prefixToAdd;
                 }
 
-                return $route;
-            }
-
-            public function put($path, $handler)
-            {
-                $route = $this->router->put($this->prefix . $path, $handler);
-
-                foreach ($this->middlewareList as $middleware) {
-                    $route->middleware($middleware);
-                }
-
-                return $route;
-            }
-
-            public function delete($path, $handler)
-            {
-                $route = $this->router->delete($this->prefix . $path, $handler);
-
-                foreach ($this->middlewareList as $middleware) {
-                    $route->middleware($middleware);
-                }
-
-                return $route;
-            }
-
-            public function patch($path, $handler)
-            {
-                $route = $this->router->patch($this->prefix . $path, $handler);
-
-                foreach ($this->middlewareList as $middleware) {
-                    $route->middleware($middleware);
-                }
-
-                return $route;
-            }
-
-            public function options($path, $handler)
-            {
-                $route = $this->router->options($this->prefix . $path, $handler);
-
-                foreach ($this->middlewareList as $middleware) {
-                    $route->middleware($middleware);
-                }
-
-                return $route;
-            }
-
-            // Add pattern middleware for all routes in the group
-            public function __destruct()
-            {
-                // If the group has a pattern-based prefix, add pattern middleware
-                if (strpos($this->prefix, '*') !== false) {
-                    $registry = $this->router->getMiddlewareRegistry();
-
-                    foreach ($this->middlewareList as $middleware) {
-                        $registry->addToPattern('*:' . $this->prefix . '*', $middleware);
+                // Merge the middleware
+                $newMiddleware = $this->middleware;
+                if (isset($attributes['middleware'])) {
+                    if (is_array($attributes['middleware'])) {
+                        $newMiddleware = array_merge($newMiddleware, $attributes['middleware']);
+                    } else {
+                        $newMiddleware[] = $attributes['middleware'];
                     }
                 }
+
+                // Create new attributes
+                $newAttributes = $attributes;
+                $newAttributes['prefix'] = $newPrefix;
+                $newAttributes['middleware'] = $newMiddleware;
+
+                // Call the parent router's group method
+                return $this->router->group($newAttributes, $callback);
             }
         };
 
-        // Call the callback with the group router
+        // Call the callback with the group router to collect routes
         $callback($groupRouter);
 
         return $this;
@@ -289,11 +285,38 @@ class Router
      */
     public function match(string $method, string $path): array
     {
+        // Normalize the path by ensuring it starts with a slash
+        if (empty($path)) {
+            $path = '/';
+        } elseif ($path[0] !== '/') {
+            $path = '/' . $path;
+        }
+
+        // Remove trailing slash for consistency (except for root path)
+        if ($path !== '/' && substr($path, -1) === '/') {
+            $path = rtrim($path, '/');
+        }
+
         $dispatcher = $this->createDispatcher();
         $routeInfo = $dispatcher->dispatch($method, $path);
 
         switch ($routeInfo[0]) {
             case Dispatcher::NOT_FOUND:
+                // Add debugging information in development mode
+                if (env('APP_DEBUG', false)) {
+                    $registeredRoutes = [];
+                    foreach ($this->routes as $route) {
+                        $registeredRoutes[] = $route[0] . ' ' . $route[1];
+                    }
+                    return [
+                        'status' => 'not_found',
+                        'debug' => [
+                            'requested_method' => $method,
+                            'requested_path' => $path,
+                            'registered_routes' => $registeredRoutes
+                        ]
+                    ];
+                }
                 return ['status' => 'not_found'];
 
             case Dispatcher::METHOD_NOT_ALLOWED:
@@ -329,7 +352,15 @@ class Router
         if ($this->dispatcher === null) {
             $this->dispatcher = simpleDispatcher(function (RouteCollector $r) {
                 foreach ($this->routes as $route) {
-                    $r->addRoute($route[0], $route[1], $route[2]);
+                    $method = $route[0];
+                    $path = $route[1];
+
+                    // Ensure path starts with a slash for consistency
+                    if (!empty($path) && $path[0] !== '/') {
+                        $path = '/' . $path;
+                    }
+
+                    $r->addRoute($method, $path, $route[2]);
                 }
             });
         }

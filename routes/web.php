@@ -53,27 +53,27 @@ Route::get('/version', function (ServerRequestInterface $request, ResponseInterf
 });
 
 // User routes with middleware
-Route::get('/users', 'App\\Controllers\\UserController@index');
+Route::get('/users', 'App\Controllers\UserController@index');
 
-Route::get('/users/{id:\\d+}', 'App\\Controllers\\UserController@show')
+Route::get('/users/{id:\\d+}', 'App\Controllers\UserController@show')
     ->middleware('auth:api');
 
-Route::post('/users', 'App\\Controllers\\UserController@store')
+Route::post('/users', 'App\Controllers\UserController@store')
     ->middleware('auth:api')
     ->middleware('role:admin');
 
-Route::put('/users/{id:\\d+}', 'App\\Controllers\\UserController@update')
+Route::put('/users/{id:\\d+}', 'App\Controllers\UserController@update')
     ->middleware('auth:api')
     ->middleware('role:admin');
 
-Route::delete('/users/{id:\\d+}', 'App\\Controllers\\UserController@destroy')
+Route::delete('/users/{id:\\d+}', 'App\Controllers\UserController@destroy')
     ->middleware('auth:api')
     ->middleware('role:admin');
 
 // API route groups
 Route::group(['prefix' => '/api/v1', 'middleware' => ['throttle:60,1']], function ($router) {
     // API routes will be defined here
-    Route::get('/status', function (ServerRequestInterface $request, ResponseInterface $response) {
+    $router->get('/status', function (ServerRequestInterface $request, ResponseInterface $response) {
         $response = $response->withHeader('Content-Type', 'application/json');
 
         $data = [
@@ -92,9 +92,9 @@ Route::group(['prefix' => '/api/v1', 'middleware' => ['throttle:60,1']], functio
 });
 
 // Admin routes
-Route::group(['prefix' => '/admin', 'middleware' => ['auth:jwt', 'role:admin']], function ($router) {
+Route::group(['prefix' => '/admin'], function ($router) {
     // Admin routes will be defined here
-    Route::get('/dashboard', function (ServerRequestInterface $request, ResponseInterface $response) {
+    $router->get('/dashboard', function (ServerRequestInterface $request, ResponseInterface $response) {
         $response = $response->withHeader('Content-Type', 'application/json');
 
         $data = [

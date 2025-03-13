@@ -65,6 +65,7 @@ class MiddlewareRegistry
      * @var array Middleware parameter cache
      */
     protected array $middlewareParams = [];
+    private $groups;
 
     /**
      * Constructor
@@ -222,21 +223,70 @@ class MiddlewareRegistry
     {
         $route = $this->formatRouteIdentifier($method, $path);
         $middleware = $this->globalMiddleware;
+        $routeMiddlewareAdded = false;
 
-        // Add route-specific middleware
+        // Step 1: Add exact match route middleware if found
         if (isset($this->routeMiddleware[$route])) {
-            $middleware = array_merge($middleware, $this->routeMiddleware[$route]);
+            foreach ($this->routeMiddleware[$route] as $m) {
+                $middleware[] = $m;
+            }
+            $routeMiddlewareAdded = true;
         }
 
-        // Add pattern-based middleware
-        $routeIdentifier = strtoupper($method) . ':' . $path;
-        foreach ($this->patternMiddleware as $item) {
-            if ($this->matchesPattern($routeIdentifier, $item['pattern'])) {
-                $middleware[] = $item['middleware'];
+        // Step 2: If no exact match was found, check for pattern-based routes
+        if (!$routeMiddlewareAdded) {
+            foreach (array_keys($this->routeMiddleware) as $routePattern) {
+                // Skip if not for the same HTTP method
+                if (strpos($routePattern, strtoupper($method) . ':') !== 0) {
+                    continue;
+                }
+
+                // Extract just the path portion for pattern matching
+                $patternPath = substr($routePattern, strlen(strtoupper($method) . ':'));
+
+                // Check if this is a pattern-based route (contains regex pattern markers)
+                if (strpos($patternPath, '{') !== false && strpos($patternPath, '}') !== false) {
+                    // Create a regex pattern from the route pattern to match against the actual path
+                    $regexPath = $this->convertRoutePatternToRegex($patternPath);
+
+                    if (preg_match($regexPath, $path)) {
+                        foreach ($this->routeMiddleware[$routePattern] as $m) {
+                            $middleware[] = $m;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        // TODO: groups never get written
+        foreach ($this->groups as $group) {
+            if ($this->matchesPattern($route, $group['pattern'])) {
+                $middleware[] = $group['middleware'];
             }
         }
 
         return $middleware;
+    }
+
+    /**
+     * Convert a route pattern with {param:regex} to a regex pattern
+     *
+     * @param string $routePattern
+     * @return string
+     */
+    protected function convertRoutePatternToRegex(string $routePattern): string
+    {
+        // Replace {param:regex} with (?P<param>regex)
+        $pattern = preg_replace('/\{([^:}]+)(?::([^}]+))?}/', '(?P<$1>$2)', $routePattern);
+
+        // If no regex was specified, match any character except /
+        $pattern = preg_replace('/\(\?P<([^>]+)>\)/', '(?P<$1>[^/]+)', $pattern);
+
+        // Add start and end markers and escape forward slashes
+        $pattern = '#^' . $pattern . '$#';
+
+        return $pattern;
     }
 
     /**

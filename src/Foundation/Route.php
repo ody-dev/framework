@@ -35,6 +35,7 @@ class Route
      * @var MiddlewareRegistry
      */
     private MiddlewareRegistry $middlewareRegistry;
+    private array $middlewareList;
 
     /**
      * Route constructor
@@ -74,12 +75,21 @@ class Route
     /**
      * Add middleware to the route
      *
-     * @param string|callable|object $middleware
+     * @param callable|object|string $middleware
      * @return self
      */
-    public function middleware($middleware): self
+    public function middleware(callable|object|string $middleware): self
     {
+        // Store the original pattern as is
         $this->middlewareRegistry->addToRoute($this->method, $this->path, $middleware);
+
+        // Also register the middleware with the route for easier access later
+        if (!property_exists($this, 'middlewareList')) {
+            $this->middlewareList = [];
+        }
+
+        $this->middlewareList[] = $middleware;
+
         return $this;
     }
 
@@ -99,6 +109,16 @@ class Route
         $this->middlewareRegistry->withParameters($middleware, $parameters);
 
         return $this;
+    }
+
+    /**
+     * Get all middleware registered for this route
+     *
+     * @return array
+     */
+    public function getMiddleware(): array
+    {
+        return $this->middlewareList ?? [];
     }
 
     /**
