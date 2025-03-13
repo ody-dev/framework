@@ -1,47 +1,19 @@
 #!/usr/bin/env php
 <?php
-/**
- * ODY Framework Console Application - Patched Version
- *
- * This version explicitly calls bootstrap() on the application to ensure providers get registered
- */
 
 // Define base path
-define('APP_BASE_PATH', dirname(__DIR__));
+define('APP_BASE_PATH', __DIR__);
 
-// Set environment variable to indicate running in console
-putenv('APP_RUNNING_IN_CONSOLE=1');
-$_ENV['APP_RUNNING_IN_CONSOLE'] = 1;
+// Include autoloader
+require_once "vendor/autoload.php";
 
-// Error handling
-set_error_handler(function($severity, $message, $file, $line) {
-    if (!(error_reporting() & $severity)) {
-        // This error code is not included in error_reporting
-        return;
-    }
-    throw new ErrorException($message, 0, $severity, $file, $line);
-});
+// Create console kernel
+$kernel = new Ody\Foundation\Console\ConsoleKernel();
 
-try {
-    // Include autoloader
-    require_once "vendor/autoload.php";
+// Bootstrap kernel
+$kernel->bootstrap();
 
-    // Use the bootstrapper to create a kernel
-    $kernel = Ody\Foundation\Console\ConsoleBootstrapper::kernel();
+// Handle the request
+$status = $kernel->handle();
 
-    // Get the application instance and explicitly bootstrap it
-    $app = $kernel->getApplication();
-
-    // Explicitly bootstrap the application to ensure providers are registered
-    $app->bootstrap();
-
-    // Run the console application
-    $status = $kernel->handle();
-    exit($status);
-
-} catch (\Throwable $e) {
-    echo "\nCritical error: " . $e->getMessage() . "\n";
-    echo "Stack trace:\n";
-    echo $e->getTraceAsString() . "\n";
-    exit(1);
-}
+exit($status);

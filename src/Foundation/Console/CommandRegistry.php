@@ -16,7 +16,7 @@ use Symfony\Component\Console\Command\Command;
 /**
  * CommandRegistry
  *
- * Registry for managing console commands
+ * Registry for managing console commands with simplified loading.
  */
 class CommandRegistry
 {
@@ -36,9 +36,9 @@ class CommandRegistry
     protected array $commands = [];
 
     /**
-     * @var string[]
+     * @var array
      */
-    protected array $commandClasses = [];
+    protected array $registered = [];
 
     /**
      * CommandRegistry constructor
@@ -53,44 +53,88 @@ class CommandRegistry
     }
 
     /**
-     * Add a command to the registry
+     * Add a command to the registry by class name
      *
-     * @param Command|string $command Command instance or class name
+     * @param string $commandClass Command class name
      * @return self
      */
-    public function add($command): self
+    public function add(string $commandClass): self
     {
-        // If it's a command class name, store it for lazy instantiation
-        if (is_string($command)) {
-            if (!class_exists($command)) {
-                $this->logger->warning("Command class {$command} does not exist");
-                return $this;
-            }
-
-            $this->commandClasses[] = $command;
+        // Skip if already registered
+        if (isset($this->registered[$commandClass])) {
             return $this;
         }
 
-        // If it's already a Command instance, store it directly
-        if ($command instanceof Command) {
-            $this->commands[$command->getName()] = $command;
+        // Check if the class exists
+        if (!class_exists($commandClass)) {
             return $this;
         }
 
-        $this->logger->warning("Invalid command type: " . gettype($command));
+        // Create the command instance
+        $instance = $this->resolveCommand($commandClass);
+
+        // Skip if resolving failed
+        if (!$instance) {
+            return $this;
+        }
+
+        // Add to commands
+        $name = $instance->getName();
+        $this->commands[$name] = $instance;
+        $this->registered[$commandClass] = true;
+
         return $this;
     }
 
     /**
      * Add multiple commands to the registry
      *
-     * @param array $commands
+     * @param string[] $commandClasses
      * @return self
      */
-    public function addMultiple(array $commands): self
+    public function addMultiple(array $commandClasses): self
     {
-        foreach ($commands as $command) {
-            $this->add($command);
+        foreach ($commandClasses as $commandClass) {
+            $this->add($commandClass);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Add commands from a directory
+     *
+     * @param string $directory
+     * @return self
+     */
+    public function addFromDirectory(string $directory): self
+    {
+        try {
+            // Normalize path
+            $directory = $this->normalizePath($directory);
+
+            if (!is_dir($directory)) {
+                return $this;
+            }
+
+            // Get all PHP files from the directory
+            foreach (glob($directory . '/*.php') as $file) {
+                $className = $this->getClassNameFromFile($file);
+
+                if ($className && class_exists($className)) {
+                    $this->add($className);
+                }
+            }
+
+            // Look in subdirectories
+            foreach (glob($directory . '/*', GLOB_ONLYDIR) as $subDir) {
+                $this->addFromDirectory($subDir);
+            }
+        } catch (\Throwable $e) {
+            $this->logger->error("Error adding commands from directory: " . $e->getMessage(), [
+                'directory' => $directory,
+                'error' => $e->getMessage()
+            ]);
         }
 
         return $this;
@@ -103,93 +147,112 @@ class CommandRegistry
      */
     public function getCommands(): array
     {
-        // Instantiate any lazy-loaded command classes
-        $this->instantiateCommandClasses();
-
         return $this->commands;
     }
 
     /**
-     * Check if a command exists in the registry
+     * Check if a command exists by name
      *
      * @param string $name
      * @return bool
      */
     public function has(string $name): bool
     {
-        // Instantiate any lazy-loaded command classes
-        $this->instantiateCommandClasses();
-
         return isset($this->commands[$name]);
     }
 
     /**
-     * Get a specific command by name
+     * Get a command by name
      *
      * @param string $name
      * @return Command|null
      */
     public function get(string $name): ?Command
     {
-        // Instantiate any lazy-loaded command classes
-        $this->instantiateCommandClasses();
-
         return $this->commands[$name] ?? null;
     }
 
     /**
-     * Clear the command registry
+     * Clear the registry
      *
      * @return self
      */
     public function clear(): self
     {
         $this->commands = [];
-        $this->commandClasses = [];
-
+        $this->registered = [];
         return $this;
     }
 
     /**
-     * Instantiate all registered command classes
+     * Resolve a command from a class name
      *
-     * @return void
+     * @param string $class
+     * @return Command|null
      */
-    protected function instantiateCommandClasses(): void
+    protected function resolveCommand(string $class): ?Command
     {
-        if (empty($this->commandClasses)) {
-            return;
+        // Try resolving from container first
+        if ($this->container->has($class)) {
+            $command = $this->container->make($class);
+        } else {
+            // Otherwise create a new instance
+            $command = new $class();
         }
 
-        $commandClassesToProcess = $this->commandClasses;
-        $this->commandClasses = []; // Clear the list to avoid processing them again
-
-        foreach ($commandClassesToProcess as $class) {
-            try {
-                // Skip if the class doesn't exist
-                if (!class_exists($class)) {
-                    $this->logger->warning("Command class {$class} does not exist");
-                    continue;
-                }
-
-                // Create the command using the container if possible
-                if ($this->container->has($class)) {
-                    $command = $this->container->make($class);
-                } else {
-                    $command = new $class();
-                }
-
-                if ($command instanceof \Symfony\Component\Console\Command\Command) {
-                    $this->commands[$command->getName()] = $command;
-                } else {
-                    $this->logger->warning("Class {$class} is not a Symfony Command");
-                }
-            } catch (\Throwable $e) {
-                $this->logger->error("Error instantiating command {$class}: " . $e->getMessage(), [
-                    'exception' => $e,
-                    'trace' => $e->getTraceAsString()
-                ]);
-            }
+        // Validate it's a Command
+        if (!$command instanceof Command) {
+            throw new \Exception("Class {$class} is not a Symfony Command");
         }
+
+        return $command;
+    }
+
+    /**
+     * Extract class name from a file
+     *
+     * @param string $file
+     * @return string|null
+     */
+    protected function getClassNameFromFile(string $file): ?string
+    {
+        $content = file_get_contents($file);
+
+        // Extract namespace
+        $namespace = null;
+        if (preg_match('/namespace\s+([^;]+);/', $content, $matches)) {
+            $namespace = $matches[1];
+        }
+
+        // Extract class name
+        $className = null;
+        if (preg_match('/class\s+([a-zA-Z0-9_]+)(?:\s+extends|\s+implements|\s*{)/', $content, $matches)) {
+            $className = $matches[1];
+        }
+
+        if ($namespace && $className) {
+            return $namespace . '\\' . $className;
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalize a path
+     *
+     * @param string $path
+     * @return string
+     */
+    protected function normalizePath(string $path): string
+    {
+        // If starts with a slash, it's an absolute path
+        if ($path[0] === '/' || $path[0] === '\\' || preg_match('/^[A-Z]:/i', $path)) {
+            return $path;
+        }
+
+        // Otherwise, make it relative to app base path
+        $basePath = defined('APP_BASE_PATH') ? APP_BASE_PATH : dirname(__DIR__, 3);
+
+        return $basePath . DIRECTORY_SEPARATOR . $path;
     }
 }

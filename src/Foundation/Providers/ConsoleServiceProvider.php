@@ -29,24 +29,10 @@ class ConsoleServiceProvider extends ServiceProvider
      * @var array
      */
     protected array $commands = [
-        // Internal commands
-        \Ody\Foundation\Console\Commands\ListCommand::class,
         \Ody\Foundation\Console\Commands\ServeCommand::class,
         \Ody\Foundation\Console\Commands\EnvironmentCommand::class,
         \Ody\Foundation\Console\Commands\TestCommand::class,
-
-        // Development commands
         \Ody\Foundation\Console\Commands\MakeCommandCommand::class,
-
-        // The following commands are commented out until they are implemented
-        // \Ody\Foundation\Console\Commands\MakeControllerCommand::class,
-        // \Ody\Foundation\Console\Commands\MakeProviderCommand::class,
-
-        // Database commands
-        // \Ody\Foundation\Console\Commands\MigrateMakeCommand::class,
-        // \Ody\Foundation\Console\Commands\MigrateCommand::class,
-        // \Ody\Foundation\Console\Commands\MigrateRollbackCommand::class,
-        // \Ody\Foundation\Console\Commands\MigrateStatusCommand::class,
     ];
 
     /**
@@ -104,15 +90,8 @@ class ConsoleServiceProvider extends ServiceProvider
         $this->registerApplicationCommands($registry);
 
         // Discover commands from specified directories
+        // TODO: not implemented
         $this->discoverCommands($registry);
-
-        // If Console instance is available, register commands directly
-        if ($this->container->has(ConsoleApplication::class)) {
-            $console = $this->container->make(ConsoleApplication::class);
-            foreach ($registry->getCommands() as $command) {
-                $console->add($command);
-            }
-        }
     }
 
     /**
@@ -123,10 +102,9 @@ class ConsoleServiceProvider extends ServiceProvider
      */
     protected function registerFrameworkCommands(CommandRegistry $registry): void
     {
-        foreach ($this->commands as $command) {
-            if (class_exists($command)) {
-                $registry->add($command);
-            }
+        foreach ($this->commands as $commandClass) {
+            // Simply pass the class name to the registry
+            $registry->add($commandClass);
         }
     }
 
@@ -138,10 +116,6 @@ class ConsoleServiceProvider extends ServiceProvider
      */
     protected function registerApplicationCommands(CommandRegistry $registry): void
     {
-        if (!$this->container->has(Config::class)) {
-            return;
-        }
-
         $config = $this->container->make(Config::class);
         $commands = $config->get('app.commands', []);
 
@@ -160,74 +134,12 @@ class ConsoleServiceProvider extends ServiceProvider
      */
     protected function discoverCommands(CommandRegistry $registry): void
     {
-        if (!$this->container->has(Config::class)) {
-            return;
-        }
-
         $config = $this->container->make(Config::class);
         $directories = $config->get('app.command_directories', [base_path('app/Console/Commands')]);
 
         foreach ($directories as $directory) {
-            if (!is_dir($directory)) {
-                continue;
-            }
-
-            foreach (glob($directory . '/*.php') as $file) {
-                $className = $this->getClassNameFromFile($file);
-                if ($className && class_exists($className)) {
-                    $registry->add($className);
-                }
-            }
+            $registry->addFromDirectory($directory);
         }
-    }
-
-    /**
-     * Extract class name from file
-     *
-     * @param string $file
-     * @return string|null
-     */
-    protected function getClassNameFromFile(string $file): ?string
-    {
-        $content = file_get_contents($file);
-        $namespace = $this->extractNamespace($content);
-        $class = $this->extractClassName($content);
-
-        if ($namespace && $class) {
-            return $namespace . '\\' . $class;
-        }
-
-        return null;
-    }
-
-    /**
-     * Extract namespace from file content
-     *
-     * @param string $content
-     * @return string|null
-     */
-    protected function extractNamespace(string $content): ?string
-    {
-        if (preg_match('/namespace\s+([^;]+);/', $content, $matches)) {
-            return trim($matches[1]);
-        }
-
-        return null;
-    }
-
-    /**
-     * Extract class name from file content
-     *
-     * @param string $content
-     * @return string|null
-     */
-    protected function extractClassName(string $content): ?string
-    {
-        if (preg_match('/class\s+([a-zA-Z0-9_]+)/', $content, $matches)) {
-            return trim($matches[1]);
-        }
-
-        return null;
     }
 
     /**

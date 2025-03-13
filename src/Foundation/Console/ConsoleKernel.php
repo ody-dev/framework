@@ -10,9 +10,10 @@
 namespace Ody\Foundation\Console;
 
 use Ody\Container\Container;
-use Ody\Foundation\Bootstrap;
 use Ody\Foundation\Application;
-use Ody\Foundation\Providers\ConsoleServiceProvider;
+use Ody\Foundation\Providers\EnvServiceProvider;
+use Ody\Foundation\Support\Config;
+use Ody\Foundation\Providers\ServiceProviderManager;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Application as ConsoleApplication;
@@ -22,7 +23,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 /**
  * ConsoleKernel
  *
- * Handles command-line interface operations using Symfony Console
+ * Central class for managing console commands and handling command-line requests.
  */
 class ConsoleKernel
 {
@@ -32,14 +33,19 @@ class ConsoleKernel
     protected Container $container;
 
     /**
-     * @var Application
+     * @var Application|null
      */
-    protected Application $app;
+    protected ?Application $app = null;
 
     /**
      * @var ConsoleApplication
      */
     protected ConsoleApplication $console;
+
+    /**
+     * @var CommandRegistry
+     */
+    protected CommandRegistry $commandRegistry;
 
     /**
      * @var LoggerInterface
@@ -50,11 +56,12 @@ class ConsoleKernel
      * @var array
      */
     protected array $bootstrappers = [
+        \Ody\Foundation\Providers\EnvServiceProvider::class,
         \Ody\Foundation\Providers\ConfigServiceProvider::class,
         \Ody\Foundation\Providers\LoggingServiceProvider::class,
         \Ody\Foundation\Providers\DatabaseServiceProvider::class,
-        \Ody\Foundation\Providers\ConsoleServiceProvider::class,
     ];
+
 
     /**
      * ConsoleKernel constructor
@@ -65,41 +72,51 @@ class ConsoleKernel
     {
         // Initialize the container
         $this->container = $container ?: new Container();
+        Container::setInstance($this->container);
 
-        // Make sure basic dependencies are available
+        // Register basic logger for initial operations
         if (!$this->container->has(LoggerInterface::class)) {
             $this->container->instance(LoggerInterface::class, new NullLogger());
         }
+        $this->logger = $this->container->make(LoggerInterface::class);
 
+        // Create and register command registry
+        $this->commandRegistry = new CommandRegistry($this->container, $this->logger);
+        $this->container->instance(CommandRegistry::class, $this->commandRegistry);
+
+        // Create Symfony Console application
+        $this->console = new ConsoleApplication('ODY Console', $this->getFrameworkVersion());
+        $this->container->instance(ConsoleApplication::class, $this->console);
+
+        // Register self in container
+        $this->container->instance(self::class, $this);
+    }
+
+    /**
+     * Bootstrap the console kernel
+     *
+     * @return self
+     */
+    public function bootstrap(): self
+    {
         try {
-            // Get the application from the container
-            if ($this->container->has(Application::class)) {
-                $this->app = $this->container->make(Application::class);
-            } else {
-                // If not available, use the bootstrapper to create it
-                ConsoleBootstrapper::bootstrap($this->container);
-                $this->app = $this->container->make(Application::class);
-            }
 
-            // Mark the application as running in console mode
-            $this->app->setRunningInConsole(true);
+            // Ensure the console service provider is registered
+            $this->registerServiceProviders();
 
-            // Register self in container
-            $this->container->instance(self::class, $this);
+            // Register all commands with Symfony Console
+            $this->registerCommandsWithConsole();
+
         } catch (\Throwable $e) {
-            // If something went wrong, provide more detailed error information
-            echo "Error initializing application: " . $e->getMessage() . PHP_EOL;
-            echo "File: " . $e->getFile() . " Line: " . $e->getLine() . PHP_EOL;
+            $this->logger->error('Error bootstrapping console kernel: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
 
-            // Exit with error status
-            exit(1);
+            throw $e;
         }
 
-        // Create a Symfony Console application
-        $this->console = new ConsoleApplication('ODY Console', $this->getFrameworkVersion());
-
-        // Get logger from container (should be registered by now)
-        $this->logger = $this->container->make(LoggerInterface::class);
+        return $this;
     }
 
     /**
@@ -112,11 +129,11 @@ class ConsoleKernel
     public function handle(?InputInterface $input = null, ?OutputInterface $output = null): int
     {
         try {
-            // Mark the application as running in console mode
-            $this->app->setRunningInConsole(true);
+            // Get the application instance
+            $app = $this->getApplication();
 
-            // Load console commands
-            $this->loadCommands();
+            // Mark it as running in console mode
+            $app->setRunningInConsole(true);
 
             // Run the Symfony Console application
             return $this->console->run($input, $output);
@@ -129,6 +146,8 @@ class ConsoleKernel
             // Show the error in the console
             if ($output) {
                 $output->writeln('<error>Error: ' . $e->getMessage() . '</error>');
+            } else {
+                echo "Error: " . $e->getMessage() . PHP_EOL;
             }
 
             return 1;
@@ -136,63 +155,177 @@ class ConsoleKernel
     }
 
     /**
-     * Load console commands from service providers and config
+     * Register the required service providers
      *
      * @return void
      */
-    protected function loadCommands(): void
+    protected function registerServiceProviders(): void
     {
-        // Make sure the Console Service Provider is registered
-        if (!$this->container->has(ConsoleServiceProvider::class)) {
-            $this->app->getProviderManager()->register(ConsoleServiceProvider::class);
+        // If service provider manager already exists, use it
+        if ($this->container->has(ServiceProviderManager::class)) {
+            $providerManager = $this->container->make(ServiceProviderManager::class);
+        } else {
+            // Otherwise create a new one
+            $config = $this->container->has(Config::class) ? $this->container->make(Config::class) : null;
+            $providerManager = new ServiceProviderManager($this->container, $config, $this->logger);
+            $this->container->instance(ServiceProviderManager::class, $providerManager);
         }
 
-        // Get the command registry from the container
-        $registry = $this->container->make(CommandRegistry::class);
-
-        // Register our default commands if registry is empty
-        if (count($registry->getCommands()) === 0) {
-            $this->registerDefaultCommands($registry);
+        // Register console service providers
+        foreach ($this->bootstrappers as $provider) {
+            if (!$providerManager->isRegistered($provider) && class_exists($provider)) {
+                $providerManager->register($provider);
+            }
         }
 
-        // Add commands to the Symfony Console application
-        foreach ($registry->getCommands() as $command) {
-            $this->console->add($command);
+        // Register the console service provider explicitly
+        if (class_exists(\Ody\Foundation\Providers\ConsoleServiceProvider::class)) {
+            $providerManager->register(\Ody\Foundation\Providers\ConsoleServiceProvider::class);
+        }
+
+        // Boot all registered providers
+        $providerManager->boot();
+    }
+
+    /**
+     * Get or create the application instance
+     *
+     * @return Application
+     */
+    public function getApplication(): Application
+    {
+        if ($this->app === null) {
+            if ($this->container->has(Application::class)) {
+                $this->app = $this->container->make(Application::class);
+            } else {
+                // Create service provider manager if needed
+                if (!$this->container->has(ServiceProviderManager::class)) {
+                    $config = $this->container->has(Config::class) ? $this->container->make(Config::class) : null;
+                    $providerManager = new ServiceProviderManager($this->container, $config, $this->logger);
+                    $this->container->instance(ServiceProviderManager::class, $providerManager);
+                } else {
+                    $providerManager = $this->container->make(ServiceProviderManager::class);
+                }
+
+                // Create application
+                $this->app = new Application($this->container, $providerManager);
+                $this->container->instance(Application::class, $this->app);
+            }
+
+            // Bootstrap the application
+            if (method_exists($this->app, 'bootstrap')) {
+                $this->app->bootstrap();
+            }
+
+            // Mark as running in console
+            $this->app->setRunningInConsole(true);
+        }
+
+        return $this->app;
+    }
+
+
+    /**
+     * Register app commands from app/Console/Commands directory
+     *
+     * @return void
+     */
+    protected function registerAppCommands(): void
+    {
+        $commandsPath = $this->getApplication()->getContainer()->has(Config::class)
+            ? $this->getApplication()->getContainer()->make(Config::class)->get('app.commands_path', 'app/Console/Commands')
+            : 'app/Console/Commands';
+
+        $this->commandRegistry->addFromDirectory($commandsPath);
+    }
+
+    /**
+     * Load commands from configuration
+     *
+     * @return void
+     */
+    protected function loadCommandsFromConfig(): void
+    {
+        if ($this->container->has(Config::class)) {
+            $config = $this->container->make(Config::class);
+            $commands = $config->get('app.commands', []);
+
+            foreach ($commands as $commandClass) {
+                if (class_exists($commandClass)) {
+                    $this->commandRegistry->add($commandClass);
+                }
+            }
         }
     }
 
     /**
-     * Register default commands if needed
+     * Discover commands in application directories
      *
-     * @param CommandRegistry $registry
      * @return void
      */
-    protected function registerDefaultCommands(CommandRegistry $registry): void
+    protected function discoverCommands(): void
     {
-        // Core commands that should always be available
-        $commands = [
-            // Register the built-in commands directly to ensure they're always available
-            new Commands\ListCommand(),
-            new Commands\ServeCommand(),
-            new Commands\EnvironmentCommand(),
-            new Commands\MakeCommandCommand(),
-        ];
+        if ($this->container->has(Config::class)) {
+            $config = $this->container->make(Config::class);
+            $directories = $config->get('app.command_directories', []);
 
-        // Register each command
-        foreach ($commands as $command) {
-            // Register with the registry
-            $registry->add($command);
-
-            // Also add directly to console application for immediate use
-            $this->console->add($command);
+            foreach ($directories as $directory) {
+                $this->commandRegistry->addFromDirectory($directory);
+            }
         }
-
-        // Log registration
-        $this->logger->info('Registered default console commands');
     }
 
     /**
-     * Get the application container
+     * Register all commands with Symfony Console
+     *
+     * @return void
+     */
+    /**
+     * Register all commands with Symfony Console
+     *
+     * @return void
+     */
+    protected function registerCommandsWithConsole(): void
+    {
+        // After ConsoleServiceProvider is registered, get the registry
+        if ($this->container->has(CommandRegistry::class)) {
+            // Get the registry from the container to ensure we have the latest version
+            $registry = $this->container->make(CommandRegistry::class);
+
+            // Register commands with Symfony Console
+            foreach ($registry->getCommands() as $command) {
+                if (!$this->console->has($command->getName())) {
+                    $this->console->add($command);
+                    $this->logger->debug("Registered command with console: " . $command->getName());
+                }
+            }
+        } else {
+            $this->logger->warning("CommandRegistry not found in container");
+        }
+    }
+
+    /**
+     * Get the framework version
+     *
+     * @return string
+     */
+    protected function getFrameworkVersion(): string
+    {
+        if ($this->container->has(Config::class)) {
+            $config = $this->container->make(Config::class);
+            $version = $config->get('app.version');
+
+            if ($version) {
+                return $version;
+            }
+        }
+
+        // Fallback version
+        return '1.0.0';
+    }
+
+    /**
+     * Get the container instance
      *
      * @return Container
      */
@@ -202,13 +335,13 @@ class ConsoleKernel
     }
 
     /**
-     * Get the application instance
+     * Get the command registry
      *
-     * @return Application
+     * @return CommandRegistry
      */
-    public function getApplication(): Application
+    public function getCommandRegistry(): CommandRegistry
     {
-        return $this->app;
+        return $this->commandRegistry;
     }
 
     /**
@@ -219,24 +352,5 @@ class ConsoleKernel
     public function getConsole(): ConsoleApplication
     {
         return $this->console;
-    }
-
-    /**
-     * Get the framework version
-     *
-     * @return string
-     */
-    protected function getFrameworkVersion(): string
-    {
-        // Try to get version from container if available
-        if ($this->container->has('config')) {
-            $version = $this->container->make('config')->get('app.version');
-            if ($version) {
-                return $version;
-            }
-        }
-
-        // Fallback to a default version
-        return '1.0.0';
     }
 }

@@ -71,7 +71,8 @@ class EnvironmentCommand extends Command
         ]);
         $table->render();
 
-        $this->newLine();
+        // Replace newLine() call with a direct output writeln
+        $this->output->writeln('');
     }
 
     /**
@@ -95,7 +96,8 @@ class EnvironmentCommand extends Command
         ]);
         $table->render();
 
-        $this->newLine();
+        // Replace newLine() call with a direct output writeln
+        $this->output->writeln('');
     }
 
     /**
@@ -126,7 +128,8 @@ class EnvironmentCommand extends Command
         ]);
         $table->render();
 
-        $this->newLine();
+        // Replace newLine() call with a direct output writeln
+        $this->output->writeln('');
     }
 
     /**

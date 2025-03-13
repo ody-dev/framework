@@ -127,7 +127,7 @@ class ServeCommand extends Command
         $this->comment("Document root is <info>{$publicPath}</info>");
         $this->comment("Press Ctrl+C to stop the server");
 
-        $process = new Process([
+        $process = new \Swoole\Process([
             PHP_BINARY,
             '-S',
             "{$host}:{$port}",

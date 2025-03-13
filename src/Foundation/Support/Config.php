@@ -176,7 +176,7 @@ class Config
      * @param string $path Full path to the file
      * @return void
      */
-    protected function loadFile(string $name, string $path): void
+    public function loadFile(string $name, string $path): void
     {
         // Skip if already loaded to prevent recursion
         if (isset($this->loadedFiles[$path])) {
