@@ -79,11 +79,19 @@ class ApplicationServiceProvider extends ServiceProvider
 
         // Register application
         $this->singleton(Application::class, function ($container) {
-            $router = $container->make(Router::class);
-            $middlewareRegistry = $container->make(MiddlewareRegistry::class);
-            $logger = $container->make(LoggerInterface::class);
+            // Get the ServiceProviderManager
+            $providerManager = $container->make(\Ody\Foundation\Providers\ServiceProviderManager::class);
 
-            return new Application($router, $middlewareRegistry, $logger, $container);
+            // If ServiceProviderManager isn't registered yet, create it
+            if (!$providerManager) {
+                $config = $container->has('config') ? $container->make('config') : null;
+                $logger = $container->has(LoggerInterface::class) ? $container->make(LoggerInterface::class) : null;
+                $providerManager = new \Ody\Foundation\Providers\ServiceProviderManager($container, $config, $logger);
+                $container->instance(\Ody\Foundation\Providers\ServiceProviderManager::class, $providerManager);
+            }
+
+            // Return the Application with correct constructor parameters
+            return new Application($container, $providerManager);
         });
     }
 

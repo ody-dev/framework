@@ -57,6 +57,17 @@ class Application
      */
     private ServiceProviderManager $providerManager;
 
+    // Add these properties to the class
+    /**
+     * @var bool Indicates if the application is running in console
+     */
+    private bool $runningInConsole = false;
+
+    /**
+     * @var bool Indicates if console detection has been performed
+     */
+    private bool $consoleDetected = false;
+
     /**
      * @var bool Whether the application has been bootstrapped
      */
@@ -70,10 +81,11 @@ class Application
     private array $providers = [
         \Ody\Foundation\Providers\ConfigServiceProvider::class,
         \Ody\Foundation\Providers\LoggingServiceProvider::class,
+        \Ody\Foundation\Providers\ConsoleServiceProvider::class,
         \Ody\Foundation\Providers\ApplicationServiceProvider::class,
         \Ody\Foundation\Providers\FacadeServiceProvider::class,
         \Ody\Foundation\Providers\MiddlewareServiceProvider::class,
-        \Ody\Foundation\Providers\RouteServiceProvider::class
+        \Ody\Foundation\Providers\RouteServiceProvider::class,
     ];
 
     /**
@@ -484,5 +496,74 @@ class Application
 
         $response = $this->handleRequest();
         $this->getResponseEmitter()->emit($response);
+    }
+
+    /**
+     * Determine if the application is running in the console.
+     *
+     * @return bool
+     */
+    public function runningInConsole(): bool
+    {
+        if ($this->consoleDetected) {
+            return $this->runningInConsole;
+        }
+
+        // Check if explicitly set
+        if ($this->runningInConsole) {
+            $this->consoleDetected = true;
+            return true;
+        }
+
+        // Check if running via CLI SAPI
+        if (in_array(PHP_SAPI, ['cli', 'phpdbg', 'embed'], true)) {
+            $this->runningInConsole = true;
+            $this->consoleDetected = true;
+            return true;
+        }
+
+        // Check for specific environment variables for CLI tools
+        $this->runningInConsole = (bool) (getenv('CONSOLE_MODE') ||
+            getenv('APP_RUNNING_IN_CONSOLE') ||
+            (isset($_ENV['APP_RUNNING_IN_CONSOLE']) && $_ENV['APP_RUNNING_IN_CONSOLE']));
+        $this->consoleDetected = true;
+
+        return $this->runningInConsole;
+    }
+
+    /**
+     * Alias for runningInConsole() - shorter method name for convenience
+     *
+     * @return bool
+     */
+    public function isConsole(): bool
+    {
+        return $this->runningInConsole();
+    }
+
+    /**
+     * Set the running in console status.
+     *
+     * @param bool $runningInConsole
+     * @return self
+     */
+    public function setRunningInConsole(bool $runningInConsole): self
+    {
+        $this->runningInConsole = $runningInConsole;
+
+        // Also set the environment variable for broader access
+        putenv('APP_RUNNING_IN_CONSOLE=' . ($runningInConsole ? '1' : '0'));
+
+        return $this;
+    }
+
+    /**
+     * Get the ServiceProviderManager instance
+     *
+     * @return ServiceProviderManager
+     */
+    public function getProviderManager(): ServiceProviderManager
+    {
+        return $this->providerManager;
     }
 }
