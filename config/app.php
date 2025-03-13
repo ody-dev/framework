@@ -8,6 +8,7 @@ return [
     'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     'providers' => [
+        Ody\Foundation\Providers\ErrorServiceProvider::class,
         Ody\Foundation\Providers\DatabaseServiceProvider::class,
 
         // Add your application service providers here
@@ -30,6 +31,7 @@ return [
     'middleware' => [
         // Global middleware applied to all routes
         'global' => [
+            Ody\Foundation\Middleware\ErrorHandlerMiddleware::class,
             Ody\Foundation\Middleware\CorsMiddleware::class,
             Ody\Foundation\Middleware\JsonBodyParserMiddleware::class,
             Ody\Foundation\Middleware\LoggingMiddleware::class,
