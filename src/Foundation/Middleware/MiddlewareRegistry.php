@@ -259,8 +259,8 @@ class MiddlewareRegistry
             }
         }
 
-        // TODO: groups never get written
-        foreach ($this->groups as $group) {
+        // Process pattern-based middleware
+        foreach ($this->patternMiddleware as $group) {
             if ($this->matchesPattern($route, $group['pattern'])) {
                 $middleware[] = $group['middleware'];
             }
@@ -392,75 +392,15 @@ class MiddlewareRegistry
     public function resolveMiddleware($middleware): ?MiddlewareInterface
     {
         try {
-            // Already a PSR-15 middleware
-            if ($middleware instanceof MiddlewareInterface) {
-                return $middleware;
-            }
+            // Try each resolution strategy in order
+            $instance = $this->resolveBuiltInTypes($middleware)
+                ?? $this->resolveNamedMiddleware($middleware)
+                ?? $this->resolveMiddlewareGroup($middleware)
+                ?? $this->resolveClassMiddleware($middleware)
+                ?? $this->resolveParameterizedMiddleware($middleware);
 
-            // Callable middleware
-            if (is_callable($middleware)) {
-                return new CallableMiddlewareAdapter($middleware);
-            }
-
-            // Named middleware
-            if (is_string($middleware) && isset($this->namedMiddleware[$middleware])) {
-                return $this->resolveMiddleware($this->namedMiddleware[$middleware]);
-            }
-
-            // Middleware group
-            if (is_string($middleware) && isset($this->middlewareGroups[$middleware])) {
-                // Creating a middleware that will run all middleware in the group
-                return new class($this, $this->middlewareGroups[$middleware]) implements MiddlewareInterface {
-                    protected $registry;
-                    protected $group;
-
-                    public function __construct(MiddlewareRegistry $registry, array $group) {
-                        $this->registry = $registry;
-                        $this->group = $group;
-                    }
-
-                    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface {
-                        $innerHandler = $handler;
-
-                        // Add middleware in reverse order
-                        foreach (array_reverse($this->group) as $middleware) {
-                            $resolved = $this->registry->resolveMiddleware($middleware);
-                            if ($resolved) {
-                                $process = function (ServerRequestInterface $req) use ($resolved, $innerHandler): ResponseInterface {
-                                    return $resolved->process($req, $innerHandler);
-                                };
-
-                                $innerHandler = new CallableMiddlewareAdapter($process);
-                            }
-                        }
-
-                        return $innerHandler->handle($request);
-                    }
-                };
-            }
-
-            // Class name
-            if (is_string($middleware) && class_exists($middleware)) {
-                $instance = $this->container->has($middleware)
-                    ? $this->container->make($middleware)
-                    : new $middleware();
-
-                if ($instance instanceof MiddlewareInterface) {
-                    return $instance;
-                }
-            }
-
-            // Parameterized middleware (e.g., 'auth:api')
-            if (is_string($middleware) && strpos($middleware, ':') !== false) {
-                list($name, $param) = explode(':', $middleware, 2);
-
-                // Store the parameter
-                $this->withParameters($name, ['value' => $param]);
-
-                // Try to resolve the base middleware
-                if (isset($this->namedMiddleware[$name])) {
-                    return $this->resolveMiddleware($this->namedMiddleware[$name]);
-                }
+            if ($instance) {
+                return $instance;
             }
 
             $this->logger->warning("Failed to resolve middleware", ['middleware' => $this->getMiddlewareName($middleware)]);
@@ -469,7 +409,8 @@ class MiddlewareRegistry
         } catch (\Throwable $e) {
             $this->logger->error("Error resolving middleware", [
                 'middleware' => $this->getMiddlewareName($middleware),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             if (env('APP_DEBUG', false)) {
@@ -478,6 +419,236 @@ class MiddlewareRegistry
 
             return null;
         }
+    }
+
+    /**
+     * Resolve built-in middleware types (instances and callables)
+     *
+     * @param mixed $middleware
+     * @return MiddlewareInterface|null
+     */
+    private function resolveBuiltInTypes($middleware): ?MiddlewareInterface
+    {
+        // Already a PSR-15 middleware
+        if ($middleware instanceof MiddlewareInterface) {
+            return $middleware;
+        }
+
+        // Callable middleware
+        if (is_callable($middleware)) {
+            return new CallableMiddlewareAdapter($middleware);
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve named middleware
+     *
+     * @param mixed $middleware
+     * @return MiddlewareInterface|null
+     */
+    private function resolveNamedMiddleware($middleware): ?MiddlewareInterface
+    {
+        if (is_string($middleware) && isset($this->namedMiddleware[$middleware])) {
+            return $this->resolveMiddleware($this->namedMiddleware[$middleware]);
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve middleware group
+     *
+     * @param mixed $middleware
+     * @return MiddlewareInterface|null
+     */
+    private function resolveMiddlewareGroup($middleware): ?MiddlewareInterface
+    {
+        if (is_string($middleware) && isset($this->middlewareGroups[$middleware])) {
+            return $this->createMiddlewareGroupAdapter($this->middlewareGroups[$middleware]);
+        }
+
+        return null;
+    }
+
+    /**
+     * Create an adapter for a middleware group
+     *
+     * @param array $group
+     * @return MiddlewareInterface
+     */
+    private function createMiddlewareGroupAdapter(array $group): MiddlewareInterface
+    {
+        return new class($this, $group) implements MiddlewareInterface {
+            protected $registry;
+            protected $group;
+
+            public function __construct(MiddlewareRegistry $registry, array $group) {
+                $this->registry = $registry;
+                $this->group = $group;
+            }
+
+            public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface {
+                $innerHandler = $handler;
+
+                // Add middleware in reverse order
+                foreach (array_reverse($this->group) as $middleware) {
+                    $resolved = $this->registry->resolveMiddleware($middleware);
+                    if ($resolved) {
+                        // Create a wrapper that chains this middleware with the current handler
+                        $currentHandler = $innerHandler; // Capture the current handler
+                        $innerHandler = new class($resolved, $currentHandler) implements RequestHandlerInterface {
+                            private $middleware;
+                            private $handler;
+
+                            public function __construct(MiddlewareInterface $middleware, RequestHandlerInterface $handler) {
+                                $this->middleware = $middleware;
+                                $this->handler = $handler;
+                            }
+
+                            public function handle(ServerRequestInterface $request): ResponseInterface {
+                                return $this->middleware->process($request, $this->handler);
+                            }
+                        };
+                    }
+                }
+
+                return $innerHandler->handle($request);
+            }
+        };
+    }
+
+    /**
+     * Resolve class-based middleware
+     *
+     * @param mixed $middleware
+     * @return MiddlewareInterface|null
+     */
+    private function resolveClassMiddleware($middleware): ?MiddlewareInterface
+    {
+        if (!is_string($middleware) || !class_exists($middleware)) {
+            return null;
+        }
+
+        // Try to resolve from container first
+        if ($this->container->has($middleware)) {
+            $instance = $this->container->make($middleware);
+
+            if ($instance instanceof MiddlewareInterface) {
+                return $instance;
+            }
+
+            return null;
+        }
+
+        // Try to instantiate using reflection if not in container
+        return $this->instantiateUsingReflection($middleware);
+    }
+
+    /**
+     * Instantiate a middleware class using reflection
+     *
+     * @param string $class
+     * @return MiddlewareInterface|null
+     */
+    private function instantiateUsingReflection(string $class): ?MiddlewareInterface
+    {
+        $reflector = new \ReflectionClass($class);
+
+        // If no constructor or constructor has no parameters, we can create directly
+        $constructor = $reflector->getConstructor();
+        if (!$constructor || $constructor->getNumberOfParameters() === 0) {
+            $instance = new $class();
+
+            if ($instance instanceof MiddlewareInterface) {
+                return $instance;
+            }
+
+            return null;
+        }
+
+        // Try to resolve constructor parameters from the container
+        $parameters = [];
+        $canResolveAll = true;
+
+        foreach ($constructor->getParameters() as $param) {
+            $paramInstance = $this->resolveConstructorParameter($param, $class);
+
+            if ($paramInstance !== null) {
+                $parameters[] = $paramInstance;
+            } else {
+                $canResolveAll = false;
+                break;
+            }
+        }
+
+        if ($canResolveAll) {
+            $instance = $reflector->newInstanceArgs($parameters);
+
+            if ($instance instanceof MiddlewareInterface) {
+                return $instance;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve a constructor parameter
+     *
+     * @param \ReflectionParameter $param
+     * @param string $className For logging purposes
+     * @return mixed|null
+     */
+    private function resolveConstructorParameter(\ReflectionParameter $param, string $className)
+    {
+        // Try to resolve by type hint
+        $type = $param->getType() && !$param->getType()->isBuiltin()
+            ? $param->getType()->getName()
+            : null;
+
+        if ($type && $this->container->has($type)) {
+            return $this->container->make($type);
+        }
+
+        // Try to use default value
+        if ($param->isDefaultValueAvailable()) {
+            return $param->getDefaultValue();
+        }
+
+        // Can't resolve parameter
+        $this->logger->warning(
+            "Cannot resolve parameter '{$param->getName()}' for middleware '{$className}'",
+            ['type' => $type]
+        );
+
+        return null;
+    }
+
+    /**
+     * Resolve parameterized middleware (e.g., 'auth:api')
+     *
+     * @param mixed $middleware
+     * @return MiddlewareInterface|null
+     */
+    private function resolveParameterizedMiddleware($middleware): ?MiddlewareInterface
+    {
+        if (!is_string($middleware) || strpos($middleware, ':') === false) {
+            return null;
+        }
+
+        list($name, $param) = explode(':', $middleware, 2);
+
+        // Store the parameter
+        $this->withParameters($name, ['value' => $param]);
+
+        // Try to resolve the base middleware
+        if (isset($this->namedMiddleware[$name])) {
+            return $this->resolveMiddleware($this->namedMiddleware[$name]);
+        }
+
+        return null;
     }
 
     /**
