@@ -148,7 +148,6 @@ class RouteLoader
             }
         }
 
-        $this->logger->info("Loaded {$count} route files from {$directory}");
         return $count;
     }
 

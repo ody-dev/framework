@@ -76,7 +76,6 @@ class LogViewerController
      */
     public function recent(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
-        logger('Application started', ['module' => 'core']);
         try {
             // Get query parameters
             $queryParams = $request->getQueryParams();

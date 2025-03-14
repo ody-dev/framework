@@ -18,7 +18,7 @@ class LogViewer {
      */
     constructor(options) {
         this.options = Object.assign({
-            apiUrl: '/api/logs/recent',
+            apiUrl: 'http://127.0.0.1:9501/api/logs/recent',
             containerSelector: '#log-container',
             interval: 5000,
             limit: 100,
@@ -27,6 +27,8 @@ class LogViewer {
             level: null,
             autoScroll: true
         }, options);
+
+        console.log(this.options.apiUrl);
 
         this.container = document.querySelector(this.options.containerSelector);
         if (!this.container) {

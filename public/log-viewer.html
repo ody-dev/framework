@@ -71,7 +71,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         // Create log viewer instance
         const logViewer = new LogViewer({
-            apiUrl: '/api/logs/recent',
+            apiUrl: 'http://127.0.0.1:9501/api/logs/recent',
             containerSelector: '#log-container',
             interval: 5000, // 5 seconds
             limit: 100,

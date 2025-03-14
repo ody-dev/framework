@@ -10,10 +10,13 @@
 namespace Ody\Foundation\Logging;
 
 use InfluxDB2\Client;
+use InfluxDB2\Model\WritePrecision;
 use InfluxDB2\Point;
 use InfluxDB2\WriteApi;
-use Swoole\Coroutine;
+use InfluxDB2\WriteType;
 use Psr\Log\LogLevel;
+use Swoole\Coroutine;
+use Throwable;
 
 /**
  * InfluxDB 2.x Logger
@@ -69,15 +72,16 @@ class InfluxDB2Logger extends AbstractLogger
      * @param bool $useCoroutines Whether to use Swoole coroutines
      */
     public function __construct(
-        string $url,
-        string $token,
-        string $org,
-        string $bucket,
-        string $level = LogLevel::DEBUG,
+        string              $url,
+        string              $token,
+        string              $org,
+        string              $bucket,
+        string              $level = LogLevel::DEBUG,
         ?FormatterInterface $formatter = null,
-        array $defaultTags = [],
-        bool $useCoroutines = false
-    ) {
+        array               $defaultTags = [],
+        bool                $useCoroutines = false
+    )
+    {
         parent::__construct($level, $formatter);
 
         // Create InfluxDB 2.x client with options array
@@ -86,7 +90,7 @@ class InfluxDB2Logger extends AbstractLogger
             "token" => $token,
             "bucket" => $bucket,
             "org" => $org,
-            "precision" => \InfluxDB2\Model\WritePrecision::S
+            "precision" => WritePrecision::S
         ]);
 
         $this->bucket = $bucket;
@@ -103,78 +107,10 @@ class InfluxDB2Logger extends AbstractLogger
 
         // Get write API with batching options
         $this->writeApi = $this->client->createWriteApi([
-            'writeType' => \InfluxDB2\WriteType::BATCHING,
+            'writeType' => WriteType::BATCHING,
             'batchSize' => 1000,
             'flushInterval' => 1000
         ]);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    protected function write(string $level, string $message, array $context = []): void
-    {
-        // Create a data point for InfluxDB
-        $point = Point::measurement($this->measurement)
-            ->addTag('level', strtolower($level));
-
-        // Add default tags
-        foreach ($this->defaultTags as $key => $value) {
-            $point->addTag($key, (string)$value);
-        }
-
-        // Add message as a field
-        $point->addField('message', $message);
-
-        // Extract error information if available
-        if (isset($context['error']) && $context['error'] instanceof \Throwable) {
-            $error = $context['error'];
-            $point->addField('error_message', $error->getMessage());
-            $point->addField('error_file', $error->getFile());
-            $point->addField('error_line', (string)$error->getLine());
-            $point->addField('error_trace', $error->getTraceAsString());
-        }
-
-        // Add custom tags from context
-        if (isset($context['tags']) && is_array($context['tags'])) {
-            foreach ($context['tags'] as $key => $value) {
-                $point->addTag($key, (string)$value);
-            }
-        }
-
-        // Add other context fields, excluding 'tags' and 'error' which are handled separately
-        foreach ($context as $key => $value) {
-            if ($key !== 'tags' && $key !== 'error') {
-                // Convert arrays and objects to JSON strings
-                if (is_array($value) || is_object($value)) {
-                    $value = json_encode($value);
-                }
-
-                // Only add scalar values as fields
-                if (is_scalar($value) || is_null($value)) {
-                    $point->addField($key, $value);
-                }
-            }
-        }
-
-        // Write the point - use coroutines if enabled
-        if ($this->useCoroutines && Coroutine::getCid() >= 0) {
-            // Use Swoole coroutine for non-blocking writes
-            Coroutine::create(function () use ($point) {
-                try {
-                    $this->writeApi->write($point);
-                } catch (\Throwable $e) {
-                    error_log('Error writing to InfluxDB: ' . $e->getMessage());
-                }
-            });
-        } else {
-            // Synchronous write
-            try {
-                $this->writeApi->write($point);
-            } catch (\Throwable $e) {
-                error_log('Error writing to InfluxDB: ' . $e->getMessage());
-            }
-        }
     }
 
     /**
@@ -221,8 +157,76 @@ class InfluxDB2Logger extends AbstractLogger
         // Flush any remaining points in the buffer
         try {
             $this->writeApi->close();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             error_log('Error closing InfluxDB write API: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function write(string $level, string $message, array $context = []): void
+    {
+        // Create a data point for InfluxDB
+        $point = Point::measurement($this->measurement)
+            ->addTag('level', strtolower($level));
+
+        // Add default tags
+        foreach ($this->defaultTags as $key => $value) {
+            $point->addTag($key, (string)$value);
+        }
+
+        // Add message as a field
+        $point->addField('message', $message);
+
+        // Extract error information if available
+        if (isset($context['error']) && $context['error'] instanceof Throwable) {
+            $error = $context['error'];
+            $point->addField('error_message', $error->getMessage());
+            $point->addField('error_file', $error->getFile());
+            $point->addField('error_line', (string)$error->getLine());
+            $point->addField('error_trace', $error->getTraceAsString());
+        }
+
+        // Add custom tags from context
+        if (isset($context['tags']) && is_array($context['tags'])) {
+            foreach ($context['tags'] as $key => $value) {
+                $point->addTag($key, (string)$value);
+            }
+        }
+
+        // Add other context fields, excluding 'tags' and 'error' which are handled separately
+        foreach ($context as $key => $value) {
+            if ($key !== 'tags' && $key !== 'error') {
+                // Convert arrays and objects to JSON strings
+                if (is_array($value) || is_object($value)) {
+                    $value = json_encode($value);
+                }
+
+                // Only add scalar values as fields
+                if (is_scalar($value) || is_null($value)) {
+                    $point->addField($key, $value);
+                }
+            }
+        }
+
+        // Write the point - use coroutines if enabled
+        if ($this->useCoroutines && Coroutine::getCid() >= 0) {
+            // Use Swoole coroutine for non-blocking writes
+            Coroutine::create(function () use ($point) {
+                try {
+                    $this->writeApi->write($point);
+                } catch (Throwable $e) {
+                    error_log('Error writing to InfluxDB: ' . $e->getMessage());
+                }
+            });
+        } else {
+            // Synchronous write
+            try {
+                $this->writeApi->write($point);
+            } catch (Throwable $e) {
+                error_log('Error writing to InfluxDB: ' . $e->getMessage());
+            }
         }
     }
 }

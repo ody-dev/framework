@@ -38,6 +38,17 @@ class LoggingServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+
+    }
+
+    /**
+     * Bootstrap any application services
+     *
+     * @return void
+     */
+    public function boot(): void
+    {
+        // No bootstrapping needed
         // Register a default NullLogger for LoggerInterface to prevent circular dependencies
         $this->instance(LoggerInterface::class, new NullLogger());
 
@@ -56,15 +67,5 @@ class LoggingServiceProvider extends ServiceProvider
         $this->singleton(LoggerInterface::class, function ($container) {
             return $container->make(LogManager::class)->channel();
         });
-    }
-
-    /**
-     * Bootstrap any application services
-     *
-     * @return void
-     */
-    public function boot(): void
-    {
-        // No bootstrapping needed
     }
 }

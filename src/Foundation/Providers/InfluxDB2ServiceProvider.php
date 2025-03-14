@@ -73,47 +73,5 @@ class InfluxDB2ServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Add InfluxDB2 driver to the LogManager if available
-        if ($this->container->has(LogManager::class)) {
-            $logManager = $this->container->make(LogManager::class);
-
-            // Check if LogManager has the extend method
-            if (method_exists($logManager, 'extend')) {
-                $container = $this->container;
-
-                // Register the InfluxDB 2.x driver
-                $logManager->extend('influxdb2', function ($config) use ($container) {
-                    // Get default InfluxDB config and merge with channel-specific config
-                    $influxConfig = $container->make(Config::class)->get('influxdb', []);
-                    $mergedConfig = array_merge($influxConfig, $config);
-
-                    // Create and return the InfluxDB 2.x logger
-                    return new InfluxDB2Logger(
-                        $mergedConfig['url'] ?? 'http://localhost:8086',
-                        $mergedConfig['token'] ?? '',
-                        $mergedConfig['org'] ?? 'organization',
-                        $mergedConfig['bucket'] ?? 'logs',
-                        $mergedConfig['log_level'] ?? 'debug',
-                        null,
-                        $mergedConfig['tags'] ?? [],
-                        $mergedConfig['use_coroutines'] ?? true
-                    );
-                });
-
-                // Add a default InfluxDB 2.x channel configuration if not already present
-                if (method_exists($logManager, 'addChannel')) {
-                    if (!$logManager->hasChannel('influxdb2')) {
-                        $logManager->addChannel('influxdb2', [
-                            'driver' => 'influxdb2',
-                            // Default channel-specific configuration
-                            'measurement' => config('influxdb.measurement', 'logs'),
-                            'tags' => [
-                                'channel' => 'influxdb2'
-                            ]
-                        ]);
-                    }
-                }
-            }
-        }
     }
 }

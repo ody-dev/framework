@@ -10,6 +10,7 @@
 namespace Ody\Foundation\Logging;
 
 use Psr\Log\LogLevel;
+use Psr\Log\LoggerInterface;
 
 /**
  * Group Logger
@@ -58,12 +59,45 @@ class GroupLogger extends AbstractLogger
      */
     protected function write(string $level, string $message, array $context = []): void
     {
-        foreach ($this->loggers as $logger) {
-            if ($logger->getLevel() !== $this->level) {
-                $logger->setLevel($this->level);
-            }
+        $errors = [];
 
-            $logger->log($level, $message, $context);
+        foreach ($this->loggers as $index => $logger) {
+            try {
+                // Forward the log message to each logger
+                $logger->log($level, $message, $context);
+            } catch (\Throwable $e) {
+                // Collect the error but don't interrupt other loggers
+                $loggerClass = get_class($logger);
+                $errors[] = "Logger #{$index} ({$loggerClass}) error: " . $e->getMessage();
+
+                // Output to error_log as a fallback
+                error_log("GroupLogger error with {$loggerClass}: " . $e->getMessage());
+            }
         }
+
+        // If we had errors, add them to the context for the next logger
+        if (!empty($errors)) {
+            $context['group_logger_errors'] = $errors;
+        }
+    }
+
+    /**
+     * Get all loggers in this group
+     *
+     * @return array
+     */
+    public function getLoggers(): array
+    {
+        return $this->loggers;
+    }
+
+    /**
+     * Count the number of loggers in this group
+     *
+     * @return int
+     */
+    public function count(): int
+    {
+        return count($this->loggers);
     }
 }

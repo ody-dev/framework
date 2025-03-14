@@ -29,7 +29,7 @@ return [
         // Default stacked channel (logs to multiple destinations)
         'stack' => [
             'driver' => 'group',
-            'channels' => ['stdout', 'influxdb'],
+            'channels' => ['file', 'stdout', 'influxdb'],
             'level' => env('LOG_LEVEL', LogLevel::DEBUG),
         ],
 
@@ -102,7 +102,8 @@ return [
         ],
 
         'influxdb' => [
-            'driver' => 'influxdb2',
+            'driver' => 'custom',
+            'via' => \Ody\Foundation\Logging\InfluxDB2Logger::class,
             'log_level' => env('INFLUXDB_LOG_LEVEL', 'debug'),
             'use_coroutines' => env('INFLUXDB_USE_COROUTINES', true),
             'tags' => [
