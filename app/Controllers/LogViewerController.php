@@ -9,23 +9,24 @@
 
 namespace App\Controllers;
 
-use InfluxDB\Database;
+use InfluxDB2\Client;
+use InfluxDB2\QueryApi;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Ody\Foundation\Http\Response;
 use Psr\Log\LoggerInterface;
 
 /**
- * Log Viewer Controller
+ * Log Viewer Controller for InfluxDB 2.x
  *
- * Provides endpoints for retrieving logs from InfluxDB
+ * Provides endpoints for retrieving logs from InfluxDB 2.x
  */
 class LogViewerController
 {
     /**
-     * @var Database InfluxDB database
+     * @var Client InfluxDB client
      */
-    private $database;
+    private $client;
 
     /**
      * @var LoggerInterface
@@ -33,14 +34,36 @@ class LogViewerController
     private $logger;
 
     /**
+     * @var string Organization name
+     */
+    private $org;
+
+    /**
+     * @var string Bucket name
+     */
+    private $bucket;
+
+    /**
+     * @var QueryApi The query API
+     */
+    private $queryApi;
+
+    /**
      * LogViewerController constructor
      *
      * Dependencies are automatically injected by the container
      */
-    public function __construct(Database $database, LoggerInterface $logger)
+    public function __construct(Client $client, LoggerInterface $logger)
     {
-        $this->database = $database;
+        $this->client = $client;
         $this->logger = $logger;
+
+        // Get org and bucket from config
+        $this->org = config('influxdb.org', 'organization');
+        $this->bucket = config('influxdb.bucket', 'logs');
+
+        // Initialize query API
+        $this->queryApi = $this->client->createQueryApi();
     }
 
     /**
@@ -53,6 +76,7 @@ class LogViewerController
      */
     public function recent(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
+        logger('Application started', ['module' => 'core']);
         try {
             // Get query parameters
             $queryParams = $request->getQueryParams();
@@ -66,42 +90,56 @@ class LogViewerController
             // Optional level filter
             $level = $queryParams['level'] ?? null;
 
-            // Build the InfluxDB query
-            $query = "SELECT * FROM logs WHERE time > now() - {$timeRange}";
+            // Build the Flux query
+            $flux = "from(bucket: \"{$this->bucket}\")
+                |> range(start: -{$timeRange})
+                |> filter(fn: (r) => r._measurement == \"logs\")";
 
             // Add service filter if specified
             if ($service) {
-                $query .= " AND service = '{$service}'";
+                $flux .= "\n|> filter(fn: (r) => r.service == \"{$service}\")";
             }
 
             // Add level filter if specified
             if ($level) {
-                $query .= " AND level = '{$level}'";
+                $flux .= "\n|> filter(fn: (r) => r.level == \"{$level}\")";
             }
 
             // Order by time descending and limit results
             $limit = $queryParams['limit'] ?? 100;
-            $query .= " ORDER BY time DESC LIMIT {$limit}";
+            $flux .= "\n|> sort(columns: [\"_time\"], desc: true)
+                |> limit(n: {$limit})";
 
             // Execute the query
-            $result = $this->database->query($query);
+            $tables = $this->queryApi->query($flux);
 
             // Process results
             $logs = [];
-            foreach ($result->getPoints() as $point) {
-                // Convert InfluxDB point to a more client-friendly format
-                $logs[] = [
-                    'timestamp' => $point['time'],
-                    'level' => $point['level'] ?? 'unknown',
-                    'service' => $point['service'] ?? 'unknown',
-                    'message' => $point['message'] ?? '',
-                    'context' => $this->extractContext($point),
-                ];
+            foreach ($tables as $table) {
+                foreach ($table->records as $record) {
+                    $key = $record->getTime() . '_' . ($record->values["service"] ?? 'unknown');
+
+                    if (!isset($logs[$key])) {
+                        $logs[$key] = [
+                            'timestamp' => $record->getTime(),
+                            'level' => $record->values["level"] ?? 'unknown',
+                            'service' => $record->values["service"] ?? 'unknown',
+                            'message' => $record->values["message"] ?? '',
+                            'context' => []
+                        ];
+                    }
+
+                    // Add field to context if it's not a standard field
+                    $fieldName = $record->getField();
+                    if (!in_array($fieldName, ['message', 'level', 'service', '_time', '_measurement', '_field', '_value'])) {
+                        $logs[$key]['context'][$fieldName] = $record->getValue();
+                    }
+                }
             }
 
             return $this->jsonResponse($response, [
                 'success' => true,
-                'logs' => $logs,
+                'logs' => array_values($logs), // Convert associative array to indexed array
                 'count' => count($logs),
                 'query' => [
                     'timeRange' => $timeRange,
@@ -131,13 +169,23 @@ class LogViewerController
     public function services(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
         try {
-            // Query for distinct service values
-            $query = "SHOW TAG VALUES FROM logs WITH KEY = service";
-            $result = $this->database->query($query);
+            // Query for distinct service values using Flux
+            $flux = "import \"influxdata/influxdb/schema\"
+                
+                schema.tagValues(
+                    bucket: \"{$this->bucket}\",
+                    tag: \"service\",
+                    predicate: (r) => r._measurement == \"logs\"
+                )";
+
+            // Execute the query
+            $tables = $this->queryApi->query($flux);
 
             $services = [];
-            foreach ($result->getPoints() as $point) {
-                $services[] = $point['value'];
+            foreach ($tables as $table) {
+                foreach ($table->records as $record) {
+                    $services[] = $record->getValue();
+                }
             }
 
             return $this->jsonResponse($response, [
@@ -165,13 +213,23 @@ class LogViewerController
     public function levels(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
         try {
-            // Query for distinct level values
-            $query = "SHOW TAG VALUES FROM logs WITH KEY = level";
-            $result = $this->database->query($query);
+            // Query for distinct level values using Flux
+            $flux = "import \"influxdata/influxdb/schema\"
+                
+                schema.tagValues(
+                    bucket: \"{$this->bucket}\",
+                    tag: \"level\",
+                    predicate: (r) => r._measurement == \"logs\"
+                )";
+
+            // Execute the query
+            $tables = $this->queryApi->query($flux);
 
             $levels = [];
-            foreach ($result->getPoints() as $point) {
-                $levels[] = $point['value'];
+            foreach ($tables as $table) {
+                foreach ($table->records as $record) {
+                    $levels[] = $record->getValue();
+                }
             }
 
             return $this->jsonResponse($response, [
@@ -186,28 +244,6 @@ class LogViewerController
                 'error' => 'Failed to retrieve log levels: ' . $e->getMessage(),
             ]);
         }
-    }
-
-    /**
-     * Extract context fields from an InfluxDB point
-     *
-     * @param array $point
-     * @return array
-     */
-    private function extractContext(array $point): array
-    {
-        $context = [];
-
-        // Extract all fields that aren't standard log fields
-        $standardFields = ['time', 'level', 'service', 'message', 'environment'];
-
-        foreach ($point as $key => $value) {
-            if (!in_array($key, $standardFields)) {
-                $context[$key] = $value;
-            }
-        }
-
-        return $context;
     }
 
     /**

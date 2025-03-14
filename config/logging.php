@@ -29,7 +29,7 @@ return [
         // Default stacked channel (logs to multiple destinations)
         'stack' => [
             'driver' => 'group',
-            'channels' => ['file', 'stdout'],
+            'channels' => ['stdout', 'influxdb'],
             'level' => env('LOG_LEVEL', LogLevel::DEBUG),
         ],
 
@@ -100,6 +100,20 @@ return [
             'level' => env('LOG_LEVEL', LogLevel::INFO),
             'formatter' => 'line',
         ],
+
+        'influxdb' => [
+            'driver' => 'influxdb2',
+            'log_level' => env('INFLUXDB_LOG_LEVEL', 'debug'),
+            'use_coroutines' => env('INFLUXDB_USE_COROUTINES', true),
+            'tags' => [
+                'service' => env('APP_NAME', 'ody-service'),
+                'environment' => env('APP_ENV', 'production'),
+                'instance' => env('INSTANCE_ID', gethostname()),
+            ],
+            'measurement' => env('INFLUXDB_MEASUREMENT', 'logs'),
+        ],
+
+
 
         // Example of custom callable handler
         // 'custom' => [

@@ -189,6 +189,8 @@ if (!function_exists('logger')) {
     {
         $logger = app('logger');
 
+        dd($logger);
+
         if (is_null($message)) {
             return $logger;
         }
