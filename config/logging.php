@@ -29,7 +29,7 @@ return [
         // Default stacked channel (logs to multiple destinations)
         'stack' => [
             'driver' => 'group',
-            'channels' => ['file', 'stdout', 'influxdb'],
+            'channels' => ['file', 'stdout'],
             'level' => env('LOG_LEVEL', LogLevel::DEBUG),
         ],
 
@@ -102,16 +102,19 @@ return [
         ],
 
         'influxdb' => [
-            'driver' => 'custom',
-            'via' => \Ody\Foundation\Logging\InfluxDB2Logger::class,
-            'log_level' => env('INFLUXDB_LOG_LEVEL', 'debug'),
-            'use_coroutines' => env('INFLUXDB_USE_COROUTINES', true),
+            'driver' => 'influxdb',
+            'url' => env('INFLUXDB_URL', 'http://127.0.0.1:8086'),
+            'token' => env('INFLUXDB_TOKEN', ''),
+            'org' => env('INFLUXDB_ORG', 'organization'),
+            'bucket' => env('INFLUXDB_BUCKET', 'logs'),
+            'measurement' => env('INFLUXDB_MEASUREMENT', 'logs'),
+            'level' => env('INFLUXDB_LOG_LEVEL', 'debug'),
+            'use_coroutines' => env('INFLUXDB_USE_COROUTINES', false),
             'tags' => [
                 'service' => env('APP_NAME', 'ody-service'),
                 'environment' => env('APP_ENV', 'production'),
                 'instance' => env('INSTANCE_ID', gethostname()),
             ],
-            'measurement' => env('INFLUXDB_MEASUREMENT', 'logs'),
         ],
 
 

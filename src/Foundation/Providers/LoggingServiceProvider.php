@@ -13,15 +13,6 @@ use Psr\Log\NullLogger;
 class LoggingServiceProvider extends ServiceProvider
 {
     /**
-     * Services that should be registered as singletons
-     *
-     * @var array
-     */
-    protected array $singletons = [
-        LogManager::class => null
-    ];
-
-    /**
      * Services that should be registered as aliases
      *
      * @var array
@@ -38,7 +29,6 @@ class LoggingServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-
     }
 
     /**

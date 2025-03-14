@@ -13,7 +13,7 @@ use Psr\Log\LogLevel;
 
 /**
  * Stream Logger
- * Logs messages to a stream (stdout, stderr, etc.)
+ * Logs messages to a stream (stdout, stderr, etc.) with self-registration capabilities
  */
 class StreamLogger extends AbstractLogger
 {
@@ -54,6 +54,56 @@ class StreamLogger extends AbstractLogger
 
         if (!is_resource($this->stream)) {
             throw new \RuntimeException('Failed to open stream');
+        }
+
+        $this->closeOnDestruct = $closeOnDestruct;
+    }
+
+    /**
+     * Create a stream logger from configuration
+     *
+     * @param array $config
+     * @return LoggerInterface
+     * @throws \InvalidArgumentException
+     */
+    public static function create(array $config): LoggerInterface
+    {
+        if (!isset($config['stream'])) {
+            throw new \InvalidArgumentException("Stream logger requires a 'stream' configuration value");
+        }
+
+        // Create formatter
+        $formatter = self::createFormatter($config);
+
+        // Create and return the logger
+        return new self(
+            $config['stream'],
+            $config['level'] ?? LogLevel::DEBUG,
+            $formatter,
+            $config['close_on_destruct'] ?? false
+        );
+    }
+
+    /**
+     * Create a formatter based on configuration
+     *
+     * @param array $config
+     * @return FormatterInterface
+     */
+    protected static function createFormatter(array $config): FormatterInterface
+    {
+        $formatterType = $config['formatter'] ?? 'line';
+
+        switch ($formatterType) {
+            case 'json':
+                return new JsonFormatter();
+
+            case 'line':
+            default:
+                return new LineFormatter(
+                    $config['format'] ?? null,
+                    $config['date_format'] ?? null
+                );
         }
     }
 

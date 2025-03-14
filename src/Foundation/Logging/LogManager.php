@@ -14,8 +14,8 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * LogManager with lazy-loading support for custom drivers
- * Factory and manager for loggers
+ * LogManager with enhanced driver discovery
+ * Factory and manager for loggers with support for self-registering drivers
  */
 class LogManager
 {
@@ -62,9 +62,9 @@ class LogManager
     protected array $loggers = [];
 
     /**
-     * @var array Custom driver creators
+     * @var array Custom driver to class mappings
      */
-    protected array $customCreators = [];
+    protected array $driverMap = [];
 
     /**
      * @var bool Whether we're in debug mode
@@ -75,6 +75,14 @@ class LogManager
      * @var bool Flag to prevent circular resolution of channels
      */
     protected array $resolvingChannels = [];
+
+    /**
+     * @var array Default namespaces to search for logger classes
+     */
+    protected array $namespaces = [
+        '\\Ody\\Foundation\\Logging\\',
+        '\\App\\Logging\\',
+    ];
 
     /**
      * Constructor
@@ -88,6 +96,25 @@ class LogManager
 
         // Set debug mode
         $this->debug = (bool)env('APP_DEBUG', false);
+
+        // Initialize default driver map for built-in loggers
+        $this->initDefaultDriverMap();
+    }
+
+    /**
+     * Initialize default driver map for built-in loggers
+     *
+     * @return void
+     */
+    protected function initDefaultDriverMap(): void
+    {
+        $this->driverMap = [
+            'file' => FileLogger::class,
+            'stream' => StreamLogger::class,
+            'null' => NullLogger::class,
+            'group' => GroupLogger::class,
+            'callable' => CallableLogger::class
+        ];
     }
 
     /**
@@ -167,65 +194,80 @@ class LogManager
 
         $driver = $config['driver'];
 
-        // Check for custom driver creator first
-        if (isset($this->customCreators[$driver])) {
-            return $this->callCustomCreator($driver, $config);
+        // Special case for group/stack driver since it needs access to the LogManager
+        if ($driver === 'group' || $driver === 'stack') {
+            return $this->createGroupLogger($config);
         }
 
-        // Handle "custom" driver with "via" class
-        if ($driver === 'custom' && isset($config['via'])) {
-            return $this->createCustomLogger($config);
+        // 1. If explicit class is defined in config, use it directly
+        if (isset($config['class'])) {
+            return $this->createLoggerFromClass($config['class'], $config);
         }
 
-        // Create formatter
-        $formatter = $this->createFormatter($config);
-
-        // Create logger based on driver
-        switch ($driver) {
-            case 'file':
-                return $this->createFileLogger($config, $formatter);
-
-            case 'stream':
-                return $this->createStreamLogger($config, $formatter);
-
-            case 'callable':
-                if (!isset($config['handler']) || !is_callable($config['handler'])) {
-                    throw new \InvalidArgumentException("Log channel '{$channel}' requires a callable handler");
-                }
-
-                return new CallableLogger(
-                    $config['handler'],
-                    $config['level'] ?? LogLevel::DEBUG,
-                    $formatter
-                );
-
-            case 'null':
-                return new NullLogger(
-                    $config['level'] ?? LogLevel::DEBUG,
-                    $formatter
-                );
-
-            case 'group':
-                return $this->createGroupLogger($config, $formatter);
-
-            default:
-                // Try to use a registered custom driver creator
-                if (in_array($driver, array_keys($this->customCreators))) {
-                    return $this->callCustomCreator($driver, $config);
-                }
-
-                throw new \InvalidArgumentException("Log driver '{$driver}' is not supported");
+        // 2. Check the driver map for registered loggers
+        if (isset($this->driverMap[$driver])) {
+            return $this->createLoggerFromClass($this->driverMap[$driver], $config);
         }
+
+        // 3. Try to auto-discover the logger class by convention
+        $loggerClass = $this->discoverLoggerClass($driver);
+        if ($loggerClass) {
+            return $this->createLoggerFromClass($loggerClass, $config);
+        }
+
+        // 4. Cannot find an appropriate logger
+        throw new \InvalidArgumentException("Log driver '{$driver}' is not supported and no matching class was found");
+    }
+
+    /**
+     * Attempt to discover a logger class by convention
+     *
+     * @param string $driver
+     * @return string|null The fully qualified class name if found, null otherwise
+     */
+    protected function discoverLoggerClass(string $driver): ?string
+    {
+        $className = ucfirst($driver) . 'Logger';
+
+        foreach ($this->namespaces as $namespace) {
+            $fullyQualifiedClass = $namespace . $className;
+            if (class_exists($fullyQualifiedClass) &&
+                method_exists($fullyQualifiedClass, 'create')) {
+                return $fullyQualifiedClass;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Create a logger from a class name
+     *
+     * @param string $class
+     * @param array $config
+     * @return LoggerInterface
+     * @throws \InvalidArgumentException If the class doesn't exist or doesn't have a create method
+     */
+    protected function createLoggerFromClass(string $class, array $config): LoggerInterface
+    {
+        if (!class_exists($class)) {
+            throw new \InvalidArgumentException("Logger class '{$class}' does not exist");
+        }
+
+        if (!method_exists($class, 'create')) {
+            throw new \InvalidArgumentException("Logger class '{$class}' must have a static 'create' method");
+        }
+
+        return $class::create($config);
     }
 
     /**
      * Create a group logger
      *
      * @param array $config
-     * @param FormatterInterface $formatter
      * @return GroupLogger
      */
-    protected function createGroupLogger(array $config, FormatterInterface $formatter): GroupLogger
+    protected function createGroupLogger(array $config): GroupLogger
     {
         // Ensure channels array exists
         if (!isset($config['channels']) || !is_array($config['channels']) || empty($config['channels'])) {
@@ -264,115 +306,15 @@ class LogManager
             }
         }
 
+        // We need to create a formatter for the group logger
+        $formatter = $this->createFormatter($config);
+
         // Create the group logger with the collected channel loggers
         return new GroupLogger(
             $loggers,
             $config['level'] ?? LogLevel::DEBUG,
             $formatter
         );
-    }
-
-    /**
-     * Create a custom logger using "via" class
-     *
-     * @param array $config
-     * @return LoggerInterface
-     */
-    protected function createCustomLogger(array $config): LoggerInterface
-    {
-        $via = $config['via'];
-
-        // If it's a class name, instantiate it
-        if (is_string($via)) {
-            // Check if class exists
-            if (!class_exists($via)) {
-                throw new \InvalidArgumentException("Custom logger class '{$via}' does not exist");
-            }
-
-            // Try to resolve from app container if available
-            if (function_exists('app') && app()->has($via)) {
-                $instance = app()->make($via);
-            } else {
-                $instance = new $via();
-            }
-
-            // If the instance has a __invoke method, call it with the config
-            if (method_exists($instance, '__invoke')) {
-                return $instance($config);
-            }
-
-            // If the instance is already a logger, return it
-            if ($instance instanceof LoggerInterface) {
-                return $instance;
-            }
-
-            throw new \InvalidArgumentException("Custom logger class '{$via}' must be invokable or implement LoggerInterface");
-        }
-
-        // If it's already a logger instance, return it
-        if ($via instanceof LoggerInterface) {
-            return $via;
-        }
-
-        // If it's a callable, invoke it with the config
-        if (is_callable($via)) {
-            $logger = $via($config);
-
-            if (!$logger instanceof LoggerInterface) {
-                throw new \InvalidArgumentException("Custom logger callable must return a LoggerInterface instance");
-            }
-
-            return $logger;
-        }
-
-        throw new \InvalidArgumentException("Invalid 'via' configuration for custom logger");
-    }
-
-    /**
-     * Call a custom creator for a driver
-     *
-     * @param string $driver
-     * @param array $config
-     * @return LoggerInterface
-     */
-    protected function callCustomCreator(string $driver, array $config): LoggerInterface
-    {
-        if (!isset($this->customCreators[$driver])) {
-            throw new \InvalidArgumentException("No custom creator registered for driver '{$driver}'");
-        }
-
-        try {
-            $logger = $this->customCreators[$driver]($config);
-
-            if (!$logger instanceof LoggerInterface) {
-                throw new \InvalidArgumentException("Custom creator for '{$driver}' must return a LoggerInterface instance");
-            }
-
-            return $logger;
-        } catch (\Throwable $e) {
-            error_log("Error creating custom logger for driver '{$driver}': " . $e->getMessage());
-            throw $e;
-        }
-    }
-
-    /**
-     * Register a custom driver creator
-     *
-     * @param string $driver
-     * @param callable $callback
-     * @return self
-     */
-    public function extend(string $driver, callable $callback): self
-    {
-        $this->customCreators[$driver] = $callback;
-        $this->customCreators[$driver] = $callback;
-
-        // Debug message to help with troubleshooting
-        if ($this->debug) {
-            error_log("Registered custom log driver: '{$driver}'");
-        }
-
-        return $this;
     }
 
     /**
@@ -399,89 +341,45 @@ class LogManager
     }
 
     /**
-     * Create a file logger
+     * Register a custom driver mapping
      *
-     * @param array $config
-     * @param FormatterInterface $formatter
-     * @return FileLogger
+     * @param string $driver The driver name
+     * @param string $class Fully qualified class name
+     * @return self
      */
-    protected function createFileLogger(array $config, FormatterInterface $formatter): FileLogger
+    public function registerDriver(string $driver, string $class): self
     {
-        // Make sure we have a path
-        if (!isset($config['path'])) {
-            throw new \InvalidArgumentException("File logger requires a 'path' configuration value");
-        }
+        $this->driverMap[$driver] = $class;
 
-        // Get the path and handle path placeholders like storage_path()
-        $path = $config['path'];
-
-        // If the path starts with a function name, try to resolve it
-        if (preg_match('/^([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)\(/', $path, $matches)) {
-            $function = $matches[1];
-            if (function_exists($function)) {
-                // Extract the arguments
-                preg_match('/^[^(]*\(([^)]*)\)/', $path, $argMatches);
-                $argString = $argMatches[1] ?? '';
-
-                // Parse the arguments
-                $args = [];
-                if (!empty($argString)) {
-                    // Split by commas outside of quotes
-                    $argParts = preg_split('/,(?=(?:[^"]*"[^"]*")*[^"]*$)/', $argString);
-
-                    // Process each argument
-                    foreach ($argParts as $arg) {
-                        $arg = trim($arg);
-                        // Remove quotes
-                        $arg = preg_replace('/^[\'"]|[\'"]$/', '', $arg);
-                        $args[] = $arg;
-                    }
-                }
-
-                // Call the function with the arguments
-                $path = call_user_func_array($function, $args);
+        // If this driver was already resolved and cached, clear it
+        // so it will be recreated with the new implementation
+        foreach ($this->loggers as $channel => $logger) {
+            if (isset($this->config['channels'][$channel]['driver']) &&
+                $this->config['channels'][$channel]['driver'] === $driver) {
+                unset($this->loggers[$channel]);
             }
         }
 
-        // Add date suffix for daily files
-        if (strpos($path, 'daily-') !== false) {
-            $path = str_replace('daily-', 'daily-' . date('Y-m-d') . '-', $path);
-        }
-
-        // Ensure directory exists
-        $dir = dirname($path);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
-
-        return new FileLogger(
-            $path,
-            $config['level'] ?? LogLevel::DEBUG,
-            $formatter,
-            $config['rotate'] ?? false,
-            $config['max_file_size'] ?? 10485760
-        );
+        return $this;
     }
 
     /**
-     * Create a stream logger
+     * Register a namespace for auto-discovery
      *
-     * @param array $config
-     * @param FormatterInterface $formatter
-     * @return StreamLogger
+     * @param string $namespace
+     * @return self
      */
-    protected function createStreamLogger(array $config, FormatterInterface $formatter): StreamLogger
+    public function registerNamespace(string $namespace): self
     {
-        if (!isset($config['stream'])) {
-            throw new \InvalidArgumentException("Stream logger requires a 'stream' configuration value");
+        // Ensure namespace ends with \\
+        $namespace = rtrim($namespace, '\\') . '\\';
+
+        // Only add if not already registered
+        if (!in_array($namespace, $this->namespaces)) {
+            $this->namespaces[] = $namespace;
         }
 
-        return new StreamLogger(
-            $config['stream'],
-            $config['level'] ?? LogLevel::DEBUG,
-            $formatter,
-            $config['close_on_destruct'] ?? false
-        );
+        return $this;
     }
 
     /**
@@ -525,12 +423,22 @@ class LogManager
     }
 
     /**
-     * Get the custom creators
+     * Get registered driver mappings
      *
      * @return array
      */
-    public function getCustomCreators(): array
+    public function getDriverMap(): array
     {
-        return array_keys($this->customCreators);
+        return $this->driverMap;
+    }
+
+    /**
+     * Get registered namespaces
+     *
+     * @return array
+     */
+    public function getNamespaces(): array
+    {
+        return $this->namespaces;
     }
 }

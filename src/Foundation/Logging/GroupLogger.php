@@ -14,7 +14,10 @@ use Psr\Log\LoggerInterface;
 
 /**
  * Group Logger
- * Logs messages to multiple loggers at once
+ * Logs messages to multiple loggers at once with self-registration capabilities
+ *
+ * Note: The create() method is a special case that requires the LogManager,
+ * so it's implemented differently from other loggers.
  */
 class GroupLogger extends AbstractLogger
 {
@@ -40,6 +43,27 @@ class GroupLogger extends AbstractLogger
         foreach ($loggers as $logger) {
             $this->addLogger($logger);
         }
+    }
+
+    /**
+     * Create method - note that this is a special case that would typically
+     * be handled directly by the LogManager since it needs access to other channels.
+     *
+     * This implementation is provided for API consistency, but in practice
+     * the LogManager handles group creation itself.
+     *
+     * @param array $config
+     * @return LoggerInterface
+     * @throws \InvalidArgumentException
+     */
+    public static function create(array $config): LoggerInterface
+    {
+        // This is typically handled by LogManager directly
+        // as it needs access to other channels
+        throw new \LogicException(
+            "GroupLogger must be created by the LogManager as it depends on other channels. " .
+            "This method exists only for interface consistency."
+        );
     }
 
     /**

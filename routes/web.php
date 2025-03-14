@@ -91,33 +91,6 @@ Route::group(['prefix' => '/api/v1', 'middleware' => ['throttle:60,1']], functio
     });
 });
 
-// Admin routes
-Route::group(['prefix' => '/admin'], function ($router) {
-    // Admin routes will be defined here
-    $router->get('/dashboard', function (ServerRequestInterface $request, ResponseInterface $response) {
-        $response = $response->withHeader('Content-Type', 'application/json');
-
-        $data = [
-            'admin' => true,
-            'dashboard' => 'Admin Dashboard',
-            'stats' => [
-                'users' => 150,
-                'active' => 120,
-                'new_today' => 5
-            ]
-        ];
-
-        if ($response instanceof Response) {
-            return $response->withJson($data);
-        }
-
-        $response->getBody()->write(json_encode($data));
-        return $response;
-    });
-});
-
-Route::get('/api/logs/recent', 'App\Controllers\LogViewerController@recent');
-
-Route::get('/api/logs/services', 'App\Controllers\LogViewerController@services');
-
-Route::get('/api/logs/levels', 'App\Controllers\LogViewerController@levels');
+Route::get('/api/logs/recent', 'Ody\InfluxDB\Controllers\InfluxDBLogViewerController@recent');
+Route::get('/api/logs/services', 'Ody\InfluxDB\Controllers\InfluxDBLogViewerController@services');
+Route::get('/api/logs/levels', 'Ody\InfluxDB\Controllers\InfluxDBLogViewerController@levels');
