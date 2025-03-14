@@ -10,6 +10,7 @@ return [
     'providers' => [
         Ody\Foundation\Providers\ErrorServiceProvider::class,
         Ody\Foundation\Providers\DatabaseServiceProvider::class,
+        Ody\Foundation\Providers\InfluxDBServiceProvider::class,
 
         // Add your application service providers here
         // App\Providers\CustomServiceProvider::class,

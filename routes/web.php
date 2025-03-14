@@ -115,3 +115,9 @@ Route::group(['prefix' => '/admin'], function ($router) {
         return $response;
     });
 });
+
+Route::get('/api/logs/recent', 'App\Controllers\LogViewerController@recent');
+
+Route::get('/api/logs/services', 'App\Controllers\LogViewerController@services');
+
+Route::get('/api/logs/levels', 'App\Controllers\LogViewerController@levels');

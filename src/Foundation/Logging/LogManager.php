@@ -12,7 +12,7 @@ namespace Ody\Foundation\Logging;
 use Psr\Log\LogLevel;
 
 /**
- * LogManager
+ * LogManager extension with custom driver support
  * Factory and manager for loggers
  */
 class LogManager
@@ -60,6 +60,11 @@ class LogManager
     protected array $loggers = [];
 
     /**
+     * @var array Custom driver creators
+     */
+    protected array $customCreators = [];
+
+    /**
      * Constructor
      *
      * @param array $config Optional configuration to override defaults
@@ -104,11 +109,18 @@ class LogManager
             throw new \InvalidArgumentException("Log channel '{$channel}' has no driver specified");
         }
 
+        $driver = $config['driver'];
+
+        // Check for custom driver creator
+        if (isset($this->customCreators[$driver])) {
+            return $this->callCustomCreator($driver, $config);
+        }
+
         // Create formatter
         $formatter = $this->createFormatter($config);
 
         // Create logger based on driver
-        switch ($config['driver']) {
+        switch ($driver) {
             case 'file':
                 return $this->createFileLogger($config, $formatter);
 
@@ -145,8 +157,33 @@ class LogManager
                 );
 
             default:
-                throw new \InvalidArgumentException("Log driver '{$config['driver']}' is not supported");
+                throw new \InvalidArgumentException("Log driver '{$driver}' is not supported");
         }
+    }
+
+    /**
+     * Call a custom creator for a driver
+     *
+     * @param string $driver
+     * @param array $config
+     * @return LoggerInterface
+     */
+    protected function callCustomCreator(string $driver, array $config): LoggerInterface
+    {
+        return $this->customCreators[$driver]($config);
+    }
+
+    /**
+     * Register a custom driver creator
+     *
+     * @param string $driver
+     * @param callable $callback
+     * @return self
+     */
+    public function extend(string $driver, callable $callback): self
+    {
+        $this->customCreators[$driver] = $callback;
+        return $this;
     }
 
     /**
@@ -226,6 +263,11 @@ class LogManager
      */
     public function custom(string $driver, array $options = []): LoggerInterface
     {
+        // Check for custom driver creator
+        if (isset($this->customCreators[$driver])) {
+            return $this->callCustomCreator($driver, $options);
+        }
+
         $formatter = $this->createFormatter($options);
 
         switch ($driver) {
@@ -255,5 +297,39 @@ class LogManager
             default:
                 throw new \InvalidArgumentException("Log driver '{$driver}' is not supported");
         }
+    }
+
+    /**
+     * Get available channel names
+     *
+     * @return array
+     */
+    public function getChannels(): array
+    {
+        return array_keys($this->config['channels']);
+    }
+
+    /**
+     * Check if a channel exists
+     *
+     * @param string $channel
+     * @return bool
+     */
+    public function hasChannel(string $channel): bool
+    {
+        return isset($this->config['channels'][$channel]);
+    }
+
+    /**
+     * Add a new channel configuration
+     *
+     * @param string $channel
+     * @param array $config
+     * @return self
+     */
+    public function addChannel(string $channel, array $config): self
+    {
+        $this->config['channels'][$channel] = $config;
+        return $this;
     }
 }
