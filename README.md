@@ -247,9 +247,6 @@ logger()->info('Processing request');
 ```
 
 # Custom Loggers in ODY Framework
-
-ODY Framework provides a flexible, standardized way to create custom loggers that seamlessly integrate with the framework's logging system. This document explains how to create and register custom loggers.
-
 ## Creating Custom Loggers
 
 ### Basic Requirements
@@ -474,29 +471,6 @@ If your logger follows the naming convention `{Driver}Logger` and is in one of t
 
 The framework will search for `RedisLogger` in the registered namespaces (`\Ody\Foundation\Logging\` and `\App\Logging\` by default).
 
-### Using in a Stack
-
-You can include your custom logger in a stack to log to multiple destinations:
-
-```php
-'stack' => [
-    'driver' => 'group',
-    'channels' => ['file', 'redis', 'slack'],
-],
-```
-
-## Advanced Customization
-
-### Registering Custom Namespaces
-
-You can register additional namespaces to be searched for logger classes:
-
-```php
-$logManager->registerNamespace('MyPackage\\Logging\\');
-```
-
-This is useful for third-party packages that provide their own loggers.
-
 ### Creating Custom Formatters
 
 If the standard formatters don't meet your needs, you can create your own by implementing the `FormatterInterface`:
@@ -555,24 +529,6 @@ logger('API request processed', ['endpoint' => '/users']);
 ---
 
 With this system, you can create custom loggers that integrate seamlessly with the ODY Framework logging infrastructure.
-
-## Working with Swoole
-
-The framework integrates with Swoole to provide high-performance asynchronous processing:
-
-```php
-// Example of using Swoole-specific features
-if (extension_loaded('swoole')) {
-    // Create a coroutine
-    \Swoole\Coroutine\run(function() {
-        // Perform async operations
-        $result = \Swoole\Coroutine\System::exec('long_running_command');
-        
-        // Log the result
-        logger()->info('Command completed', $result);
-    });
-}
-```
 
 ## Service Providers
 
