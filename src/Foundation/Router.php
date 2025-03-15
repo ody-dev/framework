@@ -1,13 +1,5 @@
 <?php
-/*
- * This file is part of ODY framework.
- *
- * @link     https://ody.dev
- * @document https://ody.dev/docs
- * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
- */
-
-declare(strict_types=1);
+// Direct fix for Router.php
 
 namespace Ody\Foundation;
 
@@ -20,6 +12,11 @@ use function FastRoute\simpleDispatcher;
 
 class Router
 {
+    /**
+     * Store all routes in a static property to persist between instances
+     */
+    private static array $allRoutes = [];
+
     /**
      * @var Dispatcher|null
      */
@@ -60,6 +57,153 @@ class Router
         } else {
             $this->middlewareRegistry = new MiddlewareRegistry($this->container);
         }
+
+        // IMPORTANT: Always use the static routes if available
+        if (!empty(self::$allRoutes)) {
+            $this->routes = self::$allRoutes;
+            error_log("Router: Loaded " . count($this->routes) . " routes from static storage");
+        }
+    }
+
+    /**
+     * Register a GET route
+     *
+     * @param string $path
+     * @param mixed $handler
+     * @return Route
+     */
+    public function get(string $path, $handler): Route
+    {
+        $route = new Route('GET', $path, $handler, $this->middlewareRegistry);
+
+        // Add to instance routes
+        $this->routes[] = ['GET', $path, $handler];
+
+        // IMPORTANT: Also store in static property
+        self::$allRoutes[] = ['GET', $path, $handler];
+
+        error_log("Router: Registered GET route: {$path}");
+
+        return $route;
+    }
+
+    // Add the same pattern for other HTTP methods
+    public function post(string $path, $handler): Route
+    {
+        $route = new Route('POST', $path, $handler, $this->middlewareRegistry);
+        $this->routes[] = ['POST', $path, $handler];
+        self::$allRoutes[] = ['POST', $path, $handler];
+        error_log("Router: Registered POST route: {$path}");
+        return $route;
+    }
+
+    public function put(string $path, $handler): Route
+    {
+        $route = new Route('PUT', $path, $handler, $this->middlewareRegistry);
+        $this->routes[] = ['PUT', $path, $handler];
+        self::$allRoutes[] = ['PUT', $path, $handler];
+        error_log("Router: Registered PUT route: {$path}");
+        return $route;
+    }
+
+    public function delete(string $path, $handler): Route
+    {
+        $route = new Route('DELETE', $path, $handler, $this->middlewareRegistry);
+        $this->routes[] = ['DELETE', $path, $handler];
+        self::$allRoutes[] = ['DELETE', $path, $handler];
+        error_log("Router: Registered DELETE route: {$path}");
+        return $route;
+    }
+
+    public function patch(string $path, $handler): Route
+    {
+        $route = new Route('PATCH', $path, $handler, $this->middlewareRegistry);
+        $this->routes[] = ['PATCH', $path, $handler];
+        self::$allRoutes[] = ['PATCH', $path, $handler];
+        error_log("Router: Registered PATCH route: {$path}");
+        return $route;
+    }
+
+    public function options(string $path, $handler): Route
+    {
+        $route = new Route('OPTIONS', $path, $handler, $this->middlewareRegistry);
+        $this->routes[] = ['OPTIONS', $path, $handler];
+        self::$allRoutes[] = ['OPTIONS', $path, $handler];
+        error_log("Router: Registered OPTIONS route: {$path}");
+        return $route;
+    }
+
+    /**
+     * Match a request to a route
+     *
+     * @param string $method
+     * @param string $path
+     * @return array
+     */
+    public function match(string $method, string $path): array
+    {
+        // Load routes on-demand when first match is attempted
+        RouteRegistry::loadRoutesIfNeeded($this);
+
+        // Normalize the path
+        if (empty($path)) {
+            $path = '/';
+        } elseif ($path[0] !== '/') {
+            $path = '/' . $path;
+        }
+
+        // Remove trailing slash (except for root path)
+        if ($path !== '/' && substr($path, -1) === '/') {
+            $path = rtrim($path, '/');
+        }
+
+        error_log("Router::match() {$method} {$path}");
+
+        error_log("Router::match() {$method} {$path} (routes: " . count($this->routes) . ", static routes: " . count(self::$allRoutes) . ")");
+
+        // CRITICAL: If instance routes are empty but static routes exist, use those
+        if (empty($this->routes) && !empty(self::$allRoutes)) {
+            $this->routes = self::$allRoutes;
+            error_log("Router::match() Restored " . count(self::$allRoutes) . " routes from static storage");
+        }
+
+        $dispatcher = $this->createDispatcher();
+        $routeInfo = $dispatcher->dispatch($method, $path);
+
+        switch ($routeInfo[0]) {
+            case Dispatcher::NOT_FOUND:
+                // Debug info in development mode
+                if (env('APP_DEBUG', false)) {
+                    $registeredRoutes = [];
+                    foreach ($this->routes as $route) {
+                        $registeredRoutes[] = $route[0] . ' ' . $route[1];
+                    }
+                    error_log("Router: No route found for {$method} {$path}. Routes count: " . count($registeredRoutes));
+                }
+                return ['status' => 'not_found'];
+
+            case Dispatcher::METHOD_NOT_ALLOWED:
+                return [
+                    'status' => 'method_not_allowed',
+                    'allowed_methods' => $routeInfo[1]
+                ];
+
+            case Dispatcher::FOUND:
+                $handler = $routeInfo[1];
+                error_log("Router: Route found for {$method} {$path}");
+
+                // Try to convert string controller@method to callable
+                $callable = $this->resolveController($handler);
+
+                return [
+                    'status' => 'found',
+                    'handler' => $callable,
+                    'originalHandler' => $handler, // Store original for reference
+                    'vars' => $routeInfo[2]
+                ];
+        }
+
+        return ['status' => 'error'];
     }
 
     /**
@@ -185,201 +329,36 @@ class Router
     }
 
     /**
-     * Register a GET route
-     *
-     * @param string $path
-     * @param mixed $handler
-     * @return Route Route instance for method chaining
-     */
-    public function get(string $path, $handler): Route
-    {
-        $route = new Route('GET', $path, $handler, $this->middlewareRegistry);
-        $this->routes[] = ['GET', $path, $handler];
-        return $route;
-    }
-
-    /**
-     * Register a POST route
-     *
-     * @param string $path
-     * @param mixed $handler
-     * @return Route
-     */
-    public function post(string $path, $handler): Route
-    {
-        $route = new Route('POST', $path, $handler, $this->middlewareRegistry);
-        $this->routes[] = ['POST', $path, $handler];
-        return $route;
-    }
-
-    /**
-     * Register a PUT route
-     *
-     * @param string $path
-     * @param mixed $handler
-     * @return Route
-     */
-    public function put(string $path, $handler): Route
-    {
-        $route = new Route('PUT', $path, $handler, $this->middlewareRegistry);
-        $this->routes[] = ['PUT', $path, $handler];
-        return $route;
-    }
-
-    /**
-     * Register a DELETE route
-     *
-     * @param string $path
-     * @param mixed $handler
-     * @return Route
-     */
-    public function delete(string $path, $handler): Route
-    {
-        $route = new Route('DELETE', $path, $handler, $this->middlewareRegistry);
-        $this->routes[] = ['DELETE', $path, $handler];
-        return $route;
-    }
-
-    /**
-     * Register a PATCH route
-     *
-     * @param string $path
-     * @param mixed $handler
-     * @return Route
-     */
-    public function patch(string $path, $handler): Route
-    {
-        $route = new Route('PATCH', $path, $handler, $this->middlewareRegistry);
-        $this->routes[] = ['PATCH', $path, $handler];
-        return $route;
-    }
-
-    /**
-     * Register an OPTIONS route
-     *
-     * @param string $path
-     * @param mixed $handler
-     * @return Route
-     */
-    public function options(string $path, $handler): Route
-    {
-        $route = new Route('OPTIONS', $path, $handler, $this->middlewareRegistry);
-        $this->routes[] = ['OPTIONS', $path, $handler];
-        return $route;
-    }
-
-    /**
-     * Get middleware registry
-     *
-     * @return MiddlewareRegistry
-     */
-    public function getMiddlewareRegistry(): MiddlewareRegistry
-    {
-        return $this->middlewareRegistry;
-    }
-
-    /**
-     * Set middleware registry
-     *
-     * @param MiddlewareRegistry $middlewareRegistry
-     * @return self
-     */
-    public function setMiddlewareRegistry(MiddlewareRegistry $middlewareRegistry): self
-    {
-        $this->middlewareRegistry = $middlewareRegistry;
-        return $this;
-    }
-
-    /**
-     * Match a request to a route
-     *
-     * @param string $method
-     * @param string $path
-     * @return array
-     */
-    public function match(string $method, string $path): array
-    {
-        // Normalize the path by ensuring it starts with a slash
-        if (empty($path)) {
-            $path = '/';
-        } elseif ($path[0] !== '/') {
-            $path = '/' . $path;
-        }
-
-        // Remove trailing slash for consistency (except for root path)
-        if ($path !== '/' && substr($path, -1) === '/') {
-            $path = rtrim($path, '/');
-        }
-
-        $dispatcher = $this->createDispatcher();
-        $routeInfo = $dispatcher->dispatch($method, $path);
-
-        switch ($routeInfo[0]) {
-            case Dispatcher::NOT_FOUND:
-                // Add debugging information in development mode
-                if (env('APP_DEBUG', false)) {
-                    $registeredRoutes = [];
-                    foreach ($this->routes as $route) {
-                        $registeredRoutes[] = $route[0] . ' ' . $route[1];
-                    }
-                    return [
-                        'status' => 'not_found',
-                        'debug' => [
-                            'requested_method' => $method,
-                            'requested_path' => $path,
-                            'registered_routes' => $registeredRoutes
-                        ]
-                    ];
-                }
-                return ['status' => 'not_found'];
-
-            case Dispatcher::METHOD_NOT_ALLOWED:
-                return [
-                    'status' => 'method_not_allowed',
-                    'allowed_methods' => $routeInfo[1]
-                ];
-
-            case Dispatcher::FOUND:
-                $handler = $routeInfo[1];
-
-                // Try to convert string controller@method to callable
-                $callable = $this->resolveController($handler);
-
-                return [
-                    'status' => 'found',
-                    'handler' => $callable,
-                    'originalHandler' => $handler, // Store original for reference
-                    'vars' => $routeInfo[2]
-                ];
-        }
-
-        return ['status' => 'error'];
-    }
-
-    /**
-     * Create FastRoute dispatcher
+     * Create FastRoute dispatcher with current routes
      *
      * @return Dispatcher
      */
     private function createDispatcher()
     {
-        if ($this->dispatcher === null) {
-            $this->dispatcher = simpleDispatcher(function (RouteCollector $r) {
-                foreach ($this->routes as $route) {
-                    $method = $route[0];
-                    $path = $route[1];
+        // Recreate the dispatcher every time to ensure latest routes
+        $this->dispatcher = null;
 
-                    // Ensure path starts with a slash for consistency
-                    if (!empty($path) && $path[0] !== '/') {
-                        $path = '/' . $path;
-                    }
-
-                    $r->addRoute($method, $path, $route[2]);
-                }
-            });
+        // CRITICAL: If instance routes are empty but static routes exist, use those
+        if (empty($this->routes) && !empty(self::$allRoutes)) {
+            $this->routes = self::$allRoutes;
+            error_log("Router::createDispatcher() Restored " . count(self::$allRoutes) . " routes from static storage");
         }
 
-        return $this->dispatcher;
+        error_log("Router::createDispatcher() Creating dispatcher with " . count($this->routes) . " routes");
+
+        return simpleDispatcher(function (RouteCollector $r) {
+            foreach ($this->routes as $route) {
+                $method = $route[0];
+                $path = $route[1];
+
+                // Ensure path starts with a slash for consistency
+                if (!empty($path) && $path[0] !== '/') {
+                    $path = '/' . $path;
+                }
+
+                $r->addRoute($method, $path, $route[2]);
+            }
+        });
     }
 
     /**
@@ -407,5 +386,33 @@ class Router
 
         // If it's already a callable or not in Controller@method format, return as is
         return $handler;
+    }
+
+    /**
+     * Force loading of all routes
+     */
+    public function loadAllRoutes(): void
+    {
+        RouteRegistry::loadRoutesIfNeeded($this);
+    }
+
+    /**
+     * Return the count of registered routes
+     *
+     * @return int
+     */
+    public function countRoutes(): int
+    {
+        return count($this->routes);
+    }
+
+    /**
+     * Return the count of static routes
+     *
+     * @return int
+     */
+    public static function countStaticRoutes(): int
+    {
+        return count(self::$allRoutes);
     }
 }

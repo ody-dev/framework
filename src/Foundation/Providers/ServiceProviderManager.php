@@ -87,12 +87,14 @@ class ServiceProviderManager
      */
     public function register($provider, bool $force = false): ServiceProvider
     {
+        error_log('ServiceProvider provider register() method: ' . $provider);
         // Convert string provider to instance
         if (is_string($provider)) {
             $providerClass = $provider;
 
             // Skip if already registered and not forcing
             if (!$force && $this->isRegistered($providerClass)) {
+                error_log("Provider already registered: {$providerClass}");
                 return $this->providers[$providerClass];
             }
 
@@ -107,6 +109,7 @@ class ServiceProviderManager
 
             // Skip if already registered and not forcing
             if (!$force && $this->isRegistered($providerClass)) {
+                error_log("Provider already registered: {$providerClass}");
                 return $this->providers[$providerClass];
             }
         }

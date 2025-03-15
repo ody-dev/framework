@@ -29,7 +29,7 @@ return [
         // Default stacked channel (logs to multiple destinations)
         'stack' => [
             'driver' => 'group',
-            'channels' => ['file', 'stdout', 'influxdb'],
+            'channels' => ['file', 'stdout', 'influxdb  '],
             'level' => env('LOG_LEVEL', LogLevel::DEBUG),
         ],
 

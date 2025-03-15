@@ -16,31 +16,69 @@ use Psr\Log\NullLogger;
 class Bootstrap
 {
     /**
+     * Static instance of the application
+     */
+    private static ?Application $instance = null;
+
+    /**
+     * Track bootstrap operation status
+     */
+    private static bool $bootstrapping = false;
+
+    /**
      * Initialize the application
-     *
-     * @param Container|null $container
-     * @param string|null $basePath
-     * @return Application
      */
     public static function init(
         ?Container $container = null,
-        ?string    $basePath = null,
+        ?string $basePath = null,
     ): Application
     {
-        self::initBasePath($basePath);
+        // Return existing instance if already initialized
+        if (self::$instance !== null) {
+            error_log("Bootstrap::init() returning existing application instance");
+            return self::$instance;
+        }
 
-        $container = self::initContainer($container);
+        if (self::$bootstrapping) {
+            error_log("WARNING: Bootstrap::init() called recursively");
+            // If we're already bootstrapping, return a dummy app or wait
+            if (self::$instance !== null) {
+                return self::$instance;
+            }
+            // Otherwise proceed cautiously
+        }
 
-        $container->singleton(LoggerInterface::class, function () {
-            return new NullLogger();
-        });
+        // Set bootstrapping flag to prevent recursion
+        self::$bootstrapping = true;
+        error_log("Bootstrap::init() creating new application instance");
 
-        $providerManager = new ServiceProviderManager($container);
-        $container->instance(ServiceProviderManager::class, $providerManager);
+        try {
+            self::initBasePath($basePath);
+            $container = self::initContainer($container);
 
-        $application = self::createApplication($container, $providerManager);
+            // Register only the absolute minimum needed for bootstrapping
+            $container->singleton(LoggerInterface::class, function () {
+                return new NullLogger();
+            });
 
-        return $application;
+            $providerManager = new ServiceProviderManager($container);
+            $container->instance(ServiceProviderManager::class, $providerManager);
+
+            // Create application but don't bootstrap it yet
+            $application = self::createApplication($container, $providerManager);
+
+            // Store the instance immediately (before bootstrapping)
+            self::$instance = $application;
+
+            // Reset bootstrapping flag
+            self::$bootstrapping = false;
+
+            return $application;
+        } catch (\Throwable $e) {
+            // Reset flag
+            self::$bootstrapping = false;
+            throw $e;
+        }
     }
 
     /**
@@ -58,7 +96,6 @@ class Bootstrap
         if (!defined('APP_BASE_PATH')) {
             define('APP_BASE_PATH', $basePath);
         }
-
     }
 
     /**

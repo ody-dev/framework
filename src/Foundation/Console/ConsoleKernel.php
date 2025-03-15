@@ -104,6 +104,7 @@ class ConsoleKernel
      */
     public function getApplication(): Application
     {
+        error_log('ConsoleKernel getApplication(); // Load everything again do we really need the application when booting the ConsoleKernel?');
         $app = new Application(
             $this->container,
             $this->container->make(ServiceProviderManager::class)

@@ -20,7 +20,7 @@ use Swoole\Http\Server as SwServer;
 
 class HttpServer
 {
-    private static Application $app;
+    private static ?Application $app = null;
 
     /**
      * @param SwServer $server
@@ -31,9 +31,13 @@ class HttpServer
     public static function start(SwServer $server): void
     {
         // static::$app = // App
-        static::$app = Bootstrap::init();
-
-        error_log('init app');
+        if (self::$app === null) {
+            // Get existing application instance
+            self::$app = Bootstrap::init();
+            error_log("HttpServer::start() initialized application");
+        } else {
+            error_log("HttpServer::start() using existing application instance");
+        }
 
         // static::$app->bind(SwServer::class, $server); // Bind server instance to container
 
@@ -50,7 +54,9 @@ class HttpServer
         Coroutine::create(function() use ($request, $response) {
             static::setContext($request);
 
-            error_log('onRequest');
+            error_log("HttpServer::onRequest() handling request: " .
+                $request->server['request_method'] . ' ' .
+                $request->server['request_uri']);
 
 
             (new RequestCallback(

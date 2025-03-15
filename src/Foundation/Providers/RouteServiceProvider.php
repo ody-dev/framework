@@ -40,6 +40,7 @@ class RouteServiceProvider extends ServiceProvider
     {
         // Register RouteLoader as a singleton
         $this->singleton(RouteLoader::class, function (Container $container) {
+            error_log('RouteServiceProvider::singleton(RouteLoader)...');
             $router = $container->make(Router::class);
             $middlewareRegistry = $container->make(MiddlewareRegistry::class);
             $logger = $container->make(LoggerInterface::class);
@@ -62,10 +63,14 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Don't load routes during bootstrap, they'll be loaded on demand
         $this->routeLoader = $this->make(RouteLoader::class);
 
+        // Only register the route loader, but don't load routes yet
+        error_log("RouteServiceProvider: Setting up lazy route loading");
+
         // Load routes from the configured path
-        $this->loadRoutes();
+//        $this->loadRoutes();
     }
 
     /**

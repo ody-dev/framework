@@ -10,11 +10,12 @@
 namespace Ody\Foundation\Console\Commands;
 
 use Ody\Foundation\Console\Command;
+use Ody\Foundation\Bootstrap;
+use Ody\Foundation\Router;
 use Ody\Foundation\HttpServer;
 use Ody\Server\ServerManager;
 use Ody\Server\ServerType;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Process\Process;
 
 /**
  * ServeCommand
@@ -59,14 +60,30 @@ class ServeCommand extends Command
      */
     protected function handle(): int
     {
+        // Get server configuration
         $config = config('server');
 
+        // Initialize the application
+        $app = Bootstrap::init();
+
+        // Don't bootstrap until needed - it will happen on first request
+        // $app->bootstrap();
+
+        // Make sure routes are marked as registered
+        $router = $this->container->make(Router::class);
+        if (method_exists($router, 'markRoutesAsRegistered')) {
+            $router->markRoutesAsRegistered();
+        }
+
+        error_log("ServeCommand handle(): bootstrapping & starting swoole http");
+
+        // Start the server
         HttpServer::start(
             ServerManager::init(ServerType::HTTP_SERVER) // ServerType::WS_SERVER to start a websocket server
-            ->createServer($config)
-            ->setServerConfig($config['additional'])
-            ->registerCallbacks($config['callbacks'])
-            ->getServerInstance()
+                ->createServer($config)
+                ->setServerConfig($config['additional'])
+                ->registerCallbacks($config['callbacks'])
+                ->getServerInstance()
         );
 
         return 0;

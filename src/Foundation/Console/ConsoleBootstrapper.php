@@ -73,6 +73,7 @@ class ConsoleBootstrapper
     protected static function registerServiceProviders(ServiceProviderManager $providerManager): void
     {
         // Core providers that must be registered in console environment
+        error_log('Loading coreProviders in ConsoleBootstrapper registerServiceProviders()');
         $coreProviders = [
             EnvServiceProvider::class,
             ConfigServiceProvider::class,
@@ -86,6 +87,7 @@ class ConsoleBootstrapper
 
         $config = $providerManager->getContainer()->make(Config::class);
         $providers = $config->get('app.providers', []);
+        error_log('Loading providers from config in ConsoleBootstrapper registerServiceProviders()');
         array_walk($providers, function ($provider) use ($providerManager) {
             $providerManager->register($provider);
         });

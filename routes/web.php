@@ -30,7 +30,7 @@ Route::get('/health', function (ServerRequestInterface $request, ResponseInterfa
 
     return $response;
 });
-var_dump('routes');
+
 Route::get('/version', function (ServerRequestInterface $request, ResponseInterface $response) {
     // Make sure we're returning a ResponseInterface
     $data = [

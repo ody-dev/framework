@@ -141,6 +141,18 @@ class Application implements \Psr\Http\Server\RequestHandlerInterface
     }
 
     /**
+     * Check if the application has been bootstrapped
+     *
+     * @return bool
+     */
+    public function isBootstrapped(): bool
+    {
+        return $this->bootstrapped;
+    }
+
+// And modify the bootstrap method:
+
+    /**
      * Bootstrap the application by loading providers
      *
      * @return self
@@ -148,6 +160,7 @@ class Application implements \Psr\Http\Server\RequestHandlerInterface
     public function bootstrap(): self
     {
         if ($this->bootstrapped) {
+            error_log("Application::bootstrap() already bootstrapped, skipping");
             return $this;
         }
 
@@ -164,6 +177,7 @@ class Application implements \Psr\Http\Server\RequestHandlerInterface
         $this->initializeCoreComponents();
 
         $this->bootstrapped = true;
+        error_log("Application::bootstrap() completed");
         return $this;
     }
 
