@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Models\User;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Ody\Foundation\Http\Response;
@@ -9,11 +10,6 @@ use Psr\Log\LoggerInterface;
 
 class UserController
 {
-    /**
-     * @var \PDO Database connection
-     */
-    private $db;
-
     /**
      * @var LoggerInterface
      */
@@ -24,9 +20,8 @@ class UserController
      *
      * Dependencies are automatically injected by the container
      */
-    public function __construct(\PDO $db, LoggerInterface $logger)
+    public function __construct(LoggerInterface $logger)
     {
-        $this->db = $db;
         $this->logger = $logger;
     }
 
@@ -45,10 +40,7 @@ class UserController
 //        $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         // Mock data for example
-         $users = [
-             ['id' => 1, 'name' => 'John Doe', 'email' => 'john@example.com'],
-             ['id' => 2, 'name' => 'Jane Smith', 'email' => 'jane@example.com']
-         ];
+         $users = User::get();
 
         return $this->jsonResponse($response, $users);
     }
