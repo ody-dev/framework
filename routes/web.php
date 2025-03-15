@@ -30,7 +30,7 @@ Route::get('/health', function (ServerRequestInterface $request, ResponseInterfa
 
     return $response;
 });
-
+var_dump('routes');
 Route::get('/version', function (ServerRequestInterface $request, ResponseInterface $response) {
     // Make sure we're returning a ResponseInterface
     $data = [
@@ -110,4 +110,30 @@ Route::group(['prefix' => '/api/docker'], function ($router) {
 
     // Images
     $router->get('/images', 'App\Controllers\DockerApiController@listImages');
+});
+
+Route::group(['prefix' => '/api/docker/stacks'], function ($router) {
+    // List all stacks
+    $router->get('/', 'App\Controllers\DockerStackApiController@listStacks');
+
+    // Get stack details
+    $router->get('/{name}', 'App\Controllers\DockerStackApiController@getStack');
+
+    // Get stack compose file
+    $router->get('/{name}/compose', 'App\Controllers\DockerStackApiController@getStackComposeFile');
+
+    // Create a new stack
+    $router->post('/', 'App\Controllers\DockerStackApiController@createStack');
+
+    // Update a stack
+    $router->put('/{name}', 'App\Controllers\DockerStackApiController@updateStack');
+
+    // Delete a stack
+    $router->delete('/{name}', 'App\Controllers\DockerStackApiController@deleteStack');
+
+    // Redeploy a stack
+    $router->post('/{name}/redeploy', 'App\Controllers\DockerStackApiController@redeployStack');
+
+    // Get stack service logs
+    $router->get('/{stack}/services/{service}/logs', 'App\Controllers\DockerStackApiController@getStackServiceLogs');
 });

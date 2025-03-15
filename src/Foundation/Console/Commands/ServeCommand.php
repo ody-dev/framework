@@ -10,6 +10,9 @@
 namespace Ody\Foundation\Console\Commands;
 
 use Ody\Foundation\Console\Command;
+use Ody\Foundation\HttpServer;
+use Ody\Server\ServerManager;
+use Ody\Server\ServerType;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Process\Process;
 
@@ -56,7 +59,15 @@ class ServeCommand extends Command
      */
     protected function handle(): int
     {
-        $this->warning('Not yet implemented!');
+        $config = config('server');
+
+        HttpServer::start(
+            ServerManager::init(ServerType::HTTP_SERVER) // ServerType::WS_SERVER to start a websocket server
+            ->createServer($config)
+            ->setServerConfig($config['additional'])
+            ->registerCallbacks($config['callbacks'])
+            ->getServerInstance()
+        );
 
         return 0;
     }

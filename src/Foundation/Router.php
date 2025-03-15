@@ -109,8 +109,9 @@ class Router
                     $path = '/' . $path;
                 }
 
-                // Important: Remove double slashes that might occur when joining prefix and path
-                $fullPath = rtrim($this->prefix, '/') . $path;
+                // FIX: Handle empty paths and trailing slashes properly
+                // This is the key fix for the routing issue
+                $fullPath = $this->combinePaths($this->prefix, $path);
 
                 // Register the route
                 $route = $this->router->{$method}($fullPath, $handler);
@@ -121,6 +122,18 @@ class Router
                 }
 
                 return $route;
+            }
+
+            // Add this new helper method to properly combine paths
+            private function combinePaths($prefix, $path): string
+            {
+                // If path is empty, just return the prefix (without duplicate trailing slash)
+                if ($path === '' || $path === '/') {
+                    return rtrim($prefix, '/');
+                }
+
+                // Otherwise combine them properly avoiding double slashes
+                return rtrim($prefix, '/') . $path;
             }
 
             // Define explicit methods for IDE auto-completion
@@ -141,7 +154,8 @@ class Router
                     if (!empty($prefixToAdd) && $prefixToAdd[0] !== '/') {
                         $prefixToAdd = '/' . $prefixToAdd;
                     }
-                    $newPrefix = rtrim($newPrefix, '/') . $prefixToAdd;
+                    // Use the new combinePaths method here too
+                    $newPrefix = $this->combinePaths($newPrefix, $prefixToAdd);
                 }
 
                 // Merge the middleware
