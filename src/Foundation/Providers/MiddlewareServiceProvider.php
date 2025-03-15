@@ -1,6 +1,7 @@
 <?php
 namespace Ody\Foundation\Providers;
 
+use Ody\Auth\Middleware\Authenticate;
 use Ody\Container\Container;
 use Ody\Foundation\Middleware\MiddlewareRegistry;
 use Ody\Foundation\Middleware\CorsMiddleware;
@@ -102,7 +103,7 @@ class MiddlewareServiceProvider extends ServiceProvider
     {
         // Get middleware from container (they were registered as singletons)
         $registry->add('auth', $container->make(AuthMiddleware::class));
-        $registry->add('auth:api', new AuthMiddleware('api', $container->make(LoggerInterface::class)));
+//        $registry->add('auth:api', new Authenticate('api', $container->make(LoggerInterface::class)));
         $registry->add('auth:jwt', new AuthMiddleware('jwt', $container->make(LoggerInterface::class)));
 
         $registry->add('role', $container->make(RoleMiddleware::class));

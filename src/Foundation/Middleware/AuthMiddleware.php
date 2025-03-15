@@ -59,6 +59,7 @@ class AuthMiddleware implements MiddlewareInterface
             // API token authentication
             if (strpos($authHeader, 'Bearer ') === 0) {
                 $token = substr($authHeader, 7);
+                var_dump($token);
                 if ($token === 'valid-api-token') {
                     return $handler->handle($request);
                 }

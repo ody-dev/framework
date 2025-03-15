@@ -42,7 +42,7 @@ return [
         'named' => [
             // Authentication middleware with different guards
             'auth' => Ody\Foundation\Middleware\AuthMiddleware::class,
-            'auth:api' => Ody\Foundation\Middleware\AuthMiddleware::class,
+            'auth:api' => \Ody\Auth\Middleware\Authenticate::class,
             'auth:jwt' => Ody\Foundation\Middleware\AuthMiddleware::class,
             'auth:session' => Ody\Foundation\Middleware\AuthMiddleware::class,
 

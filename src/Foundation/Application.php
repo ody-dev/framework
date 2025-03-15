@@ -340,6 +340,7 @@ class Application implements \Psr\Http\Server\RequestHandlerInterface
             // If nothing was returned, return the response
             return $response;
         } catch (Throwable $e) {
+            var_dump($e->getMessage());
             $this->logException($e, 'Error handling request');
             return $this->createErrorResponse($response, 500, 'Internal Server Error');
         }

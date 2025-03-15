@@ -112,7 +112,7 @@ Route::group(['prefix' => '/api/docker'], function ($router) {
     $router->get('/images', 'App\Controllers\DockerApiController@listImages');
 });
 
-Route::group(['prefix' => '/api/docker/stacks'], function ($router) {
+Route::group(['prefix' => '/api/docker/stacks', 'middleware' => ['auth:api']], function ($router) {
     // List all stacks
     $router->get('/', 'App\Controllers\DockerStackApiController@listStacks');
 

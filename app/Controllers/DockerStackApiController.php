@@ -55,6 +55,7 @@ class DockerStackApiController
      */
     public function listStacks(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
+        var_dump($request->getParsedBody());
         try {
             $stacks = $this->dockerService->listStacks();
 

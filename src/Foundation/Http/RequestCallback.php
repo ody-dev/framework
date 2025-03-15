@@ -80,25 +80,63 @@ final class RequestCallback
         $method = $server['request_method'] ?? 'GET';
         error_log("RequestCallback: Converting Swoole request to PSR-7: {$method} {$path}");
 
+        // Create the request body stream from rawContent
+        $rawBody = $swooleRequest->rawContent();
+        $bodyStream = $this->options->getStreamFactory()->createStream($rawBody);
+
+        // Create the PSR-7 server request
         $serverRequest = new ServerRequest(
             $server,
             normalizeUploadedFiles($files),
             $path,
             $method,
-            $this->options->getStreamFactory()->createStream($swooleRequest->rawContent()),
+            $bodyStream,
             $headers,
             $cookies,
-            $query_params,
+            $query_params
         );
+
+        // Parse the body based on content type if needed
+        $parsedBody = null;
+        $contentType = $swooleRequest->header['content-type'] ?? '';
+
+        // For JSON requests
+        if (strpos($contentType, 'application/json') !== false && !empty($rawBody)) {
+            $parsedBody = json_decode($rawBody, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $serverRequest = $serverRequest->withParsedBody($parsedBody);
+                error_log("RequestCallback: Parsed JSON body successfully");
+            } else {
+                error_log("RequestCallback: Failed to parse JSON body: " . json_last_error_msg());
+            }
+        }
+        // For form data requests
+        else if (strpos($contentType, 'application/x-www-form-urlencoded') !== false) {
+            $parsedBody = $swooleRequest->post ?? [];
+            if (!empty($parsedBody)) {
+                $serverRequest = $serverRequest->withParsedBody($parsedBody);
+                error_log("RequestCallback: Using form data from swoole request");
+            }
+        }
+        // For multipart form data
+        else if (strpos($contentType, 'multipart/form-data') !== false) {
+            $parsedBody = $swooleRequest->post ?? [];
+            if (!empty($parsedBody)) {
+                $serverRequest = $serverRequest->withParsedBody($parsedBody);
+                error_log("RequestCallback: Using multipart form data from swoole request");
+            }
+        }
 
         // Log the created PSR-7 request for debugging
         error_log("RequestCallback: Created PSR-7 request: " .
             $serverRequest->getMethod() . ' ' .
-            $serverRequest->getUri()->getPath()
+            $serverRequest->getUri()->getPath() .
+            (empty($parsedBody) ? ' (no parsed body)' : ' (with parsed body)')
         );
 
         return $serverRequest;
     }
+
 
     private function emit(ResponseInterface $psrResponse, Response $swooleResponse): void
     {
