@@ -29,6 +29,11 @@ class LoggingServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->singleton(LogManager::class, function (Container $container) {
+            $config = $container->make(Config::class);
+            $loggingConfig = $config->get('logging', []);
+            return new LogManager($loggingConfig);
+        });
     }
 
     /**
@@ -38,22 +43,6 @@ class LoggingServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // No bootstrapping needed
-        // Register a default NullLogger for LoggerInterface to prevent circular dependencies
-        $this->instance(LoggerInterface::class, new NullLogger());
-
-        // Register LogManager
-        $this->singleton(LogManager::class, function ($container) {
-            /** @var Config $config */
-            $config = $container->make(Config::class);
-
-            // Get log configuration
-            $loggingConfig = $config->get('logging', []);
-
-            return new LogManager($loggingConfig);
-        });
-
-        // Now update LoggerInterface binding to use the actual logger from LogManager
         $this->singleton(LoggerInterface::class, function ($container) {
             return $container->make(LogManager::class)->channel();
         });

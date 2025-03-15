@@ -13,7 +13,6 @@ use Ody\Container\Container;
 use Ody\Foundation\Http\Request;
 use Ody\Foundation\Http\Response;
 use Ody\Foundation\Http\ResponseEmitter;
-use Ody\Foundation\Logging\LogManager;
 use Ody\Foundation\Middleware\MiddlewareRegistry;
 use Ody\Foundation\Providers\ApplicationServiceProvider;
 use Ody\Foundation\Providers\ConfigServiceProvider;
@@ -185,15 +184,14 @@ class Application
     }
 
     /**
+     * @deprecated Is not used anymore
      * Initialize core components lazily using container callbacks
      *
      * @return void
      */
     protected function initializeCoreComponents(): void
     {
-        // Update logger reference after provider registration
-        $this->logger = $this->container->make(LogManager::class)->channel();
-        $this->container->instance(LoggerInterface::class, $this->logger);
+        // Deprecated?
     }
 
     /**
