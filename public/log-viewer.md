@@ -82,7 +82,7 @@ INFLUXDB_BATCH_SIZE=10
 ### Using the InfluxDBLogger Directly
 
 ```php
-use Ody\Foundation\Logging\InfluxDBLogger;
+use Ody\Logger\InfluxDBLogger;
 
 $logger = new InfluxDBLogger(
     'localhost',       // host

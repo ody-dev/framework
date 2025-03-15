@@ -3,7 +3,7 @@ namespace Ody\Foundation\Providers;
 
 use Ody\Container\Container;
 use Ody\Foundation\Support\Config;
-use Ody\Foundation\Logging\LogManager;
+use Ody\Logger\LogManager;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 

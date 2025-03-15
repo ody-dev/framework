@@ -9,7 +9,7 @@
 
 use Ody\Container\Container;
 use Ody\Foundation\Logger;
-use Ody\Foundation\LoggingLogManager;
+use Ody\LoggerLogManager;
 use Ody\Foundation\Support\Config;
 use Ody\Foundation\Support\Env;
 use Psr\Log\LoggerInterface;

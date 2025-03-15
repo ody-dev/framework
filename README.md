@@ -253,7 +253,7 @@ logger()->info('Processing request');
 
 All custom loggers must:
 
-1. Extend `Ody\Foundation\Logging\AbstractLogger`
+1. Extend `Ody\Logger\AbstractLogger`
 2. Implement a static `create(array $config)` method
 3. Override the `write(string $level, string $message, array $context = [])` method
 
@@ -266,10 +266,10 @@ Here's a simple example of a custom logger that logs to Redis:
 
 namespace App\Logging;
 
-use Ody\Foundation\Logging\AbstractLogger;
-use Ody\Foundation\Logging\FormatterInterface;
-use Ody\Foundation\Logging\JsonFormatter;
-use Ody\Foundation\Logging\LineFormatter;
+use Ody\Logger\AbstractLogger;
+use Ody\Logger\FormatterInterface;
+use Ody\Logger\JsonFormatter;
+use Ody\Logger\LineFormatter;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Redis;
@@ -436,7 +436,7 @@ You can register your logger with a driver name, which allows you to reference i
 
 ```php
 // In a service provider's register method
-$this->app->make(\Ody\Foundation\Logging\LogManager::class)
+$this->app->make(\Ody\Logger\LogManager::class)
     ->registerDriver('redis', \App\Logging\RedisLogger::class);
 ```
 
@@ -469,7 +469,7 @@ If your logger follows the naming convention `{Driver}Logger` and is in one of t
 ]
 ```
 
-The framework will search for `RedisLogger` in the registered namespaces (`\Ody\Foundation\Logging\` and `\App\Logging\` by default).
+The framework will search for `RedisLogger` in the registered namespaces (`\Ody\Logger\` and `\App\Logging\` by default).
 
 ### Creating Custom Formatters
 
@@ -478,7 +478,7 @@ If the standard formatters don't meet your needs, you can create your own by imp
 ```php
 namespace App\Logging;
 
-use Ody\Foundation\Logging\FormatterInterface;
+use Ody\Logger\FormatterInterface;
 
 class CustomFormatter implements FormatterInterface
 {
