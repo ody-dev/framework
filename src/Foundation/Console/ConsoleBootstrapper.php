@@ -85,12 +85,16 @@ class ConsoleBootstrapper
             $providerManager->register($provider);
         });
 
-        $config = $providerManager->getContainer()->make(Config::class);
-        $providers = $config->get('app.providers', []);
-        error_log('Loading providers from config in ConsoleBootstrapper registerServiceProviders()');
-        array_walk($providers, function ($provider) use ($providerManager) {
-            $providerManager->register($provider);
-        });
+        /**
+         * TODO: Figure out if we really need providers from config in the console
+         */
+//        $config = $providerManager->getContainer()->make(Config::class);
+//        $providers = $config->get('app.providers', []);
+//
+//        error_log('Loading providers from config in ConsoleBootstrapper registerServiceProviders()');
+//        array_walk($providers, function ($provider) use ($providerManager) {
+//            $providerManager->register($provider);
+//        });
 
         // Boot all registered providers
         $providerManager->boot();

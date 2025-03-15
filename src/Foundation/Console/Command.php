@@ -156,13 +156,6 @@ abstract class Command extends SymfonyCommand
         $this->container = Container::getInstance();
 
         if ($this->container) {
-            // Get application and logger
-            if ($this->container->has(Application::class)) {
-                $this->app = $this->container->make(Application::class);
-            } else {
-                $this->io->note('Application not found in container');
-            }
-
             if ($this->container->has(LoggerInterface::class)) {
                 $this->logger = $this->container->make(LoggerInterface::class);
             } else {

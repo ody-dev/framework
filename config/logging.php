@@ -29,7 +29,7 @@ return [
         // Default stacked channel (logs to multiple destinations)
         'stack' => [
             'driver' => 'group',
-            'channels' => ['file', 'stdout', 'influxdb  '],
+            'channels' => ['file', 'stdout', 'influxdb'],
             'level' => env('LOG_LEVEL', LogLevel::DEBUG),
         ],
 
@@ -129,5 +129,30 @@ return [
         //     'level' => LogLevel::DEBUG,
         //     'formatter' => 'line',
         // ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Excluded Routes
+    |--------------------------------------------------------------------------
+    |
+    | Routes that should be excluded from logging.
+    | You can use wildcards (*) to match paths.
+    |
+    */
+    'exclude_routes' => [
+        // Log viewer routes
+        '/api/logs/recent',
+        '/api/logs/services',
+        '/api/logs/levels',
+        '/api/logs/service/*',
+
+        // Health check endpoints
+        '/health',
+        '/ping',
+
+        // Add any other routes that you want to exclude from logging
+        '/metrics',
+        '/status',
     ],
 ];

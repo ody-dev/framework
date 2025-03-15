@@ -18,7 +18,7 @@ class RouteRegistry
     /**
      * Load routes if not already loaded
      */
-    public static function loadRoutesIfNeeded(): void
+    public static function loadRoutesIfNeeded(Router $router = null): void
     {
         if (self::$routesLoaded) {
             return;
@@ -48,6 +48,12 @@ class RouteRegistry
         }
 
         self::$routesLoaded = true;
+
+        // Mark routes as loaded in the router if provided
+        if ($router !== null && method_exists($router, 'markRoutesLoaded')) {
+            error_log("RouteRegistry loadRoutesIneeded; router->markRoutesLoaded()");
+            $router->markRoutesLoaded();
+        }
     }
 
     /**

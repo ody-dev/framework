@@ -34,6 +34,12 @@ class HttpServer
         if (self::$app === null) {
             // Get existing application instance
             self::$app = Bootstrap::init();
+
+            // Ensure the application is bootstrapped
+            if (!self::$app->isBootstrapped()) {
+                self::$app->bootstrap();
+            }
+
             error_log("HttpServer::start() initialized application");
         } else {
             error_log("HttpServer::start() using existing application instance");

@@ -133,7 +133,23 @@ class ApplicationServiceProvider extends ServiceProvider
         // Register logging middleware
         $this->singleton(LoggingMiddleware::class, function ($container) {
             $logger = $container->make(LoggerInterface::class);
-            return new LoggingMiddleware($logger);
+
+            $config = $container->make(Config::class);
+
+            // Get routes to exclude from logging
+            $excludedRoutes = $config->get('logging.exclude_routes', []);
+
+            // Add InfluxDB log viewer routes to excluded routes
+            $influxDbExcludedRoutes = [
+                '/api/logs/recent',
+                '/api/logs/services',
+                '/api/logs/levels',
+                '/api/logs/service/*', // Wildcard pattern for service-specific logs
+            ];
+
+            $excludedRoutes = array_merge($excludedRoutes, $influxDbExcludedRoutes);
+
+            return new LoggingMiddleware($logger, $excludedRoutes);
         });
     }
 }

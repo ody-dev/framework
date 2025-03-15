@@ -425,46 +425,7 @@ class Application implements \Psr\Http\Server\RequestHandlerInterface
      */
     public function runningInConsole(): bool
     {
-        if ($this->consoleDetected) {
-            return $this->runningInConsole;
-        }
-
-        // Check if explicitly set
-        if ($this->runningInConsole) {
-            $this->consoleDetected = true;
-            return true;
-        }
-
-        // Check if running via CLI SAPI
-        if (in_array(PHP_SAPI, ['cli', 'phpdbg', 'embed'], true)) {
-            $this->runningInConsole = true;
-            $this->consoleDetected = true;
-            return true;
-        }
-
-        // Check for specific environment variables for CLI tools
-        $this->runningInConsole = (bool)(getenv('CONSOLE_MODE') ||
-            getenv('APP_RUNNING_IN_CONSOLE') ||
-            (isset($_ENV['APP_RUNNING_IN_CONSOLE']) && $_ENV['APP_RUNNING_IN_CONSOLE']));
-        $this->consoleDetected = true;
-
-        return $this->runningInConsole;
-    }
-
-    /**
-     * Set the running in console status.
-     *
-     * @param bool $runningInConsole
-     * @return self
-     */
-    public function setRunningInConsole(bool $runningInConsole): self
-    {
-        $this->runningInConsole = $runningInConsole;
-
-        // Also set the environment variable for broader access
-        putenv('APP_RUNNING_IN_CONSOLE=' . ($runningInConsole ? '1' : '0'));
-
-        return $this;
+        return $this->container->get('runningInConsole');
     }
 
     /**

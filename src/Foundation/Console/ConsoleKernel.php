@@ -63,6 +63,8 @@ class ConsoleKernel
         // Use provided console application or create a new one
         $this->console = $console ?? $this->container->make(ConsoleApplication::class);
 
+        $this->container->instance('runningInConsole', true);
+
         // Register self in container
         $this->container->instance(self::class, $this);
     }
@@ -77,13 +79,6 @@ class ConsoleKernel
     public function handle(?InputInterface $input = null, ?OutputInterface $output = null): int
     {
         try {
-            // Get the application instance
-            $app = $this->getApplication();
-
-            // Mark it as running in console mode
-            $app->setRunningInConsole(true);
-
-            // Run the Symfony Console application
             return $this->console->run($input, $output);
         } catch (\Throwable $e) {
             // Show the error in the console
@@ -95,26 +90,5 @@ class ConsoleKernel
 
             return 1;
         }
-    }
-
-    /**
-     * Get or create the application instance
-     *
-     * @return Application
-     */
-    public function getApplication(): Application
-    {
-        error_log('ConsoleKernel getApplication(); // Load everything again do we really need the application when booting the ConsoleKernel?');
-        $app = new Application(
-            $this->container,
-            $this->container->make(ServiceProviderManager::class)
-        );
-        $this->container->instance(Application::class, $app);
-
-        if (method_exists($app, 'bootstrap')) {
-            $app->bootstrap();
-        }
-
-        return $app;
     }
 }

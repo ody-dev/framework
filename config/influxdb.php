@@ -19,6 +19,7 @@ return [
     // Logging settings
     'log_level' => env('INFLUXDB_LOG_LEVEL', 'debug'),
     'measurement' => env('INFLUXDB_MEASUREMENT', 'logs'),
+    'debug' => env('INFLUXDB_DEBUG', false),
 
     // Batching settings
     'batch_size' => env('INFLUXDB_BATCH_SIZE', 1000),

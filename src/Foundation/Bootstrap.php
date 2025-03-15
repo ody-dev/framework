@@ -35,6 +35,11 @@ class Bootstrap
     {
         // Return existing instance if already initialized
         if (self::$instance !== null) {
+            // Ensure it's bootstrapped
+            if (!self::$instance->isBootstrapped()) {
+                self::$instance->bootstrap();
+            }
+
             error_log("Bootstrap::init() returning existing application instance");
             return self::$instance;
         }

@@ -89,6 +89,10 @@ class ServiceProviderManager
     {
         error_log('ServiceProvider provider register() method: ' . $provider);
         // Convert string provider to instance
+        $providerName = is_string($provider) ? $provider : get_class($provider);
+        error_log("ServiceProvider registering: {$providerName}");
+
+        // Convert string provider to instance
         if (is_string($provider)) {
             $providerClass = $provider;
 
@@ -102,6 +106,7 @@ class ServiceProviderManager
             try {
                 $provider = $this->resolveProvider($providerClass);
             } catch (\Throwable $e) {
+                error_log("Error resolving provider {$providerClass}: " . $e->getMessage());
                 throw $e;
             }
         } else {
