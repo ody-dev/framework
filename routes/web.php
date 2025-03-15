@@ -94,3 +94,20 @@ Route::group(['prefix' => '/api/v1', 'middleware' => ['throttle:60,1']], functio
 Route::get('/api/logs/recent', 'Ody\InfluxDB\Controllers\InfluxDBLogViewerController@recent');
 Route::get('/api/logs/services', 'Ody\InfluxDB\Controllers\InfluxDBLogViewerController@services');
 Route::get('/api/logs/levels', 'Ody\InfluxDB\Controllers\InfluxDBLogViewerController@levels');
+
+Route::group(['prefix' => '/api/docker'], function ($router) {
+    // System information
+    $router->get('/info', 'App\Controllers\DockerApiController@info');
+    $router->get('/version', 'App\Controllers\DockerApiController@version');
+
+    // Containers
+    $router->get('/containers', 'App\Controllers\DockerApiController@listContainers');
+    $router->get('/containers/{id}', 'App\Controllers\DockerApiController@getContainer');
+    $router->get('/containers/{id}/logs', 'App\Controllers\DockerApiController@getContainerLogs');
+    $router->post('/containers/{id}/start', 'App\Controllers\DockerApiController@startContainer');
+    $router->post('/containers/{id}/stop', 'App\Controllers\DockerApiController@stopContainer');
+    $router->post('/containers/{id}/restart', 'App\Controllers\DockerApiController@restartContainer');
+
+    // Images
+    $router->get('/images', 'App\Controllers\DockerApiController@listImages');
+});
