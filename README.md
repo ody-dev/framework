@@ -151,15 +151,157 @@ class UserController
 }
 ```
 
-## Middleware
+# Middleware System Documentation
 
-Middleware provides a mechanism to filter HTTP requests/responses. The framework includes several built-in middleware 
-classes and supports custom middleware:
+This document explains how to use the middleware system in the ODY Framework, including how to register, configure, and create custom middleware.
+
+## Table of Contents
+
+1. [Introduction](#introduction)
+2. [Using Built-in Middleware](#using-built-in-middleware)
+3. [Middleware Parameters](#middleware-parameters)
+4. [Middleware Groups](#middleware-groups)
+5. [Creating Custom Middleware](#creating-custom-middleware)
+6. [Advanced Usage](#advanced-usage)
+
+## Introduction
+
+Middleware provides a mechanism for filtering and modifying HTTP requests and responses. The ODY Framework implements the PSR-15 middleware standard, allowing for a consistent approach to handling request processing.
+
+Key features:
+- PSR-15 compliant implementation
+- Support for named middleware
+- Parameter-based middleware configuration
+- Middleware grouping
+- Request attribute-based parameter passing
+
+## Using Built-in Middleware
+
+### Registering Middleware in Routes
+
+You can apply middleware to routes using the `middleware()` method:
+
+```php
+// Apply a single middleware
+$router->get('/profile', 'UserController@profile')
+    ->middleware('auth');
+
+// Apply multiple middleware
+$router->get('/admin/dashboard', 'AdminController@dashboard')
+    ->middleware('auth', 'role:admin');
+```
+
+### Global Middleware
+
+Global middleware runs on every request. Configure it in your `app.php` configuration file:
+
+```php
+'middleware' => [
+    // Global middleware applied to all routes
+    'global' => [
+        Ody\Foundation\Middleware\ErrorHandlerMiddleware::class,
+        Ody\Foundation\Middleware\CorsMiddleware::class,
+        Ody\Foundation\Middleware\JsonBodyParserMiddleware::class,
+    ],
+]
+```
+
+### Named Middleware
+
+Named middleware allows you to reference middleware by a short name. Define named middleware in your `app.php` configuration:
+
+```php
+'middleware' => [
+    // Named middleware that can be referenced in routes
+    'named' => [
+        'auth' => Ody\Foundation\Middleware\AuthMiddleware::class,
+        'role' => Ody\Foundation\Middleware\RoleMiddleware::class,
+        'throttle' => Ody\Foundation\Middleware\ThrottleMiddleware::class,
+        'cors' => Ody\Foundation\Middleware\CorsMiddleware::class,
+        'json' => Ody\Foundation\Middleware\JsonBodyParserMiddleware::class,
+    ],
+]
+```
+
+## Middleware Parameters
+
+The framework supports parameterized middleware using the colon syntax:
+
+```php
+// Route with parameterized middleware
+$router->get('/api/users', 'UserController@index')
+    ->middleware('auth:api', 'throttle:60,1');
+```
+
+In this example:
+- `auth:api` specifies the `auth` middleware with the `api` guard
+- `throttle:60,1` specifies the `throttle` middleware with 60 requests per 1 minute
+
+### How Parameters Work
+
+Parameters are passed to middleware through request attributes. The middleware can retrieve these parameters from the request:
+
+```php
+// In your middleware class
+public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
+{
+    // Get the guard parameter or use the default
+    $guard = $request->getAttribute('middleware_guard', $this->defaultGuard);
+    
+    // Use the guard parameter in your middleware logic
+    // ...
+    
+    return $handler->handle($request);
+}
+```
+
+### Common Parameter Formats
+
+- Single parameter: `middleware:value`
+- Multiple parameters: `middleware:value1,value2`
+
+The framework automatically parses these formats and makes them available as request attributes.
+
+## Middleware Groups
+
+Middleware groups allow you to apply multiple middleware with a single reference. Define groups in your `app.php` configuration:
+
+```php
+'middleware' => [
+    // Middleware groups for route groups
+    'groups' => [
+        'web' => [
+            'auth',
+            'json',
+        ],
+        'api' => [
+            'throttle:60,1',
+            'auth:api',
+            'json',
+        ],
+    ],
+]
+```
+
+Apply a middleware group to a route:
+
+```php
+$router->group(['middleware' => 'api'], function ($router) {
+    $router->get('/users', 'UserController@index');
+    $router->post('/users', 'UserController@store');
+});
+```
+
+## Creating Custom Middleware
+
+### Basic Middleware
+
+Creating a custom middleware requires implementing the PSR-15 `MiddlewareInterface`:
 
 ```php
 <?php
 
-namespace App\Middleware;
+namespace App\Http\Middleware;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -168,33 +310,191 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 class CustomMiddleware implements MiddlewareInterface
 {
+    /**
+     * Process an incoming server request
+     *
+     * @param ServerRequestInterface $request
+     * @param RequestHandlerInterface $handler
+     * @return ResponseInterface
+     */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        // Perform actions before the request is handled
-        
-        // Pass the request to the next middleware in the stack
+        // Your logic before passing the request to the next middleware
+
+        // Process the request with the next middleware or route handler
         $response = $handler->handle($request);
-        
-        // Perform actions after the request is handled
-        
+
+        // Your logic after receiving the response from the next middleware
+
         return $response;
     }
 }
 ```
 
-Register your middleware in `config/app.php`:
+### Parameterized Middleware
+
+To support parameters in your middleware:
+
+```php
+<?php
+
+namespace App\Http\Middleware;
+
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
+
+class CustomParameterizedMiddleware implements MiddlewareInterface
+{
+    /**
+     * @var string Default value for the parameter
+     */
+    private string $defaultValue;
+
+    /**
+     * Constructor
+     *
+     * @param string $defaultValue
+     */
+    public function __construct(string $defaultValue = 'default')
+    {
+        $this->defaultValue = $defaultValue;
+    }
+
+    /**
+     * Process an incoming server request
+     *
+     * @param ServerRequestInterface $request
+     * @param RequestHandlerInterface $handler
+     * @return ResponseInterface
+     */
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
+    {
+        // Get the parameter from request attribute or use default
+        $value = $request->getAttribute('middleware_value', $this->defaultValue);
+        
+        // Use the parameter in your middleware logic
+        // ...
+        
+        return $handler->handle($request);
+    }
+}
+```
+
+### Registering Custom Middleware
+
+Register your custom middleware in the `app.php` configuration:
 
 ```php
 'middleware' => [
-    'global' => [
-        // Global middleware applied to all routes
-        App\Middleware\CustomMiddleware::class,
-    ],
     'named' => [
-        // Named middleware that can be referenced in routes
-        'custom' => App\Middleware\CustomMiddleware::class,
+        'custom' => App\Http\Middleware\CustomMiddleware::class,
+        'custom-param' => App\Http\Middleware\CustomParameterizedMiddleware::class,
     ],
-],
+]
+```
+
+Now you can use your custom middleware in routes:
+
+```php
+$router->get('/custom-route', 'Controller@method')
+    ->middleware('custom', 'custom-param:special');
+```
+
+## Advanced Usage
+
+### Middleware Priority
+
+Middleware executes in the order they are registered. Global middleware runs first, followed by group middleware, and finally route-specific middleware.
+
+### Stopping Middleware Execution
+
+To stop the middleware chain and return a response early:
+
+```php
+public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
+{
+    if ($someCondition) {
+        // Return response without calling $handler->handle($request)
+        return new Response()
+            ->withStatus(403)
+            ->json()
+            ->withJson(['error' => 'Access denied']);
+    }
+    
+    return $handler->handle($request);
+}
+```
+
+### Modifying the Request
+
+You can modify the request before passing it to the next middleware:
+
+```php
+public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
+{
+    // Add data to the request
+    $request = $request->withAttribute('custom_data', 'value');
+    
+    return $handler->handle($request);
+}
+```
+
+### Modifying the Response
+
+You can also modify the response after receiving it from the next middleware:
+
+```php
+public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
+{
+    // Process the request
+    $response = $handler->handle($request);
+    
+    // Modify the response
+    return $response->withHeader('X-Custom-Header', 'value');
+}
+```
+
+### Testing Middleware
+
+To test middleware in isolation:
+
+```php
+use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\RequestHandlerInterface;
+
+class CustomMiddlewareTest extends TestCase
+{
+    public function testMiddlewareProcessing(): void
+    {
+        // Create a mock request
+        $request = $this->createMock(ServerRequestInterface::class);
+        
+        // Configure request for test
+        $request->method('getAttribute')
+            ->with('middleware_value', 'default')
+            ->willReturn('test-value');
+        
+        // Create a mock handler
+        $handler = $this->createMock(RequestHandlerInterface::class);
+        
+        // Configure handler to return a response
+        $response = $this->createMock(ResponseInterface::class);
+        $handler->method('handle')->willReturn($response);
+        
+        // Create middleware instance
+        $middleware = new CustomParameterizedMiddleware();
+        
+        // Execute middleware
+        $result = $middleware->process($request, $handler);
+        
+        // Assert result is as expected
+        $this->assertSame($response, $result);
+    }
+}
 ```
 
 ## Dependency Injection
