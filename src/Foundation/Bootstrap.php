@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Ody\Foundation;
 
 use Ody\Container\Container;
+use Ody\Container\Contracts\BindingResolutionException;
 use Ody\Foundation\Providers\ServiceProviderManager;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -40,22 +41,18 @@ class Bootstrap
                 self::$instance->bootstrap();
             }
 
-            error_log("Bootstrap::init() returning existing application instance");
+            logger()->debug("Bootstrap::init() returning existing application instance");
             return self::$instance;
         }
 
         if (self::$bootstrapping) {
-            error_log("WARNING: Bootstrap::init() called recursively");
-            // If we're already bootstrapping, return a dummy app or wait
-            if (self::$instance !== null) {
-                return self::$instance;
-            }
-            // Otherwise proceed cautiously
+            logger()->warning("Bootstrap::init() called recursively");
+            exit(1); // TODO: throw appropriate exception;
         }
 
         // Set bootstrapping flag to prevent recursion
         self::$bootstrapping = true;
-        error_log("Bootstrap::init() creating new application instance");
+        logger()->debug("Bootstrap::init() creating new application instance");
 
         try {
             self::initBasePath($basePath);
@@ -126,6 +123,7 @@ class Bootstrap
      * @param Container $container
      * @param ServiceProviderManager $providerManager
      * @return Application
+     * @throws BindingResolutionException
      */
     private static function createApplication(Container $container, ServiceProviderManager $providerManager): Application
     {

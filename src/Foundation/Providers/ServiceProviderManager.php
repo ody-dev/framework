@@ -87,7 +87,6 @@ class ServiceProviderManager
      */
     public function register($provider, bool $force = false): ServiceProvider
     {
-        error_log('ServiceProvider provider register() method: ' . $provider);
         // Convert string provider to instance
         $providerName = is_string($provider) ? $provider : get_class($provider);
         error_log("ServiceProvider registering: {$providerName}");
