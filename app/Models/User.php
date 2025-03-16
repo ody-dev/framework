@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Ody\Auth\Contracts\Authenticatable;
 use Ody\Auth\HasApiTokens;
-use Illuminate\Database\Eloquent\Model;
 
 class User extends Model implements Authenticatable
 {

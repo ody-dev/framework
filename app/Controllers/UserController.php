@@ -2,29 +2,12 @@
 
 namespace App\Controllers;
 
-use App\Models\User;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Ody\Foundation\Http\Response;
-use Psr\Log\LoggerInterface;
 
 class UserController
 {
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
-
-    /**
-     * UserController constructor
-     *
-     * Dependencies are automatically injected by the container
-     */
-    public function __construct(LoggerInterface $logger)
-    {
-        $this->logger = $logger;
-    }
-
     /**
      * Get all users
      *
@@ -36,11 +19,18 @@ class UserController
     public function index(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
         // In a real app, fetch from database
-//        $stmt = $this->db->query('SELECT id, email FROM users');
-//        $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         // Mock data for example
-         $users = User::get();
+         $users = [
+             [
+                 'id' => 1,
+                 'name' => 'John Doe',
+             ],
+             [
+                 'id' => 2,
+                 'name' => 'Jane Doe',
+             ]
+         ];
 
         return $this->jsonResponse($response, $users);
     }
@@ -57,12 +47,9 @@ class UserController
     {
         $id = $params['id'] ?? null;
 
-        $this->logger->info('Fetching user', ['id' => $id]);
+        logger()->info('Fetching user', ['id' => $id]);
 
-        // In a real app, fetch from database
-        // $stmt = $this->db->prepare('SELECT id, name, email FROM users WHERE id = ?');
-        // $stmt->execute([$id]);
-        // $user = $stmt->fetch(\PDO::FETCH_ASSOC);
+        // In a real app, fetch from databaseS
 
         // Mock data for example
         $user = ['id' => (int)$id, 'name' => 'John Doe', 'email' => 'john@example.com'];
@@ -82,7 +69,7 @@ class UserController
     {
         $data = $request->getParsedBody() ?? [];
 
-        $this->logger->info('Creating user', $data);
+        logger()->info('Creating user', $data);
 
         // Validate input
         if (empty($data['name']) || empty($data['email'])) {
@@ -91,10 +78,7 @@ class UserController
             ]);
         }
 
-        // In a real app, save to database
-        // $stmt = $this->db->prepare('INSERT INTO users (name, email) VALUES (?, ?)');
-        // $stmt->execute([$data['name'], $data['email']]);
-        // $id = $this->db->lastInsertId();
+        // In a real app, save to databaseS
 
         // Mock data for example
         $id = 3;
@@ -119,31 +103,9 @@ class UserController
         $id = $params['id'] ?? null;
         $data = $request->getParsedBody() ?? [];
 
-        $this->logger->info('Updating user', ['id' => $id, 'data' => $data]);
+        logger()->info('Updating user', ['id' => $id, 'data' => $data]);
 
-        // In a real app, update in database
-        // $updateFields = [];
-        // $updateParams = [];
-
-        // if (!empty($data['name'])) {
-        //     $updateFields[] = 'name = ?';
-        //     $updateParams[] = $data['name'];
-        // }
-
-        // if (!empty($data['email'])) {
-        //     $updateFields[] = 'email = ?';
-        //     $updateParams[] = $data['email'];
-        // }
-
-        // if (empty($updateFields)) {
-        //     return $this->jsonResponse($response->withStatus(422), [
-        //         'error' => 'No fields to update'
-        //     ]);
-        // }
-
-        // $updateParams[] = $id;
-        // $stmt = $this->db->prepare('UPDATE users SET ' . implode(', ', $updateFields) . ' WHERE id = ?');
-        // $stmt->execute($updateParams);
+        // In a real app, update in databaseDSS
 
         // Mock response for example
         return $this->jsonResponse($response, [
@@ -166,12 +128,9 @@ class UserController
     {
         $id = $params['id'] ?? null;
 
-        $this->logger->info('Deleting user', ['id' => $id]);
+        logger()->info('Deleting user', ['id' => $id]);
 
         // In a real app, delete from database
-        // $stmt = $this->db->prepare('DELETE FROM users WHERE id = ?');
-        // $stmt->execute([$id]);
-        // $affected = $stmt->rowCount();
 
         // Mock data for example
         $affected = 1;
@@ -192,7 +151,7 @@ class UserController
     private function jsonResponse(ResponseInterface $response, $data): ResponseInterface
     {
         // Debug the response type
-        $this->logger->info('Response object in jsonResponse', [
+        logger()->info('Response object in jsonResponse', [
             'class' => get_class($response),
             'interfaces' => implode(', ', class_implements($response))
         ]);
@@ -205,7 +164,7 @@ class UserController
             // Instead of using withJson directly, we'll manually encode and set the body
             $jsonData = json_encode($data);
             if ($jsonData === false) {
-                $this->logger->error('JSON encoding error', [
+                logger()->error('JSON encoding error', [
                     'error' => json_last_error_msg()
                 ]);
                 $jsonData = json_encode(['error' => 'JSON encoding error']);
