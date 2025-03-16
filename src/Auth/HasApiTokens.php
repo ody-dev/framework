@@ -3,8 +3,6 @@
 namespace Ody\Auth;
 
 use DateTimeInterface;
-use Ody\Auth\NewAccessToken;
-use Ody\Auth\PersonalAccessToken;
 use Ody\Auth\Contracts\HasAbilities;
 use Ody\Database\Relations\MorphMany;
 use Ody\Support\Str;
