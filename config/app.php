@@ -18,8 +18,8 @@ return [
 
     'aliases' => [
         'App' => Ody\Foundation\Application::class,
-        'Config' => Ody\Foundation\Support\Config::class,
-        'Env' => Ody\Foundation\Support\Env::class,
+        'Config' => \Ody\Support\Config::class,
+        'Env' => \Ody\Support\Env::class,
         'Router' => Ody\Foundation\Router::class,
         'Request' => Ody\Foundation\Http\Request::class,
         'Response' => Ody\Foundation\Http\Response::class,

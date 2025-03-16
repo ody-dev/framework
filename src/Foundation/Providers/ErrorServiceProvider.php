@@ -11,7 +11,7 @@ namespace Ody\Foundation\Providers;
 
 use Ody\Container\Container;
 use Ody\Foundation\Exceptions\Handler;
-use Ody\Foundation\Support\Config;
+use Ody\Support\Config;
 use Psr\Log\LoggerInterface;
 
 class ErrorServiceProvider extends ServiceProvider

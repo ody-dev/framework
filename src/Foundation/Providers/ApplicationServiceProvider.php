@@ -1,16 +1,16 @@
 <?php
 namespace Ody\Foundation\Providers;
 
+use Nyholm\Psr7\Factory\Psr17Factory;
 use Ody\Foundation\Application;
-use Ody\Foundation\Middleware\MiddlewareRegistry;
-use Ody\Foundation\Support\Config;
 use Ody\Foundation\Middleware\CorsMiddleware;
 use Ody\Foundation\Middleware\JsonBodyParserMiddleware;
 use Ody\Foundation\Middleware\LoggingMiddleware;
+use Ody\Foundation\Middleware\MiddlewareRegistry;
 use Ody\Foundation\Router;
-use Nyholm\Psr7\Factory\Psr17Factory;
-use Psr\Http\Message\ServerRequestFactoryInterface;
+use Ody\Support\Config;
 use Psr\Http\Message\ResponseFactoryInterface;
+use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\UploadedFileFactoryInterface;
 use Psr\Http\Message\UriFactoryInterface;

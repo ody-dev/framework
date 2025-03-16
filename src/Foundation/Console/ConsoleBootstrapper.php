@@ -16,7 +16,6 @@ use Ody\Foundation\Providers\ConsoleServiceProvider;
 use Ody\Foundation\Providers\EnvServiceProvider;
 use Ody\Foundation\Providers\LoggingServiceProvider;
 use Ody\Foundation\Providers\ServiceProviderManager;
-use Ody\Foundation\Support\Config;
 
 /**
  * Console Bootstrapper

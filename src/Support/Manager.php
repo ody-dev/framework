@@ -17,7 +17,7 @@ abstract class Manager
     /**
      * The configuration repository instance.
      *
-     * @var \Ody\Foundation\Support\Config
+     * @var \Ody\Support\Config
      */
     protected $config;
 

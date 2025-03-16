@@ -36,7 +36,7 @@
   },
   "autoload": {
     "files": [
-      "src/Foundation/Support/helpers.php",
+      "src/Support/helpers.php",
       "src/Foundation/Http/functions/normalize_uploaded_files.php",
       "src/Foundation/Http/functions/create_uploaded_file.php"
     ],

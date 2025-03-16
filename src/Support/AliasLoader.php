@@ -7,7 +7,7 @@
  * @license  https://github.com/ody-dev/ody-core/blob/master/LICENSE
  */
 
-namespace Ody\Foundation\Support;
+namespace Ody\Support;
 
 /**
  * Class alias loader

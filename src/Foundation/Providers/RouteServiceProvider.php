@@ -6,7 +6,7 @@ use Ody\Container\Container;
 use Ody\Foundation\Loaders\RouteLoader;
 use Ody\Foundation\Middleware\MiddlewareRegistry;
 use Ody\Foundation\Router;
-use Ody\Foundation\Support\Config;
+use Ody\Support\Config;
 use Psr\Log\LoggerInterface;
 
 /**

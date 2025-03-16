@@ -2,10 +2,9 @@
 namespace Ody\Foundation\Providers;
 
 use Ody\Container\Container;
-use Ody\Foundation\Support\Config;
 use Ody\Logger\LogManager;
+use Ody\Support\Config;
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 /**
  * Service provider for logging

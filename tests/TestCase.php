@@ -6,7 +6,7 @@ use Ody\Container\Container;
 use Ody\Foundation\Application;
 use Ody\Foundation\Http\Request;
 use Ody\Foundation\Providers\ServiceProviderManager;
-use Ody\Foundation\Support\Config;
+use Ody\Support\Config;
 use PHPUnit\Framework\TestCase as BaseTestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;

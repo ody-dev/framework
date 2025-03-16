@@ -1,16 +1,15 @@
 <?php
 namespace Ody\Foundation\Providers;
 
-use Ody\Auth\Middleware\Authenticate;
 use Ody\Container\Container;
-use Ody\Foundation\Middleware\MiddlewareRegistry;
+use Ody\Foundation\Middleware\AuthMiddleware;
 use Ody\Foundation\Middleware\CorsMiddleware;
 use Ody\Foundation\Middleware\JsonBodyParserMiddleware;
 use Ody\Foundation\Middleware\LoggingMiddleware;
-use Ody\Foundation\Middleware\AuthMiddleware;
+use Ody\Foundation\Middleware\MiddlewareRegistry;
 use Ody\Foundation\Middleware\RoleMiddleware;
 use Ody\Foundation\Middleware\ThrottleMiddleware;
-use Ody\Foundation\Support\Config;
+use Ody\Support\Config;
 use Psr\Log\LoggerInterface;
 
 /**

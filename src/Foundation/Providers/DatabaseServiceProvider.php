@@ -1,8 +1,7 @@
 <?php
 namespace Ody\Foundation\Providers;
 
-use Ody\Container\Container;
-use Ody\Foundation\Support\Config;
+use Ody\Support\Config;
 use PDO;
 
 /**

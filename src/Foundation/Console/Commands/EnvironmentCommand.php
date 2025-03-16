@@ -10,7 +10,7 @@
 namespace Ody\Foundation\Console\Commands;
 
 use Ody\Foundation\Console\Command;
-use Ody\Foundation\Support\Config;
+use Ody\Support\Config;
 
 /**
  * EnvironmentCommand

@@ -12,7 +12,7 @@ namespace Ody\Foundation\Providers;
 use Ody\Container\Container;
 use Ody\Foundation\Console\CommandRegistry;
 use Ody\Foundation\Console\ConsoleKernel;
-use Ody\Foundation\Support\Config;
+use Ody\Support\Config;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Application as ConsoleApplication;
 

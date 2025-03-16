@@ -10,8 +10,8 @@
 use Ody\Container\Container;
 use Ody\Foundation\Logger;
 use Ody\LoggerLogManager;
-use Ody\Foundation\Support\Config;
-use Ody\Foundation\Support\Env;
+use Ody\Support\Config;
+use Ody\Support\Env;
 use Psr\Log\LoggerInterface;
 
 if (!function_exists('app')) {

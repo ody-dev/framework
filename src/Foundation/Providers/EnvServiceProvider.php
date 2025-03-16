@@ -9,8 +9,7 @@
 
 namespace Ody\Foundation\Providers;
 
-use Ody\Container\Container;
-use Ody\Foundation\Support\Env;
+use Ody\Support\Env;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 

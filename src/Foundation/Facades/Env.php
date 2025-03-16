@@ -23,7 +23,7 @@ class Env extends Facade
      */
     protected static function getFacadeAccessor()
     {
-        return \Ody\Foundation\Support\Env::class;
+        return \Ody\Support\Env::class;
     }
 
     /**
@@ -38,7 +38,7 @@ class Env extends Facade
      */
     public static function get(string $key, $default = null)
     {
-        return \Ody\Foundation\Support\Env::get($key, $default);
+        return \Ody\Support\Env::get($key, $default);
     }
 
     /**
@@ -52,6 +52,6 @@ class Env extends Facade
      */
     public static function has(string $key): bool
     {
-        return \Ody\Foundation\Support\Env::has($key);
+        return \Ody\Support\Env::has($key);
     }
 }

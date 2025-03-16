@@ -1,11 +1,7 @@
 <?php
 namespace Ody\Foundation\Providers;
 
-use Ody\Container\Container;
-use Ody\Foundation\Support\Config;
-use Ody\Foundation\Support\Env;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
+use Ody\Support\Config;
 
 /**
  * Service provider for configuration

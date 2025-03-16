@@ -1,14 +1,12 @@
 <?php
 namespace Ody\Foundation\Providers;
 
-use Ody\Container\Container;
-use Ody\Foundation\Facades\App;
-use Ody\Foundation\Support\AliasLoader;
-use Ody\Foundation\Support\Config;
+use Ody\Foundation\Facades\Facade;
 use Ody\Foundation\Http\Request;
 use Ody\Foundation\Http\Response;
 use Ody\Foundation\Router;
-use Ody\Foundation\Facades\Facade;
+use Ody\Support\AliasLoader;
+use Ody\Support\Config;
 
 /**
  * Service provider for facades

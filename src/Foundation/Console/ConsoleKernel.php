@@ -10,11 +10,7 @@
 namespace Ody\Foundation\Console;
 
 use Ody\Container\Container;
-use Ody\Foundation\Application;
-use Ody\Foundation\Support\Config;
-use Ody\Foundation\Providers\ServiceProviderManager;
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use Symfony\Component\Console\Application as ConsoleApplication;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;

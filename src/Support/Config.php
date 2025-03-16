@@ -1,5 +1,5 @@
 <?php
-namespace Ody\Foundation\Support;
+namespace Ody\Support;
 
 /**
  * Configuration repository

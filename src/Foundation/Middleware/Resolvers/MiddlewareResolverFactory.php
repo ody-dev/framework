@@ -10,7 +10,7 @@
 namespace Ody\Foundation\Middleware\Resolvers;
 
 use Ody\Container\Container;
-use Ody\Foundation\Support\Config;
+use Ody\Support\Config;
 use Psr\Log\LoggerInterface;
 
 /**

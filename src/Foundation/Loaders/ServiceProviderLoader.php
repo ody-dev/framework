@@ -10,9 +10,9 @@
 namespace Ody\Foundation\Loaders;
 
 use Ody\Container\Container;
-use Ody\Foundation\Providers\ServiceProviderManager;
-use Ody\Foundation\Support\Config;
 use Ody\Foundation\Logger;
+use Ody\Foundation\Providers\ServiceProviderManager;
+use Ody\Support\Config;
 
 /**
  * Service Provider Loader
