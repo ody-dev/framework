@@ -9,21 +9,7 @@ ODY is a modern PHP API framework built with a focus on high performance and mod
 Swoole's coroutines for asynchronous processing, follows PSR standards for interoperability, and provides a 
 clean architecture for building robust APIs.
 
-!! Swoole not fully implemented yet !!
-
-## Key Features
-
-- **High Performance**: Built with Swoole support for asynchronous processing and coroutines
-- **PSR Compliance**: Implements PSR-7, PSR-15, and PSR-17 for HTTP messaging and middleware
-- **Modern PHP**: Requires PHP 8.3+ and takes advantage of modern language features
-- **Modular Design**: Build and integrate different modules with a clean architecture
-- **Middleware System**: Powerful middleware system for request/response processing
-- **Dependency Injection**: Built-in IoC container for dependency management
-- **Console Support**: CLI commands for various tasks and application management
-- **Routing**: Simple and flexible routing system with support for route groups and middleware
-
 ## Installation
-
 ### Requirements
 
 - PHP 8.3 or higher
@@ -33,7 +19,7 @@ clean architecture for building robust APIs.
 ### Basic Installation
 
 ```bash
-composer create-project ody/api-core your-project-name
+composer create-project ody/framework your-project-name
 cd your-project-name
 ```
 
@@ -62,8 +48,7 @@ your-project/
 ├── public/               # Public directory (web server root)
 │   └── index.php         # Application entry point
 ├── routes/               # Route definitions
-│   ├── api.php           # API routes
-│   └── web.php           # Web routes
+│   └── api.php           # API routes
 ├── src/                  # Framework core components
 ├── storage/              # Storage directory for logs, cache, etc.
 ├── tests/                # Test files
@@ -92,7 +77,7 @@ Route::post('/users', 'App\Controllers\UserController@store');
 
 // Route with middleware
 Route::get('/users/{id}', 'App\Controllers\UserController@show')
-    ->middleware('auth:api');
+    ->middleware('auth');
 
 // Route groups
 Route::group(['prefix' => '/api/v1', 'middleware' => ['throttle:60,1']], function ($router) {
@@ -151,29 +136,15 @@ class UserController
 }
 ```
 
-# Middleware System Documentation
+# Middleware
 
-This document explains how to use the middleware system in the ODY Framework, including how to register, configure, and create custom middleware.
-
-## Table of Contents
-
-1. [Introduction](#introduction)
-2. [Using Built-in Middleware](#using-built-in-middleware)
-3. [Middleware Parameters](#middleware-parameters)
-4. [Middleware Groups](#middleware-groups)
-5. [Creating Custom Middleware](#creating-custom-middleware)
-6. [Advanced Usage](#advanced-usage)
-
-## Introduction
-
-Middleware provides a mechanism for filtering and modifying HTTP requests and responses. The ODY Framework implements the PSR-15 middleware standard, allowing for a consistent approach to handling request processing.
+Middleware provides a mechanism for filtering and modifying HTTP requests and responses. The ODY Framework implements
+the PSR-15 middleware standard, allowing for a consistent approach to handling request processing.
 
 Key features:
 - PSR-15 compliant implementation
 - Support for named middleware
-- Parameter-based middleware configuration
 - Middleware grouping
-- Request attribute-based parameter passing
 
 ## Using Built-in Middleware
 
@@ -223,45 +194,6 @@ Named middleware allows you to reference middleware by a short name. Define name
 ]
 ```
 
-## Middleware Parameters
-
-The framework supports parameterized middleware using the colon syntax:
-
-```php
-// Route with parameterized middleware
-$router->get('/api/users', 'UserController@index')
-    ->middleware('auth:api', 'throttle:60,1');
-```
-
-In this example:
-- `auth:api` specifies the `auth` middleware with the `api` guard
-- `throttle:60,1` specifies the `throttle` middleware with 60 requests per 1 minute
-
-### How Parameters Work
-
-Parameters are passed to middleware through request attributes. The middleware can retrieve these parameters from the request:
-
-```php
-// In your middleware class
-public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
-{
-    // Get the guard parameter or use the default
-    $guard = $request->getAttribute('middleware_guard', $this->defaultGuard);
-    
-    // Use the guard parameter in your middleware logic
-    // ...
-    
-    return $handler->handle($request);
-}
-```
-
-### Common Parameter Formats
-
-- Single parameter: `middleware:value`
-- Multiple parameters: `middleware:value1,value2`
-
-The framework automatically parses these formats and makes them available as request attributes.
-
 ## Middleware Groups
 
 Middleware groups allow you to apply multiple middleware with a single reference. Define groups in your `app.php` configuration:
@@ -275,8 +207,8 @@ Middleware groups allow you to apply multiple middleware with a single reference
             'json',
         ],
         'api' => [
-            'throttle:60,1',
-            'auth:api',
+            'throttle',
+            'auth',
             'json',
         ],
     ],
@@ -327,57 +259,6 @@ class CustomMiddleware implements MiddlewareInterface
         // Your logic after receiving the response from the next middleware
 
         return $response;
-    }
-}
-```
-
-### Parameterized Middleware
-
-To support parameters in your middleware:
-
-```php
-<?php
-
-namespace App\Http\Middleware;
-
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\MiddlewareInterface;
-use Psr\Http\Server\RequestHandlerInterface;
-
-class CustomParameterizedMiddleware implements MiddlewareInterface
-{
-    /**
-     * @var string Default value for the parameter
-     */
-    private string $defaultValue;
-
-    /**
-     * Constructor
-     *
-     * @param string $defaultValue
-     */
-    public function __construct(string $defaultValue = 'default')
-    {
-        $this->defaultValue = $defaultValue;
-    }
-
-    /**
-     * Process an incoming server request
-     *
-     * @param ServerRequestInterface $request
-     * @param RequestHandlerInterface $handler
-     * @return ResponseInterface
-     */
-    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
-    {
-        // Get the parameter from request attribute or use default
-        $value = $request->getAttribute('middleware_value', $this->defaultValue);
-        
-        // Use the parameter in your middleware logic
-        // ...
-        
-        return $handler->handle($request);
     }
 }
 ```
@@ -456,50 +337,7 @@ public function process(ServerRequestInterface $request, RequestHandlerInterface
 }
 ```
 
-### Testing Middleware
-
-To test middleware in isolation:
-
-```php
-use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\RequestHandlerInterface;
-
-class CustomMiddlewareTest extends TestCase
-{
-    public function testMiddlewareProcessing(): void
-    {
-        // Create a mock request
-        $request = $this->createMock(ServerRequestInterface::class);
-        
-        // Configure request for test
-        $request->method('getAttribute')
-            ->with('middleware_value', 'default')
-            ->willReturn('test-value');
-        
-        // Create a mock handler
-        $handler = $this->createMock(RequestHandlerInterface::class);
-        
-        // Configure handler to return a response
-        $response = $this->createMock(ResponseInterface::class);
-        $handler->method('handle')->willReturn($response);
-        
-        // Create middleware instance
-        $middleware = new CustomParameterizedMiddleware();
-        
-        // Execute middleware
-        $result = $middleware->process($request, $handler);
-        
-        // Assert result is as expected
-        $this->assertSame($response, $result);
-    }
-}
-```
-
 ## Dependency Injection
-
-The framework includes a powerful IoC container for managing dependencies:
 
 ```php
 <?php
@@ -516,21 +354,6 @@ $container->singleton(UserService::class, function($container) {
 
 // Resolving dependencies
 $userService = $container->make(UserService::class);
-```
-
-## Command Line Interface
-
-The framework provides a CLI tool for various tasks. To use it, run the `ody` command from your project root:
-
-```bash
-# List available commands
-php ody list
-
-# Get environment information
-php ody env
-
-# Create a new command
-php ody make:command MyCustomCommand
 ```
 
 ## Logging
