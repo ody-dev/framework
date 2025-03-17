@@ -8,7 +8,9 @@ return [
     'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     'providers' => [
-        Ody\Foundation\Providers\ErrorServiceProvider::class
+        Ody\Foundation\Providers\ErrorServiceProvider::class,
+        Ody\Auth\Providers\AuthServiceProvider::class,
+        Ody\DB\DatabaseServiceProvider::class,
 
         // Add your application service providers here
         // App\Providers\CustomServiceProvider::class,
@@ -30,66 +32,21 @@ return [
     'middleware' => [
         // Global middleware applied to all routes
         'global' => [
-            Ody\Foundation\Middleware\ErrorHandlerMiddleware::class,
-            Ody\Foundation\Middleware\CorsMiddleware::class,
-            Ody\Foundation\Middleware\JsonBodyParserMiddleware::class,
-            Ody\Foundation\Middleware\LoggingMiddleware::class,
+            \Ody\Foundation\Middleware\ErrorHandlerMiddleware::class,
+            \Ody\Foundation\Middleware\CorsMiddleware::class,
+            \Ody\Foundation\Middleware\JsonBodyParserMiddleware::class,
+            \Ody\Foundation\Middleware\LoggingMiddleware::class,
+            \Ody\Auth\Middleware\AttachUserToRequest::class,
         ],
 
         // Named middleware that can be referenced in routes
         'named' => [
-            // Authentication middleware with different guards
-            'auth' => Ody\Foundation\Middleware\AuthMiddleware::class,
-            'auth:api' => [
-                'class' => Ody\Foundation\Middleware\AuthMiddleware::class,
-                'parameters' => ['guard' => 'api']
-            ],
-            'auth:jwt' => [
-                'class' => Ody\Foundation\Middleware\AuthMiddleware::class,
-                'parameters' => ['guard' => 'jwt']
-            ],
-            'auth:session' => [
-                'class' => Ody\Foundation\Middleware\AuthMiddleware::class,
-                'parameters' => ['guard' => 'session']
-            ],
-
-            // Role-based access control
-            'role' => Ody\Foundation\Middleware\RoleMiddleware::class,
-            'role:admin' => [
-                'class' => Ody\Foundation\Middleware\RoleMiddleware::class,
-                'parameters' => ['requiredRole' => 'admin']
-            ],
-            'role:user' => [
-                'class' => Ody\Foundation\Middleware\RoleMiddleware::class,
-                'parameters' => ['requiredRole' => 'user']
-            ],
-            'role:guest' => [
-                'class' => Ody\Foundation\Middleware\RoleMiddleware::class,
-                'parameters' => ['requiredRole' => 'guest']
-            ],
-
-            // Rate limiting
-            'throttle' => Ody\Foundation\Middleware\ThrottleMiddleware::class,
-            'throttle:60,1' => [
-                'class' => Ody\Foundation\Middleware\ThrottleMiddleware::class,
-                'parameters' => ['maxRequests' => 60, 'minutes' => 1]
-            ],
-            'throttle:1000,60' => [
-                'class' => Ody\Foundation\Middleware\ThrottleMiddleware::class,
-                'parameters' => ['maxRequests' => 1000, 'minutes' => 60]
-            ],
-
-            // Other middleware
-            'cors' => Ody\Foundation\Middleware\CorsMiddleware::class,
-            'json' => Ody\Foundation\Middleware\JsonBodyParserMiddleware::class,
-            'log' => Ody\Foundation\Middleware\LoggingMiddleware::class,
-
-            // Custom middleware example
-            // 'cache' => App\Http\Middleware\CacheMiddleware::class,
-            // 'cache:60' => [
-            //     'class' => App\Http\Middleware\CacheMiddleware::class,
-            //     'parameters' => ['duration' => 60]
-            // ],
+            'auth' => \Ody\Auth\Middleware\Authenticate::class,
+            'auth.sanctum' => \Ody\Auth\Middleware\Authenticate::class,
+            'auth.token' => \Ody\Auth\Middleware\Authenticate::class,
+            'abilities' => \Ody\Auth\Middleware\CheckAbilities::class,
+            'ability' => \Ody\Auth\Middleware\CheckForAnyAbility::class,
+            'throttle' => \Ody\Foundation\Middleware\ThrottleMiddleware::class,
         ],
 
         // Middleware groups for route groups

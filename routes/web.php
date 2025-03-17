@@ -8,9 +8,9 @@
  */
 
 use Ody\Foundation\Facades\Route;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\ResponseInterface;
 use Ody\Foundation\Http\Response;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 // Public routes
 Route::get('/health', function (ServerRequestInterface $request, ResponseInterface $response) {
@@ -53,7 +53,7 @@ Route::get('/version', function (ServerRequestInterface $request, ResponseInterf
 });
 
 // User routes with middleware
-Route::get('/users', 'App\Controllers\UserController@index');
+Route::get('/users', 'App\Controllers\UserController@index')->middleware('auth:api');
 
 Route::get('/users/{id:\\d+}', 'App\Controllers\UserController@show')
     ->middleware('auth:api');
@@ -69,6 +69,16 @@ Route::put('/users/{id:\\d+}', 'App\Controllers\UserController@update')
 Route::delete('/users/{id:\\d+}', 'App\Controllers\UserController@destroy')
     ->middleware('auth:api')
     ->middleware('role:admin');
+
+// Public authentication endpoints
+Route::post('/api/auth/login', 'App\Controllers\AuthController@login');
+Route::post('/api/auth/register', 'App\Controllers\AuthController@register');
+
+// Protected authentication endpoints
+Route::group(['prefix' => '/api/auth', 'middleware' => ['auth:jwt']], function ($router) {
+    $router->get('/user', 'App\Controllers\AuthController@user');
+    $router->post('/logout', 'App\Controllers\AuthController@logout');
+});
 
 // API route groups
 Route::group(['prefix' => '/api/v1', 'middleware' => ['throttle:60,1']], function ($router) {
