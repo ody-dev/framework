@@ -6,16 +6,17 @@ return [
     'debug' => (bool) env('APP_DEBUG', false),
     'url' => env('APP_URL', 'http://localhost'),
     'timezone' => env('APP_TIMEZONE', 'UTC'),
-
     'providers' => [
-        Ody\Foundation\Providers\ErrorServiceProvider::class,
+        \Ody\Foundation\Providers\FacadeServiceProvider::class,
+        \Ody\Foundation\Providers\MiddlewareServiceProvider::class,
+        \Ody\Foundation\Providers\RouteServiceProvider::class,
+        \Ody\Foundation\Providers\ErrorServiceProvider::class,
         \Ody\Foundation\Providers\MiddlewareCacheServiceProvider::class,
-        Ody\DB\DatabaseServiceProvider::class,
+        \Ody\DB\Providers\DatabaseServiceProvider::class,
 
         // Add your application service providers here
         // App\Providers\CustomServiceProvider::class,
     ],
-
     'aliases' => [
         'App' => \Ody\Foundation\Application::class,
         'Config' => \Ody\Support\Config::class,
@@ -24,22 +25,24 @@ return [
         'Request' => \Ody\Foundation\Http\Request::class,
         'Response' => \Ody\Foundation\Http\Response::class,
     ],
-
     'routes' => [
         'path' => env('ROUTES_PATH', base_path('routes')),
     ],
-
     'middleware' => [
-        // Global middleware applied to all routes
         'global' => [
             // TODO: revision error handling
 //            \Ody\Foundation\Middleware\ErrorHandlerMiddleware::class,
             \Ody\Foundation\Middleware\CorsMiddleware::class,
             \Ody\Foundation\Middleware\JsonBodyParserMiddleware::class,
             \Ody\Foundation\Middleware\LoggingMiddleware::class
+        ],
+        'named' => [
+            'api' => [
+                \Ody\Foundation\Middleware\ThrottleMiddleware::class,
+                \Ody\Foundation\Middleware\AuthMiddleware::class,
+            ]
         ]
     ],
-
     'cors' => [
         'origin' => env('CORS_ALLOW_ORIGIN', '*'),
         'methods' => env('CORS_ALLOW_METHODS', 'GET, POST, PUT, DELETE, OPTIONS'),
