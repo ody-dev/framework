@@ -9,7 +9,7 @@ return [
 
     'providers' => [
         Ody\Foundation\Providers\ErrorServiceProvider::class,
-        Ody\Auth\Providers\AuthServiceProvider::class,
+        \Ody\Foundation\Providers\MiddlewareCacheServiceProvider::class,
         Ody\DB\DatabaseServiceProvider::class,
 
         // Add your application service providers here
@@ -17,12 +17,12 @@ return [
     ],
 
     'aliases' => [
-        'App' => Ody\Foundation\Application::class,
+        'App' => \Ody\Foundation\Application::class,
         'Config' => \Ody\Support\Config::class,
         'Env' => \Ody\Support\Env::class,
-        'Router' => Ody\Foundation\Router::class,
-        'Request' => Ody\Foundation\Http\Request::class,
-        'Response' => Ody\Foundation\Http\Response::class,
+        'Router' => \Ody\Foundation\Router::class,
+        'Request' => \Ody\Foundation\Http\Request::class,
+        'Response' => \Ody\Foundation\Http\Response::class,
     ],
 
     'routes' => [
@@ -32,40 +32,12 @@ return [
     'middleware' => [
         // Global middleware applied to all routes
         'global' => [
-            \Ody\Foundation\Middleware\ErrorHandlerMiddleware::class,
+            // TODO: revision error handling
+//            \Ody\Foundation\Middleware\ErrorHandlerMiddleware::class,
             \Ody\Foundation\Middleware\CorsMiddleware::class,
             \Ody\Foundation\Middleware\JsonBodyParserMiddleware::class,
-            \Ody\Foundation\Middleware\LoggingMiddleware::class,
-            \Ody\Auth\Middleware\AttachUserToRequest::class,
-        ],
-
-        // Named middleware that can be referenced in routes
-        'named' => [
-            'auth' => \Ody\Auth\Middleware\Authenticate::class,
-            'auth.sanctum' => \Ody\Auth\Middleware\Authenticate::class,
-            'auth.token' => \Ody\Auth\Middleware\Authenticate::class,
-            'abilities' => \Ody\Auth\Middleware\CheckAbilities::class,
-            'ability' => \Ody\Auth\Middleware\CheckForAnyAbility::class,
-            'throttle' => \Ody\Foundation\Middleware\ThrottleMiddleware::class,
-        ],
-
-        // Middleware groups for route groups
-        'groups' => [
-            'web' => [
-                'auth',
-                'json',
-            ],
-            'api' => [
-                'throttle:60,1',
-                'auth:api',
-                'json',
-            ],
-            'admin' => [
-                'auth',
-                'role:admin',
-                'json',
-            ],
-        ],
+            \Ody\Foundation\Middleware\LoggingMiddleware::class
+        ]
     ],
 
     'cors' => [
