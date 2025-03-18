@@ -73,8 +73,8 @@ return [
      * Configure what directories or files must be
      * watched for hot reloading.
      */
-    'watcher' => [
-        'App',
+    'watch' => [
+        'app',
         'config',
         'database',
         'composer.lock',
