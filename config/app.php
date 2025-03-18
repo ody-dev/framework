@@ -34,7 +34,8 @@ return [
 //            \Ody\Foundation\Middleware\ErrorHandlerMiddleware::class,
             \Ody\Foundation\Middleware\CorsMiddleware::class,
             \Ody\Foundation\Middleware\JsonBodyParserMiddleware::class,
-            \Ody\Foundation\Middleware\LoggingMiddleware::class
+            \Ody\Foundation\Middleware\LoggingMiddleware::class,
+            \App\Middleware\RequestLoggerMiddleware::class, 
         ],
         'named' => [
             'api' => [
