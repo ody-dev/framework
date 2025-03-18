@@ -1,89 +1,21 @@
 <?php
-/*
- * This file is part of ODY framework
- *
- * @link https://ody.dev
- * @documentation https://ody.dev/docs
- * @license https://github.com/ody-dev/ody-core/blob/master/LICENSE
- */
+// config/auth.php
 
 return [
-    /*
-    |--------------------------------------------------------------------------
-    | Authentication Defaults
-    |--------------------------------------------------------------------------
-    |
-    | This option controls the default authentication "guard" and password
-    | reset options for your application.
-    |
-    */
+    'driver' => [
+        'provider' => env('AUTH_PROVIDER', 'direct'),
+        'jwt_key' => env('JWT_SECRET_KEY', 'your_secret_key_for_development'),
+        'token_expiry' => 3600, // 1 hour
+        'refresh_token_expiry' => 86400 * 30, // 30 days
 
-    'defaults' => [
-        'guard' => 'web',
-        'provider' => 'users',
+        // Remote auth service config
+        'service_host' => env('AUTH_SERVICE_HOST', 'localhost'),
+        'service_port' => env('AUTH_SERVICE_PORT', 9501),
+        'service_id' => env('SERVICE_ID', 'api_service'),
+        'service_secret' => env('SERVICE_SECRET', 'service_secret')
     ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Authentication Guards
-    |--------------------------------------------------------------------------
-    |
-    | Next, you may define every authentication guard for your application.
-    | Of course, a great default configuration has been defined for you.
-    |
-    */
-
-    'guards' => [
-        'web' => [
-            'driver' => 'session',
-            'provider' => 'users',
-        ],
-
-        'api' => [
-            'driver' => 'token',
-            'provider' => 'users',
-            'hash' => false,
-        ],
-
-        'sanctum' => [
-            'driver' => 'sanctum',
-            'provider' => 'users',
-            'expiration' => 60 * 24 * 30, // 30 days in minutes
-        ],
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | User Providers
-    |--------------------------------------------------------------------------
-    |
-    | All authentication drivers have a user provider. This defines how the
-    | users are actually retrieved out of your database or other storage.
-    |
-    */
-
-    'providers' => [
-        'users' => [
-            'driver' => 'database',
-            'model' => App\Models\User::class,
-        ],
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Personal Access Tokens
-    |--------------------------------------------------------------------------
-    |
-    | Settings related to personal access tokens.
-    |
-    */
-
-    'token_prefix' => '',
-
-    'token_expiration' => 60 * 24 * 30, // 30 days in minutes
 
     'middleware' => [
-        'authenticate' => \Ody\Auth\Middleware\Authenticate::class,
-        'attach_user' => \Ody\Auth\Middleware\AttachUserToRequest::class,
+        'auth' => \Ody\Auth\Middleware\AuthMiddleware::class,
     ],
 ];

@@ -7,14 +7,18 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
     'timezone' => env('APP_TIMEZONE', 'UTC'),
     'providers' => [
+        // Core providers
         \Ody\Foundation\Providers\FacadeServiceProvider::class,
         \Ody\Foundation\Providers\MiddlewareServiceProvider::class,
         \Ody\Foundation\Providers\RouteServiceProvider::class,
         \Ody\Foundation\Providers\ErrorServiceProvider::class,
+
+        // Package providers
+        \Ody\Auth\Providers\AuthServiceProvider::class,
         \Ody\DB\Providers\DatabaseServiceProvider::class,
 
         // Add your application service providers here
-        // App\Providers\CustomServiceProvider::class,
+        \App\Providers\AppServiceProvider::class,
     ],
     'aliases' => [
         'App' => \Ody\Foundation\Application::class,
@@ -34,10 +38,10 @@ return [
             \Ody\Foundation\Middleware\CorsMiddleware::class,
             \Ody\Foundation\Middleware\JsonBodyParserMiddleware::class,
             \Ody\Foundation\Middleware\LoggingMiddleware::class,
-            \App\Middleware\RequestLoggerMiddleware::class, 
+//            \App\Middleware\RequestLoggerMiddleware::class,
         ],
         'named' => [
-            'api' => \Ody\Foundation\Middleware\AuthMiddleware::class
+            'auth' => \Ody\Auth\Middleware\AuthMiddleware::class,
         ],
         'groups' => [
             'api' => [
