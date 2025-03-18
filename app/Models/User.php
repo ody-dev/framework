@@ -3,16 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Ody\Auth\Contracts\Authenticatable;
-use Ody\Auth\HasApiTokens;
 
-class User extends Model implements Authenticatable
+class User extends Model
 {
-    /**
-     * Include HasApiTokens trait to support token management
-     */
-    use HasApiTokens;
-
     /**
      * The attributes that are mass assignable.
      *

@@ -11,7 +11,6 @@ return [
         \Ody\Foundation\Providers\MiddlewareServiceProvider::class,
         \Ody\Foundation\Providers\RouteServiceProvider::class,
         \Ody\Foundation\Providers\ErrorServiceProvider::class,
-        \Ody\Foundation\Providers\MiddlewareCacheServiceProvider::class,
         \Ody\DB\Providers\DatabaseServiceProvider::class,
 
         // Add your application service providers here
@@ -37,6 +36,9 @@ return [
             \Ody\Foundation\Middleware\LoggingMiddleware::class
         ],
         'named' => [
+            'api' => \Ody\Foundation\Middleware\AuthMiddleware::class
+        ],
+        'groups' => [
             'api' => [
                 \Ody\Foundation\Middleware\ThrottleMiddleware::class,
                 \Ody\Foundation\Middleware\AuthMiddleware::class,
