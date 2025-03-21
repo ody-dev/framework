@@ -10,13 +10,14 @@
 use Ody\Server\ServerEvent;
 
 return [
-    'mode' => SWOOLE_BASE,
+    'mode' => SWOOLE_PROCESS,
     'host' => env('HTTP_SERVER_HOST' , '127.0.0.1'),
     'port' => env('HTTP_SERVER_PORT' , 9501) ,
     'sock_type' => SWOOLE_SOCK_TCP,
     'additional' => [
         'daemonize' => false,
         'worker_num' => env('HTTP_SERVER_WORKER_COUNT' , swoole_cpu_num() * 2) ,
+        'dispatch_mode' => 3, // Important: This ensures connections stay with their worker, does not work in SWOOLE_BASE
         'open_http_protocol' => true,
         /**
          * log level
@@ -36,6 +37,9 @@ return [
         'enable_coroutine' => false,
         'max_coroutine' => 3000,
         'send_yield' => false,
+
+        'ssl_cert_file' => null,
+        'ssl_key_file' => null,
     ],
 
     'runtime' => [
@@ -62,11 +66,6 @@ return [
         ServerEvent::ON_START => [\Ody\Server\ServerCallbacks::class, 'onStart'],
         ServerEvent::ON_WORKER_ERROR => [\Ody\Server\ServerCallbacks::class, 'onWorkerError'],
         ServerEvent::ON_WORKER_START => [\Ody\Server\ServerCallbacks::class, 'onWorkerStart'],
-    ],
-
-    'ssl' => [
-        'ssl_cert_file' => null ,
-        'ssl_key_file' => null ,
     ],
 
     /**
