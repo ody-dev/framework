@@ -11,7 +11,10 @@
   ],
   "require": {
     "php": ">=8.3",
-    "ody/ody-repo": "@dev"
+    "ody/foundation": "^0.1.0",
+    "ody/auth": "^0.1.0",
+    "ody/server": "^0.1.0",
+    "ody/database": "^0.1.0"
   },
   "require-dev": {
     "phpunit/phpunit": "^9.6",
@@ -31,11 +34,5 @@
     "allow-plugins": {
       "php-http/discovery": false
     }
-  },
-  "repositories": [
-    {
-      "type": "path",
-      "url": "../"
-    }
-  ]
+  }
 }

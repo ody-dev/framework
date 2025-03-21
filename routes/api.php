@@ -54,23 +54,6 @@ Route::get('/version', function (ServerRequestInterface $request, ResponseInterf
     return $response;
 });
 
-// User routes with middleware
-Route::get('/users', 'App\Controllers\UserController@index')
-    ->middleware(AuthMiddleware::class);
-
-Route::get('/users/{id:\\d+}', 'App\Controllers\UserController@show')
-    ->middleware('api');
-
-Route::post('/users', 'App\Controllers\UserController@store');
-
-Route::put('/users/{id:\\d+}', 'App\Controllers\UserController@update');
-
-Route::delete('/users/{id:\\d+}', 'App\Controllers\UserController@destroy');
-
-// Public authentication endpoints
-Route::post('/api/auth/login', 'App\Controllers\AuthController@login');
-Route::post('/api/auth/register', 'App\Controllers\AuthController@register');
-
 // Protected authentication endpoints
 Route::group(['prefix' => '/api/auth', 'middleware' => ['auth:jwt']], function ($router) {
     $router->get('/user', 'App\Controllers\AuthController@user');

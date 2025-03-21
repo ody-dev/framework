@@ -74,7 +74,7 @@ return [
      * watched for hot reloading.
      */
     'watch' => [
-        'App',
+        'app',
         'config',
         'database',
         'composer.lock',
