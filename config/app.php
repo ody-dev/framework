@@ -15,6 +15,7 @@ return [
         \Ody\Server\Providers\ServerServiceProvider::class,
 
         // Package providers
+//        \Ody\Websocket\Providers\WebsocketServiceProvider::class,
         \Ody\Auth\Providers\AuthServiceProvider::class,
         \Ody\DB\Providers\DatabaseServiceProvider::class,
 
@@ -35,7 +36,7 @@ return [
     'middleware' => [
         'global' => [
             // TODO: revision error handling
-//            \Ody\Foundation\Middleware\ErrorHandlerMiddleware::class,
+            \Ody\Foundation\Middleware\ErrorHandlerMiddleware::class,
             \Ody\Foundation\Middleware\CorsMiddleware::class,
             \Ody\Foundation\Middleware\JsonBodyParserMiddleware::class,
 //            \App\Middleware\RequestLoggerMiddleware::class,

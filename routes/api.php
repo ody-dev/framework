@@ -14,6 +14,8 @@ use Ody\Foundation\Middleware\ThrottleMiddleware;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
+Route::get('/users', 'App\Controllers\UserController@index');
+
 // Public routes
 Route::get('/health', function (ServerRequestInterface $request, ResponseInterface $response, array $params = []) {
     $response = $response->withHeader('Content-Type', 'application/json');

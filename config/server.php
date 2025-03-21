@@ -28,7 +28,7 @@ return [
          * SWOOLE_LOG_ERROR
          */
         'log_level' => 1,
-        'log_file' => base_path('/storage/logs/ody_server.log'),
+        'log_file' => base_path('storage/logs/ody_server.log'),
         'log_rotation' => SWOOLE_LOG_ROTATION_DAILY,
         'log_date_format' => '%Y-%m-%d %H:%M:%S',
 
@@ -67,7 +67,7 @@ return [
     'ssl' => [
         'ssl_cert_file' => null ,
         'ssl_key_file' => null ,
-    ] ,
+    ],
 
     /**
      * Configure what directories or files must be
