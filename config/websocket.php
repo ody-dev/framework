@@ -12,16 +12,21 @@ use Ody\Websocket\WsEvent;
 return [
     'host' => env('WEBSOCKET_HOST', '127.0.0.1'),
     'port' => env('WEBSOCKET_PORT', 9502),
+    'secret_key' => env('WEBSOCKET_SECRET_KEY', '123123123'),
     'sock_type' => SWOOLE_SOCK_TCP,
+    'enable_api' => true,
     'callbacks' => [
         WsEvent::ON_HAND_SHAKE => [\Ody\Websocket\WsServerCallbacks::class, 'onHandShake'],
         WsEvent::ON_WORKER_START => [\Ody\Websocket\WsServerCallbacks::class, 'onWorkerStart'],
         WsEvent::ON_MESSAGE => [\Ody\Websocket\WsServerCallbacks::class, 'onMessage'],
         WsEvent::ON_CLOSE => [\Ody\Websocket\WsServerCallbacks::class, 'onClose'],
-        WsEvent::ON_REQUEST => [\Ody\Websocket\WsServerCallbacks::class, 'onRequest'],
         WsEvent::ON_DISCONNECT => [\Ody\Websocket\WsServerCallbacks::class, 'onDisconnect'],
+        // if enable_api is set to true, the Application class will be
+        // bootstrapped and expose a REST API. This enables all normal
+        // functionality of ODY framework including route middleware.
+        WsEvent::ON_REQUEST => [\Ody\Websocket\WsServerCallbacks::class, 'onRequest'],
     ],
-    'secret_key' => env('WEBSOCKET_SECRET_KEY', '123123123'),
+
     "additional" => [
         "worker_num" => env('WEBSOCKET_WORKER_COUNT', swoole_cpu_num() * 2),
         /*
@@ -36,6 +41,7 @@ return [
         'log_level' => SWOOLE_LOG_DEBUG,
         'log_file' => base_path('storage/logs/ody_websockets.log'),
     ],
+
     'runtime' => [
         'enable_coroutine' => true,
         /**
@@ -47,6 +53,56 @@ return [
          */
         'hook_flag' => SWOOLE_HOOK_ALL,
     ],
+
+    'middleware' => [
+        // Common middleware applied to both pipelines
+        'global' => [
+            \Ody\Websocket\Middleware\LoggingMiddleware::class,
+//            \Ody\Websocket\Middleware\MetricsMiddleware::class,
+        ],
+
+        // Handshake-specific middleware
+        'handshake' => [
+            \Ody\Websocket\Middleware\AuthenticationMiddleware::class,
+//            \Ody\Websocket\Middleware\OriginValidationMiddleware::class,
+//            \Ody\Websocket\Middleware\ConnectionRateLimitMiddleware::class,
+        ],
+
+        // Message-specific middleware
+        'message' => [
+//            \Ody\Websocket\Middleware\MessageRateLimitMiddleware::class,
+//            \Ody\Websocket\Middleware\MessageValidationMiddleware::class,
+//            \Ody\Websocket\Middleware\MessageSizeLimitMiddleware::class,
+        ],
+    ],
+
+    // Middleware parameters
+    'middleware_params' => [
+        // Authentication middleware parameters
+        \Ody\Websocket\Middleware\AuthenticationMiddleware::class => [
+            'header_name' => 'sec-websocket-protocol',
+        ],
+
+//        // Rate limit middleware parameters
+//        \Ody\Websocket\Middleware\MessageRateLimitMiddleware::class => [
+//            'messages_per_minute' => env('WEBSOCKET_RATE_LIMIT', 60),
+//            'table_size' => 1024,
+//        ],
+//
+//        // Origin validation middleware parameters
+//        \Ody\Websocket\Middleware\OriginValidationMiddleware::class => [
+//            'allowed_origins' => [
+//                env('APP_URL', 'http://localhost'),
+//                // Add additional allowed origins
+//            ],
+//        ],
+    ],
+
+    'rate_limits' => [
+        'messages_per_minute' => env('WEBSOCKET_RATE_LIMIT', 60),
+        'connections_per_minute' => env('WEBSOCKET_CONNECTION_LIMIT', 10),
+    ],
+
     'ssl' => [
         'ssl_cert_file' => null,
         'ssl_key_file' => null,
