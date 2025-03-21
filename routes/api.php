@@ -12,16 +12,7 @@ use Ody\Foundation\Http\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-// Public authentication endpoints
-Route::post('/auth/login', 'App\Controllers\AuthController@login');
-Route::post('/auth/register', 'App\Controllers\AuthController@register');
-Route::post('/auth/refresh', 'App\Controllers\AuthController@refresh');
-
-// Protected authentication endpoints
-Route::group(['prefix' => '/auth', 'middleware' => ['auth']], function ($router) {
-    $router->get('/user', 'App\Controllers\AuthController@user');
-    $router->post('/logout', 'App\Controllers\AuthController@logout');
-});
+Route::get('/users', 'App\Controllers\UserController@index');
 
 // Public routes
 Route::get('/health', function (ServerRequestInterface $request, ResponseInterface $response) {
