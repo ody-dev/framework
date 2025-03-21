@@ -222,6 +222,98 @@ $router->group(['middleware' => 'api'], function ($router) {
     $router->get('/users', 'UserController@index');
     $router->post('/users', 'UserController@store');
 });
+````
+
+## Defining Middleware with Attributes
+
+You can apply middleware at two levels:
+
+1. **Controller Level**: Middleware applied to all methods in the controller
+2. **Method Level**: Middleware applied to specific methods only
+
+### Example Controller
+
+```php
+<?php
+
+namespace App\Controllers;
+
+use App\Middleware\RequestLoggerMiddleware;
+use App\Middleware\AuthMiddleware;
+use Ody\Foundation\Attributes\Middleware;
+use Ody\Foundation\Attributes\MiddlewareGroup;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface;
+
+// Apply logging middleware to all methods in this controller
+#[Middleware(RequestLoggerMiddleware::class)]
+// Apply a predefined middleware group to all methods
+#[MiddlewareGroup('api')]
+class UserController
+{
+    // This method inherits middleware from the controller class
+    public function index(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
+    {
+        // List users...
+        return $response->withJson(['users' => $users]);
+    }
+
+    // This method has authentication middleware in addition to inherited middleware
+    #[Middleware(AuthMiddleware::class)]
+    public function store(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
+    {
+        // Create a user...
+        return $response->withJson(['user' => $newUser]);
+    }
+
+    // Use parameters with middleware
+    #[Middleware(AuthMiddleware::class, ['guard' => 'admin'])]
+    public function destroy(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
+    {
+        // Delete a user...
+        return $response->withJson(['success' => true]);
+    }
+}
+```
+
+### Middleware Attribute Features
+
+#### Apply a Single Middleware
+
+```php
+#[Middleware(MyMiddleware::class)]
+```
+
+#### Apply Multiple Middleware
+
+Using multiple attributes:
+```php
+#[Middleware(AuthMiddleware::class)]
+#[Middleware(ThrottleMiddleware::class)]
+```
+
+Or using an array of middleware:
+```php
+#[Middleware([LoggingMiddleware::class, CacheMiddleware::class])]
+```
+
+#### Middleware with Parameters
+
+Pass parameters to middleware:
+```php
+#[Middleware(ThrottleMiddleware::class, ['maxRequests' => 60, 'minutes' => 1])]
+```
+
+The parameters will be available in the middleware via request attributes:
+```php
+$maxRequests = $request->getAttribute('middleware_maxRequests');
+```
+
+#### Middleware Groups
+
+Use predefined middleware groups:
+```php
+#[MiddlewareGroup('api')]
 ```
 
 ## Creating Custom Middleware

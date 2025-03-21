@@ -37,7 +37,7 @@ return [
         'file' => [
             'driver' => 'file',
             'path' => storage_path(env('LOG_FILE', 'logs/app.log')),
-            'level' => env('LOG_LEVEL', LogLevel::DEBUG),
+            'level' => env('LOG_LEVEL', LogLevel::INFO),
             'formatter' => 'line',
             'format' => "[%datetime%] [%level%] %message% %context%", // Optional custom format
             'date_format' => 'Y-m-d H:i:s', // Optional custom date format
@@ -49,7 +49,7 @@ return [
         'daily' => [
             'driver' => 'file',
             'path' => storage_path('logs/daily-'), // Date will be appended automatically
-            'level' => env('LOG_LEVEL', LogLevel::DEBUG),
+            'level' => env('LOG_LEVEL', LogLevel::INFO),
             'formatter' => 'line',
             'rotate' => true,
             'max_file_size' => 5242880, // 5MB
@@ -59,7 +59,7 @@ return [
         'stdout' => [
             'driver' => 'stream',
             'stream' => 'php://stdout',
-            'level' => env('LOG_LEVEL', LogLevel::DEBUG),
+            'level' => env('LOG_LEVEL', LogLevel::INFO),
             'formatter' => 'line',
         ],
 
@@ -67,7 +67,7 @@ return [
         'stderr' => [
             'driver' => 'stream',
             'stream' => 'php://stderr',
-            'level' => LogLevel::ERROR,
+            'level' => LogLevel::INFO,
             'formatter' => 'line',
         ],
 
@@ -75,21 +75,21 @@ return [
         'json' => [
             'driver' => 'file',
             'path' => storage_path('logs/json.log'),
-            'level' => env('LOG_LEVEL', LogLevel::DEBUG),
+            'level' => env('LOG_LEVEL', LogLevel::INFO),
             'formatter' => 'json',
         ],
 
         // Null logger (discards all logs)
         'null' => [
             'driver' => 'null',
-            'level' => LogLevel::DEBUG,
+            'level' => LogLevel::INFO,
         ],
 
         // Error channel - for error logs only
         'error' => [
             'driver' => 'file',
             'path' => storage_path('logs/error.log'),
-            'level' => LogLevel::ERROR,
+            'level' => LogLevel::INFO,
             'formatter' => 'line',
         ],
 

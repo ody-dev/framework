@@ -7,13 +7,15 @@
  * Variables $router, $middleware, and $container are available from the RouteLoader.
  */
 
+use Ody\Auth\Middleware\AuthMiddleware;
 use Ody\Foundation\Facades\Route;
 use Ody\Foundation\Http\Response;
+use Ody\Foundation\Middleware\ThrottleMiddleware;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 // Public routes
-Route::get('/health', function (ServerRequestInterface $request, ResponseInterface $response) {
+Route::get('/health', function (ServerRequestInterface $request, ResponseInterface $response, array $params = []) {
     $response = $response->withHeader('Content-Type', 'application/json');
 
     if ($response instanceof Response) {
@@ -23,7 +25,7 @@ Route::get('/health', function (ServerRequestInterface $request, ResponseInterfa
         ]);
     }
 
-    $response->getBody()->write(json_encode([
+    $response->json()->write(json_encode([
         'status' => 'ok',
         'timestamp' => time()
     ]));
@@ -54,7 +56,7 @@ Route::get('/version', function (ServerRequestInterface $request, ResponseInterf
 
 // User routes with middleware
 Route::get('/users', 'App\Controllers\UserController@index')
-    ->middleware('api');
+    ->middleware(AuthMiddleware::class);
 
 Route::get('/users/{id:\\d+}', 'App\Controllers\UserController@show')
     ->middleware('api');
