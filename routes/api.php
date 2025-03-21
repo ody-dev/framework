@@ -7,15 +7,17 @@
  * Variables $router, $middleware, and $container are available from the RouteLoader.
  */
 
+use Ody\Auth\Middleware\AuthMiddleware;
 use Ody\Foundation\Facades\Route;
 use Ody\Foundation\Http\Response;
+use Ody\Foundation\Middleware\ThrottleMiddleware;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 Route::get('/users', 'App\Controllers\UserController@index');
 
 // Public routes
-Route::get('/health', function (ServerRequestInterface $request, ResponseInterface $response) {
+Route::get('/health', function (ServerRequestInterface $request, ResponseInterface $response, array $params = []) {
     $response = $response->withHeader('Content-Type', 'application/json');
 
     if ($response instanceof Response) {
@@ -25,7 +27,7 @@ Route::get('/health', function (ServerRequestInterface $request, ResponseInterfa
         ]);
     }
 
-    $response->getBody()->write(json_encode([
+    $response->json()->write(json_encode([
         'status' => 'ok',
         'timestamp' => time()
     ]));
@@ -52,4 +54,32 @@ Route::get('/version', function (ServerRequestInterface $request, ResponseInterf
     $response = $response->withHeader('Content-Type', 'application/json');
     $response->getBody()->write(json_encode($data));
     return $response;
+});
+
+// Protected authentication endpoints
+Route::group(['prefix' => '/api/auth', 'middleware' => ['auth:jwt']], function ($router) {
+    $router->get('/user', 'App\Controllers\AuthController@user');
+    $router->post('/logout', 'App\Controllers\AuthController@logout');
+});
+
+// API route groups
+// TODO: review middleware handling for grouped routes
+Route::group(['prefix' => '/api/v1'], function ($router) {
+    // API routes will be defined here
+    $router->get('/status', function (ServerRequestInterface $request, ResponseInterface $response) {
+        $response = $response->withHeader('Content-Type', 'application/json');
+
+        $data = [
+            'status' => 'operational',
+            'time' => date('c'),
+            'api_version' => 'v1'
+        ];
+
+        if ($response instanceof Response) {
+            return $response->withJson($data);
+        }
+
+        $response->getBody()->write(json_encode($data));
+        return $response;
+    });
 });

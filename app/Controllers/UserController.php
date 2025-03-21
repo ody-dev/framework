@@ -2,6 +2,8 @@
 
 namespace App\Controllers;
 
+use App\Middleware\RequestLoggerMiddleware;
+use Ody\Foundation\Middleware\Attributes\Middleware;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Ody\Foundation\Http\Response;
@@ -16,6 +18,7 @@ class UserController
      * @param array $params
      * @return ResponseInterface
      */
+    #[Middleware(RequestLoggerMiddleware::class)]
     public function index(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
         // In a real app, fetch from database
@@ -150,12 +153,6 @@ class UserController
      */
     private function jsonResponse(ResponseInterface $response, $data): ResponseInterface
     {
-        // Debug the response type
-        logger()->info('Response object in jsonResponse', [
-            'class' => get_class($response),
-            'interfaces' => implode(', ', class_implements($response))
-        ]);
-
         // Always set JSON content type
         $response = $response->withHeader('Content-Type', 'application/json');
 

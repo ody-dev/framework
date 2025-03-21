@@ -26,7 +26,7 @@ return [
         'App' => \Ody\Foundation\Application::class,
         'Config' => \Ody\Support\Config::class,
         'Env' => \Ody\Support\Env::class,
-        'Router' => \Ody\Foundation\Router::class,
+        'Router' => \Ody\Foundation\Router\Router::class,
         'Request' => \Ody\Foundation\Http\Request::class,
         'Response' => \Ody\Foundation\Http\Response::class,
     ],
@@ -39,16 +39,15 @@ return [
             \Ody\Foundation\Middleware\ErrorHandlerMiddleware::class,
             \Ody\Foundation\Middleware\CorsMiddleware::class,
             \Ody\Foundation\Middleware\JsonBodyParserMiddleware::class,
-            \Ody\Foundation\Middleware\LoggingMiddleware::class,
-            \App\Middleware\RequestLoggerMiddleware::class,
+//            \App\Middleware\RequestLoggerMiddleware::class,
         ],
         'named' => [
             'auth' => \Ody\Auth\Middleware\AuthMiddleware::class,
         ],
         'groups' => [
             'api' => [
-                \Ody\Foundation\Middleware\ThrottleMiddleware::class,
                 \Ody\Foundation\Middleware\AuthMiddleware::class,
+                \Ody\Foundation\Middleware\ThrottleMiddleware::class,
             ]
         ]
     ],
