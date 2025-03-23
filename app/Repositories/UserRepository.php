@@ -74,4 +74,14 @@ class UserRepository
         // This could use Redis or a database table
         return false;
     }
+
+    public function getAll()
+    {
+        return User::get();
+    }
+
+    public function find($id)
+    {
+        return User::find($id);
+    }
 }

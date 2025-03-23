@@ -12,12 +12,12 @@ return [
         \Ody\Foundation\Providers\MiddlewareServiceProvider::class,
         \Ody\Foundation\Providers\RouteServiceProvider::class,
         \Ody\Foundation\Providers\ErrorServiceProvider::class,
-        \Ody\Server\Providers\ServerServiceProvider::class,
+        \Ody\Foundation\Providers\CacheServiceProvider::class,
 
         // Package providers
-//        \Ody\Websocket\Providers\WebsocketServiceProvider::class,
-        \Ody\Auth\Providers\AuthServiceProvider::class,
+        \Ody\Server\Providers\ServerServiceProvider::class,
         \Ody\DB\Providers\DatabaseServiceProvider::class,
+        \Ody\Auth\Providers\AuthServiceProvider::class,
 
         // Add your application service providers here
         \App\Providers\AppServiceProvider::class,
@@ -39,14 +39,13 @@ return [
             \Ody\Foundation\Middleware\ErrorHandlerMiddleware::class,
             \Ody\Foundation\Middleware\CorsMiddleware::class,
             \Ody\Foundation\Middleware\JsonBodyParserMiddleware::class,
-//            \App\Middleware\RequestLoggerMiddleware::class,
         ],
         'named' => [
             'auth' => \Ody\Auth\Middleware\AuthMiddleware::class,
         ],
         'groups' => [
             'api' => [
-                \Ody\Foundation\Middleware\AuthMiddleware::class,
+                \Ody\Auth\Middleware\AuthMiddleware::class,
                 \Ody\Foundation\Middleware\ThrottleMiddleware::class,
             ]
         ]
@@ -57,5 +56,22 @@ return [
         'headers' => env('CORS_ALLOW_HEADERS', 'Content-Type, Authorization, X-Requested-With, X-API-Key'),
         'credentials' => env('CORS_ALLOW_CREDENTIALS', false),
         'max_age' => env('CORS_MAX_AGE', 86400), // 24 hours
+    ],
+
+    /**
+     * Controller caching configuration
+     *
+     * Controls the behavior of the framework's controller caching mechanism
+     * Enabling this gives a slight performance boost.
+     */
+    'controller_cache' => [
+        // Whether controller caching is enabled globally
+        'enabled' => true,
+
+        // Controllers that should be excluded from caching (helpful for controllers with serialization issues)
+        'excluded' => [
+            // Example: 'App\Http\Controllers\ComplexController',
+            // Example: 'App\Http\Controllers\ResourceIntensiveController',
+        ],
     ],
 ];

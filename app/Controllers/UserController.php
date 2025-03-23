@@ -2,14 +2,17 @@
 
 namespace App\Controllers;
 
-use App\Middleware\RequestLoggerMiddleware;
-use Ody\Foundation\Middleware\Attributes\Middleware;
-use Psr\Http\Message\ServerRequestInterface;
+use App\Repositories\UserRepository;
+use Cache;
 use Psr\Http\Message\ResponseInterface;
-use Ody\Foundation\Http\Response;
+use Psr\Http\Message\ServerRequestInterface;
 
 class UserController
 {
+    public function __construct(protected UserRepository $usersService)
+    {
+    }
+
     /**
      * Get all users
      *
@@ -18,24 +21,18 @@ class UserController
      * @param array $params
      * @return ResponseInterface
      */
-    #[Middleware(RequestLoggerMiddleware::class)]
+//    #[Middleware(RequestLoggerMiddleware::class)]
     public function index(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
-        // In a real app, fetch from database
+        if (Cache::has('users')) {
+            return $response->json(Cache::get('users'));
+        }
 
-        // Mock data for example
-         $users = [
-             [
-                 'id' => 1,
-                 'name' => 'John Doe',
-             ],
-             [
-                 'id' => 2,
-                 'name' => 'Jane Doe',
-             ]
-         ];
+        $users = $this->usersService->getAll();
 
-        return $this->jsonResponse($response, $users);
+        Cache::set('users', $users);
+
+        return $response->json($users);
     }
 
     /**
@@ -57,7 +54,8 @@ class UserController
         // Mock data for example
         $user = ['id' => (int)$id, 'name' => 'John Doe', 'email' => 'john@example.com'];
 
-        return $this->jsonResponse($response, $user);
+        return $response->json($user);
+
     }
 
     /**
@@ -76,9 +74,9 @@ class UserController
 
         // Validate input
         if (empty($data['name']) || empty($data['email'])) {
-            return $this->jsonResponse($response->withStatus(422), [
+            return $response->json([
                 'error' => 'Name and email are required'
-            ]);
+            ], 422);
         }
 
         // In a real app, save to databaseS
@@ -86,11 +84,11 @@ class UserController
         // Mock data for example
         $id = 3;
 
-        return $this->jsonResponse($response->withStatus(201), [
+        return $response->json([
             'id' => $id,
             'name' => $data['name'],
             'email' => $data['email']
-        ]);
+        ], 201);
     }
 
     /**
@@ -111,7 +109,7 @@ class UserController
         // In a real app, update in databaseDSS
 
         // Mock response for example
-        return $this->jsonResponse($response, [
+        return $response->json([
             'id' => (int)$id,
             'name' => $data['name'] ?? 'John Doe',
             'email' => $data['email'] ?? 'john@example.com',
@@ -138,45 +136,9 @@ class UserController
         // Mock data for example
         $affected = 1;
 
-        return $this->jsonResponse($response, [
+        return $response->json([
             'deleted' => $affected > 0,
             'id' => (int)$id
         ]);
-    }
-
-    /**
-     * Helper method to create JSON responses
-     *
-     * @param ResponseInterface $response
-     * @param mixed $data
-     * @return ResponseInterface
-     */
-    private function jsonResponse(ResponseInterface $response, $data): ResponseInterface
-    {
-        // Always set JSON content type
-        $response = $response->withHeader('Content-Type', 'application/json');
-
-        // If using our custom Response class
-        if ($response instanceof Response) {
-            // Instead of using withJson directly, we'll manually encode and set the body
-            $jsonData = json_encode($data);
-            if ($jsonData === false) {
-                logger()->error('JSON encoding error', [
-                    'error' => json_last_error_msg()
-                ]);
-                $jsonData = json_encode(['error' => 'JSON encoding error']);
-            }
-
-            // Create a stream factory
-            $streamFactory = new \Nyholm\Psr7\Factory\Psr17Factory();
-            // Create a stream with the JSON data
-            $stream = $streamFactory->createStream($jsonData);
-            // Set the stream as the response body
-            return $response->withBody($stream);
-        }
-
-        // For other PSR-7 implementations
-        $response->getBody()->write(json_encode($data));
-        return $response;
     }
 }
