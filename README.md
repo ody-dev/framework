@@ -21,6 +21,9 @@ clean architecture for building robust APIs.
 ```bash
 composer create-project ody/framework your-project-name
 cd your-project-name
+php ody publish
+
+php ody server:start
 ```
 
 ## Configuration
@@ -30,6 +33,7 @@ Configuration files are stored in the `config` directory. The primary configurat
 - `app.php`: Application settings, service providers, and middleware
 - `database.php`: Database connections configuration
 - `logging.php`: Logging configuration and channels
+- `caching.php`: Cache configuration
 
 Environment-specific configurations can be set in `.env` files. A sample `.env.example` file is provided that you can copy to `.env` and customize:
 
@@ -460,8 +464,6 @@ $logger->error('Failed to process payment', ['order_id' => $orderId]);
 // Using the logger helper function
 logger()->info('Processing request');
 ```
-
-# Custom Loggers in ODY Framework
 ## Creating Custom Loggers
 
 ### Basic Requirements
@@ -788,67 +790,10 @@ Register your service provider in `config/app.php`:
 
 ## Running the Application
 
-### Development Server
-
-For development, you can use the built-in PHP server:
-
 ```bash
-php -S localhost:8000 -t public
+php ody server:start
 ```
 
-### Production Deployment
-
-For production, you can use Swoole HTTP server:
-
-```bash
-php ody serve --swoole --host=0.0.0.0 --port=9501
-```
-
-## Advanced Features
-
-### Custom Commands
-
-Create custom console commands by extending the base Command class:
-
-```php
-<?php
-
-namespace App\Console\Commands;
-
-use Ody\Foundation\Console\Command;
-
-class CustomCommand extends Command
-{
-    protected $name = 'app:custom';
-    
-    protected $description = 'A custom command';
-    
-    protected function handle(): int
-    {
-        $this->info('Custom command executed successfully!');
-        
-        return self::SUCCESS;
-    }
-}
-```
-
-### Working with Databases
-
-The framework provides a simple database abstraction layer:
-
-```php
-<?php
-
-// Using PDO directly
-$db = app('db');
-$users = $db->query('SELECT * FROM users')->fetchAll();
-
-// Or inject PDO into your classes
-public function __construct(PDO $db)
-{
-    $this->db = $db;
-}
-```
 
 ## Resources
 
