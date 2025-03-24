@@ -35,7 +35,6 @@ return [
     ],
     'middleware' => [
         'global' => [
-            // TODO: revision error handling
             \Ody\Foundation\Middleware\ErrorHandlerMiddleware::class,
             \Ody\Foundation\Middleware\CorsMiddleware::class,
             \Ody\Foundation\Middleware\JsonBodyParserMiddleware::class,
