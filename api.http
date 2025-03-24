@@ -1,7 +1,0 @@
-### GET request verion
-GET http://127.0.0.1:9501/version
-accept: application/json
-
-###
-GET http://127.0.0.1:9501/users
-accept: application/json
