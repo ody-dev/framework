@@ -17,7 +17,7 @@ return [
     'additional' => [
         'daemonize' => false,
         'worker_num' => env('HTTP_SERVER_WORKER_COUNT' , swoole_cpu_num() * 2) ,
-        'dispatch_mode' => 3, // Important: This ensures connections stay with their worker, does not work in SWOOLE_BASE
+        'dispatch_mode' => 2, // Important: This ensures connections stay with their worker, does not work in SWOOLE_BASE
         'open_http_protocol' => true,
         /**
          * log level
@@ -34,7 +34,6 @@ return [
         'log_date_format' => '%Y-%m-%d %H:%M:%S',
 
         // Coroutine
-        'enable_coroutine' => false,
         'max_coroutine' => 3000,
         'send_yield' => false,
 
