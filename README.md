@@ -33,7 +33,7 @@ Configuration files are stored in the `config` directory. The primary configurat
 - `app.php`: Application settings, service providers, and middleware
 - `database.php`: Database connections configuration
 - `logging.php`: Logging configuration and channels
-- `caching.php`: Cache configuration
+- `cache.php`: Cache configuration
 
 Environment-specific configurations can be set in `.env` files. A sample `.env.example` file is provided that you can copy to `.env` and customize:
 
