@@ -3,37 +3,13 @@
 use Psr\Log\LogLevel;
 
 return [
-    /*
-    |--------------------------------------------------------------------------
-    | Default Log Channel
-    |--------------------------------------------------------------------------
-    |
-    | This option defines the default log channel that is used when writing
-    | messages to the logs. The name specified in this option should match
-    | one of the channels defined in the "channels" configuration array.
-    |
-    */
     'default' => env('LOG_CHANNEL', 'stack'),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Log Channels
-    |--------------------------------------------------------------------------
-    |
-    | Here you may configure the log channels for your application.
-    | Available drivers: "file", "stream", "null", "callable", "group"
-    | Available formatters: "line", "json"
-    |
-    */
     'channels' => [
-        // Default stacked channel (logs to multiple destinations)
         'stack' => [
             'driver' => 'group',
             'channels' => ['file', 'stdout'],
-            'level' => env('LOG_LEVEL', LogLevel::DEBUG),
+            'level' => env('LOG_LEVEL', LogLevel::INFO),
         ],
-
-        // Main file logger
         'file' => [
             'driver' => 'file',
             'path' => storage_path(env('LOG_FILE', 'logs/app.log')),
@@ -44,63 +20,48 @@ return [
             'rotate' => true, // Whether to rotate log files when they get too big
             'max_file_size' => 10485760, // 10MB default
         ],
-
-        // Daily rotating logs
         'daily' => [
             'driver' => 'file',
-            'path' => storage_path('logs/daily-'), // Date will be appended automatically
+            'path' => storage_path('logs/daily-'),
             'level' => env('LOG_LEVEL', LogLevel::INFO),
             'formatter' => 'line',
             'rotate' => true,
             'max_file_size' => 5242880, // 5MB
         ],
-
-        // Log to standard output (good for containerized environments)
         'stdout' => [
             'driver' => 'stream',
             'stream' => 'php://stdout',
             'level' => env('LOG_LEVEL', LogLevel::INFO),
             'formatter' => 'line',
         ],
-
-        // Log errors to standard error
         'stderr' => [
             'driver' => 'stream',
             'stream' => 'php://stderr',
             'level' => LogLevel::INFO,
             'formatter' => 'line',
         ],
-
-        // JSON formatted logs (useful for log aggregation services)
         'json' => [
             'driver' => 'file',
             'path' => storage_path('logs/json.log'),
             'level' => env('LOG_LEVEL', LogLevel::INFO),
             'formatter' => 'json',
         ],
-
-        // Null logger (discards all logs)
         'null' => [
             'driver' => 'null',
             'level' => LogLevel::INFO,
         ],
-
-        // Error channel - for error logs only
         'error' => [
             'driver' => 'file',
             'path' => storage_path('logs/error.log'),
             'level' => LogLevel::INFO,
             'formatter' => 'line',
         ],
-
-        // Example of logger for specific component
         'api' => [
             'driver' => 'file',
             'path' => storage_path('logs/api.log'),
             'level' => env('LOG_LEVEL', LogLevel::INFO),
             'formatter' => 'line',
         ],
-
         'influxdb' => [
             'driver' => 'influxdb',
             'url' => env('INFLUXDB_URL', 'http://127.0.0.1:8086'),
