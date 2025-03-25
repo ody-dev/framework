@@ -19,7 +19,7 @@ return [
         \Ody\DB\Providers\DatabaseServiceProvider::class,
 //        \Ody\DB\Eloquent\Providers\EloquentServiceProvider::class,
         Ody\DB\Doctrine\Providers\DBALServiceProvider::class,
-        Ody\DB\Providers\DoctrineORMServiceProvider::class,
+        Ody\DB\Doctrine\Providers\DoctrineORMServiceProvider::class,
         App\Providers\RepositoryServiceProvider::class,
         App\Providers\DoctrineIntegrationProvider::class,
         \Ody\Auth\Providers\AuthServiceProvider::class,
