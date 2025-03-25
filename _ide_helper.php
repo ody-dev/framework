@@ -34,7 +34,15 @@ namespace {
     class Cache extends \Ody\Foundation\Facades\Cache
     {
     }
-
 }
+
+//namespace Illuminate\Support\Facades {
+//    /**
+//     * @deprecated Use Ody\DB\Facades\DB instead
+//     * @see \Ody\DB\Facades\DB
+//     */
+//    class DB extends \Ody\DB\Facades\DB {
+//    }
+//}
 
 // End of IDE helper

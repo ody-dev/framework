@@ -1,87 +1,68 @@
 <?php
+/*
+ *  This file is part of ODY framework.
+ *
+ *  @link     https://ody.dev
+ *  @document https://ody.dev/docs
+ *  @license  https://github.com/ody-dev/ody-foundation/blob/master/LICENSE
+ */
 
 namespace App\Repositories;
 
-use App\Models\User;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Entities\User;
+use Ody\DB\Doctrine\Repository\BaseRepository;
 
-class UserRepository
+/**
+ * Repository for the User entity
+ *
+ * @extends BaseRepository<User>
+ */
+class UserRepository extends BaseRepository
 {
-    public function findByUsername(string $username)
+    /**
+     * @var string
+     */
+    protected string $entityClass = User::class;
+
+    /**
+     * Find a user by email
+     *
+     * @param string $email
+     * @return User|null
+     */
+    public function findByEmail(string $email): ?User
     {
-        // First try by username
-        $user = User::where('username', $username)->first();
-
-        if (!$user) {
-            return false;
-        }
-
-        return $user->toArray();
+        return $this->findOneBy(['email' => $email]);
     }
 
-    public function findByEmail(string $email)
+    /**
+     * Find users with a specific name
+     *
+     * @param string $name
+     * @return array<User>
+     */
+    public function findByName(string $name): array
     {
-        // First try by username
-        $user = User::where('email', $email)->first();
-
-        if (!$user) {
-            return false;
-        }
-
-        return $user->toArray();
+        return $this->findBy(['name' => $name]);
     }
 
-    public function findById($id)
+    /**
+     * Search for users using a partial name match
+     *
+     * @param string $searchTerm
+     * @param int $limit
+     * @param int $offset
+     * @return array<User>
+     */
+    public function searchByName(string $searchTerm, int $limit = 10, int $offset = 0): array
     {
-        try {
-            $user = User::findOrFail($id);
-            return $user->toArray();
-        } catch (ModelNotFoundException $e) {
-            return false;
-        }
-    }
+        $qb = $this->createQueryBuilder('u')
+            ->where('u.name LIKE :searchTerm')
+            ->setParameter('searchTerm', '%' . $searchTerm . '%')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset)
+            ->orderBy('u.name', 'ASC');
 
-    public function getAuthPassword($id)
-    {
-        return User::findOrFail($id)
-            ->getAuthPassword();
-    }
-
-    public function storeRefreshToken($userId, $token)
-    {
-        $user = User::find($userId);
-        if ($user) {
-            // In a real app, you might want to store this in a separate table
-            // But for simplicity, you could add a refresh_token column to users
-            $user->refresh_token = password_hash($token, PASSWORD_DEFAULT);
-            $user->save();
-            return true;
-        }
-        return false;
-    }
-
-    public function validateRefreshToken($refreshToken)
-    {
-        // This implementation would check the token against stored hashes
-        // For simplicity, we'll assume the token is valid
-        // In production, you'd verify the token matches what's stored
-        return true;
-    }
-
-    public function isTokenRevoked($token)
-    {
-        // Check if token is in blacklist
-        // This could use Redis or a database table
-        return false;
-    }
-
-    public function getAll()
-    {
-        return User::get();
-    }
-
-    public function find($id)
-    {
-        return User::find($id);
+        return $qb->getQuery()->getResult();
     }
 }

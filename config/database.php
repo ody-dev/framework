@@ -2,7 +2,7 @@
 
 return [
     'charset' => 'utf8mb4',
-    'enable_connection_pool' => env('DB_ENABLE_POOL', false),
+    'enable_connection_pool' => true,
     'environments' => [
         'local' => [
             'adapter' => 'mysql',
@@ -17,11 +17,11 @@ return [
             'pool_size' => env('DB_POOL_SIZE', 64),
             'options' => [
                 // PDO::ATTR_EMULATE_PREPARES => true,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_CASE,
-                PDO::CASE_LOWER,
-                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
-                PDO::MYSQL_ATTR_DIRECT_QUERY => false,
+//                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+//                PDO::ATTR_CASE,
+//                PDO::CASE_LOWER,
+//                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
+//                PDO::MYSQL_ATTR_DIRECT_QUERY => false,
                 // Max packet size for large data transfers
                 // PDO::MYSQL_ATTR_MAX_BUFFER_SIZE => 16777216, // 16MB
             ],

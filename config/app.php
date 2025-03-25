@@ -17,6 +17,11 @@ return [
         // Package providers
         \Ody\Server\Providers\ServerServiceProvider::class,
         \Ody\DB\Providers\DatabaseServiceProvider::class,
+//        \Ody\DB\Eloquent\Providers\EloquentServiceProvider::class,
+        Ody\DB\Doctrine\Providers\DBALServiceProvider::class,
+        Ody\DB\Providers\DoctrineORMServiceProvider::class,
+        App\Providers\RepositoryServiceProvider::class,
+        App\Providers\DoctrineIntegrationProvider::class,
         \Ody\Auth\Providers\AuthServiceProvider::class,
 
         // Add your application service providers here

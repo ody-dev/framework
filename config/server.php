@@ -34,6 +34,7 @@ return [
         'log_date_format' => '%Y-%m-%d %H:%M:%S',
 
         // Coroutine
+        'enable_coroutine' => true,
         'max_coroutine' => 3000,
         'send_yield' => false,
 

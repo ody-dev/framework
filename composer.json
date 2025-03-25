@@ -11,10 +11,10 @@
   ],
   "require": {
     "php": ">=8.3",
-    "ody/foundation": "^0.1.0",
+    "ext-pdo": "*",
     "ody/auth": "^0.1.0",
-    "ody/server": "^0.1.0",
-    "ody/database": "^0.1.0"
+    "ody/server": "^0.1.4",
+    "ody/database": "^0.1.3"
   },
   "require-dev": {
     "phpunit/phpunit": "^9.6",
