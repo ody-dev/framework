@@ -704,46 +704,6 @@ class CustomFormatter implements FormatterInterface
 }
 ```
 
-## Complete Example: Using Redis Logger
-
-### Configuration
-
-```php
-// In config/logging.php
-'channels' => [
-    // Using explicit class
-    'redis' => [
-        'driver' => 'redis',
-        'class' => \App\Logging\RedisLogger::class,
-        'host' => env('REDIS_HOST', '127.0.0.1'),
-        'port' => env('REDIS_PORT', 6379),
-        'password' => env('REDIS_PASSWORD', null),
-        'channel' => 'app_logs',
-        'formatter' => 'json',
-        'level' => 'debug',
-    ],
-    
-    // Using it in a stack
-    'production' => [
-        'driver' => 'group',
-        'channels' => ['file', 'redis'],
-    ],
-],
-```
-
-### Usage
-
-```php
-// Send to redis channel
-logger('User registered', ['id' => 123], 'redis');
-
-// Or use the stack
-logger('API request processed', ['endpoint' => '/users']);
-```
----
-
-With this system, you can create custom loggers that integrate seamlessly with the ODY Framework logging infrastructure.
-
 ## Service Providers
 
 Service providers are used to register services with the application. Custom service providers can be created in the 
