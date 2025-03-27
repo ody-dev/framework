@@ -1,8 +1,5 @@
 # ODY Framework Documentation
 
-> [!WARNING]
-> 🚧 !! This is a WIP, build completely from scratch. This will replace ody-core which was build on top of Slim framework. !!
-
 ## Introduction
 
 ODY is a modern PHP API framework built with a focus on high performance and modern architecture. It leverages 
