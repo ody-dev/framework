@@ -16,8 +16,6 @@ return [
 
         // Package providers
         \Ody\Server\Providers\ServerServiceProvider::class,
-        \Ody\DB\Providers\DatabaseServiceProvider::class,
-        \Ody\Auth\Providers\AuthServiceProvider::class,
 
         // Add your application service providers here
         \App\Providers\AppServiceProvider::class,
