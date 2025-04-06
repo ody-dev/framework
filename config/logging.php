@@ -15,7 +15,7 @@ return [
             'with' => [
                 'stream' => 'php://stdout',
             ],
-            'level' => env('LOG_LEVEL', LogLevel::DEBUG),
+            'level' => env('LOG_LEVEL', LogLevel::INFO),
             'formatter' => ConsoleExceptionFormatter::class,
             'formatter_with' => [
                 'format' => "[%datetime%] [%level_name%] %channel%: %message% %context% %extra%\n",
@@ -32,7 +32,7 @@ return [
             'with' => [
                 'stream' => 'logs/ody_monolog.log', // Needs path resolution
             ],
-            'level' => env('LOG_LEVEL', LogLevel::DEBUG),
+            'level' => env('LOG_LEVEL', LogLevel::INFO),
             'formatter' => MonologLineFormatter::class,
             'formatter_with' => [
                 'format' => "[%datetime%] %channel%.%level_name%: %message% %context% %extra%\n",
