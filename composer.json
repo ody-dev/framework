@@ -18,8 +18,7 @@
   },
   "require-dev": {
     "swoole/ide-helper": "^6.0.2",
-    "phpunit/phpunit": "^9.6",
-    "symfony/var-dumper": "^7.2"
+    "phpunit/phpunit": "^9.6"
   },
   "autoload": {
     "psr-4": {
