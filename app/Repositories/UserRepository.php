@@ -2,86 +2,29 @@
 
 namespace App\Repositories;
 
-use App\Models\User;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Ody\DB\Doctrine\Facades\DBAL;
 
 class UserRepository
 {
-    public function findByUsername(string $username)
+    public function getAll()
     {
-        // First try by username
-        $user = User::where('username', $username)->first();
-
-        if (!$user) {
-            return false;
-        }
-
-        return $user->toArray();
+        return DBAL::fetchAllAssociative("SELECT * FROM users");
     }
 
     public function findByEmail(string $email)
     {
         // First try by username
-        $user = User::where('email', $email)->first();
+        $user = DBAL::fetchAllAssociative("SELECT * FROM users WHERE email = ?", [$email]);
 
         if (!$user) {
             return false;
         }
 
-        return $user->toArray();
+        return $user;
     }
 
     public function findById($id)
     {
-        try {
-            $user = User::findOrFail($id);
-            return $user->toArray();
-        } catch (ModelNotFoundException $e) {
-            return false;
-        }
-    }
-
-    public function getAuthPassword($id)
-    {
-        return User::findOrFail($id)
-            ->getAuthPassword();
-    }
-
-    public function storeRefreshToken($userId, $token)
-    {
-        $user = User::find($userId);
-        if ($user) {
-            // In a real app, you might want to store this in a separate table
-            // But for simplicity, you could add a refresh_token column to users
-            $user->refresh_token = password_hash($token, PASSWORD_DEFAULT);
-            $user->save();
-            return true;
-        }
-        return false;
-    }
-
-    public function validateRefreshToken($refreshToken)
-    {
-        // This implementation would check the token against stored hashes
-        // For simplicity, we'll assume the token is valid
-        // In production, you'd verify the token matches what's stored
-        return true;
-    }
-
-    public function isTokenRevoked($token)
-    {
-        // Check if token is in blacklist
-        // This could use Redis or a database table
-        return false;
-    }
-
-    public function getAll()
-    {
-        return User::get();
-    }
-
-    public function find($id)
-    {
-        return User::find($id);
+        return DBAL::fetchAllAssociative("SELECT * FROM users WHERE id = ?", [$id]);
     }
 }

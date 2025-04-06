@@ -11,21 +11,19 @@
   ],
   "require": {
     "php": ">=8.3",
-    "ody/foundation": "^0.1.0",
-    "ody/server": "^0.1.0"
+    "ody/foundation": "^0.2.0",
+    "ody/server": "^0.2.0",
+    "ody/database": "^0.2.0",
+    "doctrine/dbal": "^4.2.3"
   },
   "require-dev": {
+    "swoole/ide-helper": "^6.0.2",
     "phpunit/phpunit": "^9.6",
     "symfony/var-dumper": "^7.2"
   },
   "autoload": {
     "psr-4": {
       "App\\": "app/"
-    }
-  },
-  "autoload-dev": {
-    "psr-4": {
-      "Tests\\": "tests/"
     }
   },
   "config": {

@@ -3,34 +3,36 @@
 namespace App\Controllers;
 
 use App\Repositories\UserRepository;
-use Cache;
+use Ody\DB\Doctrine\Facades\DBAL;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 class UserController
 {
     public function __construct(protected UserRepository $usersService)
-    {
-    }
+    {}
 
     /**
      * Get all users
      *
      * @param ServerRequestInterface $request
      * @param ResponseInterface $response
-     * @param array $params
      * @return ResponseInterface
      */
-//    #[Middleware(RequestLoggerMiddleware::class)]
-    public function index(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
+//    #[Middleware(AuthMiddleware::class)]
+    public function index(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        if (Cache::has('users')) {
-            return $response->json(Cache::get('users'));
-        }
+        // In a real app, fetch from database
+//        $users = $this->usersService->getAll();
 
-        $users = $this->usersService->getAll();
-
-        Cache::set('users', $users);
+        $users = [
+            ['id' => 1, 'name' => 'John Doe', 'email' => 'john@example.com'],
+            ['id' => 2, 'name' => 'Jane Smith', 'email' => 'jane@example.com'],
+            ['id' => 3, 'name' => 'Bob Johnson', 'email' => 'bob@example.com'],
+            ['id' => 4, 'name' => 'Alice Brown', 'email' => 'alice@example.com'],
+            ['id' => 5, 'name' => 'Charlie Davis', 'email' => 'charlie@example.com'],
+            ['id' => 6, 'name' => 'Eve Wilson', 'email' => 'eve@example.com'],
+        ];
 
         return $response->json($users);
     }
@@ -47,9 +49,7 @@ class UserController
     {
         $id = $params['id'] ?? null;
 
-        logger()->info('Fetching user', ['id' => $id]);
-
-        // In a real app, fetch from databaseS
+        // In a real app, fetch from database
 
         // Mock data for example
         $user = ['id' => (int)$id, 'name' => 'John Doe', 'email' => 'john@example.com'];
@@ -69,8 +69,6 @@ class UserController
     public function store(ServerRequestInterface $request, ResponseInterface $response, array $params): ResponseInterface
     {
         $data = $request->getParsedBody() ?? [];
-
-        logger()->info('Creating user', $data);
 
         // Validate input
         if (empty($data['name']) || empty($data['email'])) {
@@ -103,8 +101,6 @@ class UserController
     {
         $id = $params['id'] ?? null;
         $data = $request->getParsedBody() ?? [];
-
-        logger()->info('Updating user', ['id' => $id, 'data' => $data]);
 
         // In a real app, update in databaseDSS
 

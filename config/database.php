@@ -2,7 +2,6 @@
 
 return [
     'charset' => 'utf8mb4',
-    'enable_connection_pool' => env('DB_ENABLE_POOL', false),
     'environments' => [
         'local' => [
             'adapter' => 'mysql',
@@ -13,8 +12,7 @@ return [
             'db_name' => env('DB_DATABASE', 'ody'),
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_general_ci',
-            'prefix'    => '',
-            'pool_size' => env('DB_POOL_SIZE', 64),
+            'prefix' => '',
             'options' => [
                 // PDO::ATTR_EMULATE_PREPARES => true,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -25,6 +23,17 @@ return [
                 // Max packet size for large data transfers
                 // PDO::MYSQL_ATTR_MAX_BUFFER_SIZE => 16777216, // 16MB
             ],
+            'pool' => [
+                'enabled' => env('DB_ENABLE_POOL', false),
+                'pool_name' => env('DB_POOL_NAME', 'default'),
+                'connections_per_worker' => env('DB_POOL_CONN_PER_WORKER', 10),
+                'minimum_idle' => 5,
+                'idle_timeout' => 60.0,
+                'max_lifetime' => 3600.0,
+                'borrowing_timeout' => 1,
+                'returning_timeout' => 0.5,
+                'leak_detection_threshold' => 10.0,
+            ]
         ],
         'production' => [
             'adapter' => 'mysql',
@@ -35,6 +44,17 @@ return [
             'db_name' => 'my_production_db',
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_general_ci',
+            'pool' => [
+                'enabled' => env('DB_ENABLE_POOL', false),
+                'pool_name' => env('DB_POOL_NAME', 'default'),
+                'connections_per_worker' => env('DB_POOL_CONN_PER_WORKER', 10),
+                'minimum_idle' => 5,
+                'idle_timeout' => 60.0,
+                'max_lifetime' => 3600.0,
+                'borrowing_timeout' => 1,
+                'returning_timeout' => 0.5,
+                'leak_detection_threshold' => 10.0,
+            ]
         ],
     ],
     'default_environment' => 'local',
